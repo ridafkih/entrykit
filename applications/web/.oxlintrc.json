@@ -3,7 +3,8 @@
   "plugins": null,
   "categories": {
     "correctness": "error",
-    "perf": "error"
+    "perf": "error",
+    "nursery": "error"
   },
   "rules": {},
   "settings": {

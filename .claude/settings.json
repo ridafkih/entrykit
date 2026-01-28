@@ -6,11 +6,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun lint"
+            "command": "bun lint --fix"
           },
           {
             "type": "command",
-            "command": "bun types"
+            "command": "bun format"
           }
         ]
       }
