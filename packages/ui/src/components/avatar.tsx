@@ -1,16 +1,18 @@
 import { useState, type ImgHTMLAttributes } from "react";
 import { cn } from "../utils/cn";
 
-type AvatarSize = "xs" | "sm" | "md" | "lg";
+type AvatarSize = "xxs" | "xs" | "sm" | "md" | "lg";
 type PresenceStatus = "online" | "offline" | "busy";
 
 export type AvatarProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "size"> & {
   size?: AvatarSize;
   fallback?: string;
   presence?: PresenceStatus;
+  rounded?: boolean;
 };
 
 const sizeStyles: Record<AvatarSize, string> = {
+  xxs: "h-4 w-4 text-[8px]",
   xs: "h-6 w-6 text-[10px]",
   sm: "h-8 w-8 text-xs",
   md: "h-10 w-10 text-sm",
@@ -24,6 +26,7 @@ const presenceStyles: Record<PresenceStatus, string> = {
 };
 
 const presenceSizeStyles: Record<AvatarSize, string> = {
+  xxs: "h-1 w-1 right-0 bottom-0",
   xs: "h-1.5 w-1.5 right-0 bottom-0",
   sm: "h-2 w-2 right-0 bottom-0",
   md: "h-2.5 w-2.5 right-0 bottom-0",
@@ -46,17 +49,19 @@ export function Avatar({
   alt = "",
   fallback,
   presence,
+  rounded = false,
   ...props
 }: AvatarProps) {
   const [error, setError] = useState(false);
   const showFallback = !src || error;
 
   return (
-    <span className={cn("relative inline-block", sizeStyles[size])}>
+    <span className={cn("relative inline-block", sizeStyles[size], rounded && "rounded-full")}>
       {showFallback ? (
         <span
           className={cn(
             "flex h-full w-full items-center justify-center bg-muted text-muted-foreground font-medium",
+            rounded && "rounded-full",
             className,
           )}
         >
@@ -66,7 +71,7 @@ export function Avatar({
         <img
           src={src}
           alt={alt}
-          className={cn("h-full w-full object-cover", className)}
+          className={cn("h-full w-full object-cover", rounded && "rounded-full", className)}
           onError={() => setError(true)}
           {...props}
         />

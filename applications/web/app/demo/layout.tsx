@@ -15,7 +15,7 @@ import {
 } from "@/components/sidebar";
 import { Avatar } from "@lab/ui/components/avatar";
 import { Copy } from "@lab/ui/components/copy";
-import { X, Settings, ChevronDown, Users, FolderKanban } from "lucide-react";
+import { X, Settings, ChevronDown, FolderKanban } from "lucide-react";
 import {
   Dropdown,
   DropdownTrigger,
@@ -82,9 +82,7 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
                   <ChevronDown className="size-3" />
                 </DropdownTrigger>
                 <DropdownMenu>
-                  <DropdownItem icon={<Users className="size-3" />}>People</DropdownItem>
-                  <DropdownSeparator />
-                  {projects.map((project) => (
+                                    {projects.map((project) => (
                     <DropdownItem
                       key={project.id}
                       icon={<Box className="size-3" />}
