@@ -1,0 +1,7 @@
+{
+  "extends": "./base.json",
+  "files": [],
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
+}
