@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { SessionView } from "@/compositions/session-view";
-import { SessionSidebar } from "@/compositions/session-sidebar";
+import { SessionView } from "@/components/session-view";
+import { SessionSidebar } from "@/components/session-sidebar";
 import type { ReviewableFile } from "@/types/review";
 
 const exampleMessages = [

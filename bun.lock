@@ -45,6 +45,7 @@
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "next": "^16",
+        "oxfmt": "0.27.0",
         "oxlint": "1.42.0",
         "typescript": "^5",
       },

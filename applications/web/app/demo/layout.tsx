@@ -12,7 +12,7 @@ import {
   SidebarSession,
   SidebarNewSession,
   SidebarAction,
-} from "@/compositions/sidebar";
+} from "@/components/sidebar";
 import { Avatar } from "@lab/ui/components/avatar";
 import { Copy } from "@lab/ui/components/copy";
 import { X } from "lucide-react";

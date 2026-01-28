@@ -126,6 +126,14 @@ export function SidebarSession({
         active ? "bg-muted" : "hover:bg-muted/50",
       )}
     >
+      <Copy as="span" size="xs" className="flex-1 truncate">
+        {title}
+      </Copy>
+      {timestamp && (
+        <Copy as="span" size="xs" muted>
+          {timestamp}
+        </Copy>
+      )}
       <span className="grid w-3 h-3 place-items-center">
         <Loader2
           className={cn(
@@ -135,19 +143,11 @@ export function SidebarSession({
         />
         <span
           className={cn(
-            "w-1 h-1 bg-info col-start-1 row-start-1",
+            "w-1.5 h-1.5 bg-info col-start-1 row-start-1",
             (isWorking || !hasUnread) && "invisible",
           )}
         />
       </span>
-      <Copy as="span" size="xs" className="flex-1 truncate">
-        {title}
-      </Copy>
-      {timestamp && (
-        <Copy as="span" size="xs" muted>
-          {timestamp}
-        </Copy>
-      )}
     </button>
   );
 }

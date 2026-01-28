@@ -1,9 +1,5 @@
-import { Copy } from "@lab/ui/components/copy";
+import { CenteredPlaceholder } from "@/components/centered-placeholder";
 
 export default function DemoPage() {
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <Copy muted>Select a project</Copy>
-    </div>
-  );
+  return <CenteredPlaceholder>Select a project</CenteredPlaceholder>;
 }
