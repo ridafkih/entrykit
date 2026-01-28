@@ -108,7 +108,7 @@ export function LogsSectionSourceSelector({
             </span>
           ))}
         </span>
-        <ChevronDown className="w-3 h-3 text-muted-foreground" />
+        <ChevronDown className="size-3 text-muted-foreground" />
       </DropdownTrigger>
       <DropdownMenu className="right-0 left-auto">
         {sources.map((source) => (

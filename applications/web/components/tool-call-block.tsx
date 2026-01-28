@@ -27,13 +27,13 @@ export function ToolCallBlock({ children }: ToolCallBlockProps) {
     >
       {children}
       <span className="flex-1" />
-      <ChevronDown className="w-3 h-3" />
+      <ChevronDown className="size-3" />
     </button>
   );
 }
 
 export function ToolCallBlockStatus({ completed }: ToolCallBlockStatusProps) {
-  return completed ? <Check className="w-3 h-3" /> : <Spinner size="xxs" />;
+  return completed ? <Check className="size-3" /> : <Spinner size="xxs" />;
 }
 
 export function ToolCallBlockDuration({ children }: ToolCallBlockDurationProps) {

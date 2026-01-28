@@ -46,14 +46,14 @@ export function DismissibleFileHeaderCheckbox({ onDismiss }: DismissibleFileHead
     <button
       type="button"
       onClick={onDismiss}
-      className="w-3 h-3 flex-shrink-0 border border-muted-foreground flex items-center justify-center"
+      className="size-3 shrink-0 border border-muted-foreground flex items-center justify-center"
     />
   );
 }
 
 export function DismissibleFileHeaderIcon({ changeType }: DismissibleFileHeaderIconProps) {
   const Icon = changeTypeIcons[changeType];
-  return <Icon className={cn("w-3 h-3 flex-shrink-0", changeTypeColors[changeType])} />;
+  return <Icon className={cn("size-3 shrink-0", changeTypeColors[changeType])} />;
 }
 
 export function DismissibleFileHeaderLabel({ children }: DismissibleFileHeaderLabelProps) {

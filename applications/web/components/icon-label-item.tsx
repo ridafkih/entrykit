@@ -27,7 +27,7 @@ export function IconLabelItem({ children }: IconLabelItemProps) {
 }
 
 export function IconLabelItemIcon({ icon: Icon, className }: IconLabelItemIconProps) {
-  return <Icon className={cn("w-3 h-3 text-muted-foreground", className)} />;
+  return <Icon className={cn("size-3 text-muted-foreground", className)} />;
 }
 
 export function IconLabelItemText({ children, className, strikethrough }: IconLabelItemTextProps) {
@@ -54,7 +54,7 @@ export function IconLabelItemLink({
       rel="noopener noreferrer"
       {...props}
     >
-      <Icon className="w-3 h-3" />
+      <Icon className="size-3" />
       {children}
     </a>
   );

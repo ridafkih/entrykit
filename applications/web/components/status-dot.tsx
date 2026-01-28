@@ -16,5 +16,5 @@ interface StatusDotProps {
 }
 
 export function StatusDot({ variant, className }: StatusDotProps) {
-  return <span className={cn("w-1.5 h-1.5", variantStyles[variant], className)} />;
+  return <span className={cn("size-1.5", variantStyles[variant], className)} />;
 }

@@ -31,7 +31,7 @@ export function ContainerStatusItem({ children }: ContainerStatusItemProps) {
 }
 
 export function ContainerStatusItemIcon({}: ContainerStatusItemIconProps) {
-  return <Container className="w-3 h-3 text-muted-foreground" />;
+  return <Container className="size-3 text-muted-foreground" />;
 }
 
 export function ContainerStatusItemName({ children }: ContainerStatusItemNameProps) {

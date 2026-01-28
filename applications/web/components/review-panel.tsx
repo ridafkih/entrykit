@@ -60,7 +60,7 @@ export function ReviewPanel({ files, onDismiss }: ReviewPanelProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <EmptyState
-          icon={<Check className="w-8 h-8 text-success" />}
+          icon={<Check className="size-8 text-success" />}
           title="All caught up"
           description="No files to review"
         />
@@ -72,7 +72,7 @@ export function ReviewPanel({ files, onDismiss }: ReviewPanelProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <EmptyState
-          icon={<Check className="w-8 h-8 text-success" />}
+          icon={<Check className="size-8 text-success" />}
           title="All files reviewed"
           description="All files have been dismissed"
         />
@@ -154,7 +154,7 @@ export function ReviewPanel({ files, onDismiss }: ReviewPanelProps) {
             placeholder="Provide feedback on this selection..."
           />
           <SelectionFeedbackFormActions>
-            <Button variant="primary" icon={<Send className="w-3 h-3" />}>
+            <Button variant="primary" icon={<Send className="size-3" />}>
               Send
             </Button>
           </SelectionFeedbackFormActions>

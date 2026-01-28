@@ -59,19 +59,19 @@ export function SessionView({ messages, reviewFiles, onDismissFile }: SessionVie
     <Tabs defaultValue="chat" className="flex-1 flex flex-col h-full min-w-0">
       <TabsList className="grid-cols-[1fr_1fr_1fr_1fr]">
         <TabsTrigger value="chat">
-          <MessageSquare className="w-3 h-3" />
+          <MessageSquare className="size-3" />
           Chat
         </TabsTrigger>
         <TabsTrigger value="review">
-          <FileSearch className="w-3 h-3" />
+          <FileSearch className="size-3" />
           Review
         </TabsTrigger>
         <TabsTrigger value="frame">
-          <Frame className="w-3 h-3" />
+          <Frame className="size-3" />
           Frame
         </TabsTrigger>
         <TabsTrigger value="stream">
-          <Radio className="w-3 h-3" />
+          <Radio className="size-3" />
           Stream
         </TabsTrigger>
       </TabsList>
@@ -103,21 +103,21 @@ export function SessionView({ messages, reviewFiles, onDismissFile }: SessionVie
           <ChatInputTextarea placeholder="Send a message..." />
           <ChatInputActions>
             <ChatInputActionsStart>
-              <Button variant="secondary" icon={<Plus className="w-3 h-3" />}>
+              <Button variant="secondary" icon={<Plus className="size-3" />}>
                 Attach
               </Button>
-              <Button variant="secondary" icon={<Zap className="w-3 h-3" />}>
+              <Button variant="secondary" icon={<Zap className="size-3" />}>
                 Skills
               </Button>
-              <Button variant="secondary" icon={<SlidersHorizontal className="w-3 h-3" />}>
+              <Button variant="secondary" icon={<SlidersHorizontal className="size-3" />}>
                 Model
               </Button>
             </ChatInputActionsStart>
             <ChatInputActionsEnd>
-              <Button variant="secondary" icon={<Volume2 className="w-3 h-3" />}>
+              <Button variant="secondary" icon={<Volume2 className="size-3" />}>
                 Voice
               </Button>
-              <Button variant="primary" icon={<Send className="w-3 h-3" />}>
+              <Button variant="primary" icon={<Send className="size-3" />}>
                 Send
               </Button>
             </ChatInputActionsEnd>

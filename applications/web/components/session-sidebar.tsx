@@ -179,13 +179,13 @@ export function SessionSidebar({
                 <div key={task.id} className="flex items-center gap-1.5">
                   <span
                     className={cn(
-                      "w-3 h-3 border flex items-center justify-center",
+                      "size-3 border flex items-center justify-center",
                       task.completed
                         ? "border-foreground bg-foreground text-background"
                         : "border-muted-foreground",
                     )}
                   >
-                    {task.completed && <Check className="w-2 h-2" />}
+                    {task.completed && <Check className="size-2" />}
                   </span>
                   <Copy
                     size="xs"

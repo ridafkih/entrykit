@@ -89,12 +89,12 @@ export function SidebarProject({ name, icon, active, onClick }: SidebarProjectPr
         active ? "bg-muted" : "hover:bg-muted/50",
       )}
     >
-      {icon || <Box className="w-3 h-3" />}
+      {icon || <Box className="size-3" />}
       <Copy as="span" size="xs" className="flex-1 truncate text-left">
         {name}
       </Copy>
       <ChevronRight
-        className={cn("w-3 h-3 opacity-0 group-hover:opacity-100", active && "opacity-100")}
+        className={cn("size-3 opacity-0 group-hover:opacity-100", active && "opacity-100")}
       />
     </button>
   );
@@ -134,16 +134,16 @@ export function SidebarSession({
           {timestamp}
         </Copy>
       )}
-      <span className="grid w-3 h-3 place-items-center">
+      <span className="grid size-3 place-items-center">
         <Loader2
           className={cn(
-            "w-3 h-3 animate-spin text-muted-foreground col-start-1 row-start-1",
+            "size-3 animate-spin text-muted-foreground col-start-1 row-start-1",
             !isWorking && "invisible",
           )}
         />
         <span
           className={cn(
-            "w-1.5 h-1.5 bg-info col-start-1 row-start-1",
+            "size-1.5 bg-info col-start-1 row-start-1",
             (isWorking || !hasUnread) && "invisible",
           )}
         />
@@ -164,7 +164,7 @@ export function SidebarAction({ icon, label, onClick }: SidebarActionProps) {
       type="button"
       onClick={onClick}
       title={label}
-      className="flex items-center justify-center w-4 h-4 text-muted-foreground hover:text-foreground [&>svg]:w-3 [&>svg]:h-3"
+      className="flex items-center justify-center size-4 text-muted-foreground hover:text-foreground [&>svg]:size-3"
     >
       {icon}
     </button>

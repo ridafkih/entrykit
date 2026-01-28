@@ -46,18 +46,18 @@ export function FileStatusItemCheckbox({ checked, onChange }: FileStatusItemChec
       type="button"
       onClick={onChange}
       className={cn(
-        "w-3 h-3 flex-shrink-0 border flex items-center justify-center",
+        "size-3 shrink-0 border flex items-center justify-center",
         checked ? "border-foreground bg-foreground text-background" : "border-muted-foreground",
       )}
     >
-      {checked && <Check className="w-2 h-2" />}
+      {checked && <Check className="size-2" />}
     </button>
   );
 }
 
 export function FileStatusItemIcon({ changeType }: FileStatusItemIconProps) {
   const Icon = changeTypeIcons[changeType];
-  return <Icon className={cn("w-3 h-3 flex-shrink-0", changeTypeColors[changeType])} />;
+  return <Icon className={cn("size-3 shrink-0", changeTypeColors[changeType])} />;
 }
 
 export function FileStatusItemLabel({ children, dismissed, muted }: FileStatusItemLabelProps) {

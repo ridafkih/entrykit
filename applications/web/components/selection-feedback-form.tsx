@@ -36,7 +36,7 @@ export function SelectionFeedbackFormHeader({
       {children}
       <span className="flex-1" />
       <button type="button" onClick={onClose} className="p-0.5 hover:bg-muted">
-        <X className="w-3 h-3 text-muted-foreground" />
+        <X className="size-3 text-muted-foreground" />
       </button>
     </div>
   );
