@@ -5,7 +5,7 @@ import type { MessageState } from "@/lib/opencode/state/types";
 import { MessageBlock } from "../message-block";
 import { ReasoningBlock } from "./reasoning-block";
 import { ToolStatusBlock } from "./tool-status-block";
-import { StepStartBoundary, StepFinishBoundary } from "./step-boundary";
+import { ThinkingIndicator, StepFinishBoundary } from "./step-boundary";
 import {
   isTextPart,
   isReasoningPart,
@@ -13,7 +13,6 @@ import {
   isStepStartPart,
   isStepFinishPart,
 } from "@/lib/opencode/events/guards";
-import type { ToolPart, StepStartPart, StepFinishPart } from "@opencode-ai/sdk/client";
 
 interface MessagePartsRendererProps {
   messageState: MessageState;
@@ -43,12 +42,14 @@ export function MessagePartsRenderer({ messageState }: MessagePartsRendererProps
     }
   };
 
-  for (const partId of partOrder) {
+  for (let i = 0; i < partOrder.length; i++) {
+    const partId = partOrder[i];
     const partState = parts.get(partId);
     if (!partState) continue;
 
     const { part, delta } = partState;
     const isCurrentlyStreaming = isStreaming && streamingPartId === partId;
+    const isLastPart = i === partOrder.length - 1;
 
     if (isTextPart(part)) {
       const text = delta || part.text;
@@ -70,17 +71,19 @@ export function MessagePartsRenderer({ messageState }: MessagePartsRendererProps
     }
 
     if (isToolPart(part)) {
-      elements.push(<ToolStatusBlock key={partId} part={part as ToolPart} />);
+      elements.push(<ToolStatusBlock key={partId} part={part} />);
       continue;
     }
 
     if (isStepStartPart(part)) {
-      elements.push(<StepStartBoundary key={partId} part={part as StepStartPart} />);
+      if (isLastPart) {
+        elements.push(<ThinkingIndicator key={partId} part={part} />);
+      }
       continue;
     }
 
     if (isStepFinishPart(part)) {
-      elements.push(<StepFinishBoundary key={partId} part={part as StepFinishPart} />);
+      elements.push(<StepFinishBoundary key={partId} part={part} />);
       continue;
     }
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Copy } from "@lab/ui/components/copy";
-import { PlayCircle, CheckCircle } from "lucide-react";
+import { Spinner } from "@lab/ui/components/spinner";
 import type { StepStartPart, StepFinishPart } from "@opencode-ai/sdk/client";
 
 interface StepStartBoundaryProps {
@@ -35,12 +35,12 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(2)}`;
 }
 
-export function StepStartBoundary({ part: _part }: StepStartBoundaryProps) {
+export function ThinkingIndicator({ part: _part }: StepStartBoundaryProps) {
   return (
-    <div className="flex items-center gap-2 px-4 py-1 border-b border-border bg-muted/20">
-      <PlayCircle className="size-3 text-blue-500" />
+    <div className="flex items-center gap-2 px-4 py-2 border-b last:border-b-0 border-border bg-muted/30">
+      <Spinner size="xxs" />
       <Copy as="span" size="xs" muted>
-        Step started
+        Thinking...
       </Copy>
     </div>
   );
@@ -51,12 +51,7 @@ export function StepFinishBoundary({ part }: StepFinishBoundaryProps) {
   const costInfo = formatCost(part.cost);
 
   return (
-    <div className="flex items-center gap-2 px-4 py-1 border-b border-border bg-muted/20">
-      <CheckCircle className="size-3 text-green-500" />
-      <Copy as="span" size="xs" muted>
-        Step finished
-      </Copy>
-      <span className="flex-1" />
+    <div className="flex items-center justify-end gap-2 px-4 py-1 border-b last:border-b-0 border-border bg-muted/20">
       {tokenInfo && (
         <Copy as="span" size="xs" muted>
           {tokenInfo}
