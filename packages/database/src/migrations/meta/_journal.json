@@ -15,6 +15,13 @@
       "when": 1769658327339,
       "tag": "0001_amazing_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769665487570,
+      "tag": "0002_new_miek",
+      "breakpoints": true
     }
   ]
 }
