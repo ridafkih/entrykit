@@ -43,5 +43,22 @@ services:
     environment:
       MCP_PORT: "3000"
 
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    container_name: lab-api
+    ports:
+      - "3001:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      API_PORT: "3001"
+      DATABASE_URL: "postgresql://lab:lab@postgres:5432/lab"
+      OPENCODE_URL: "http://opencode:3000"
+    depends_on:
+      - postgres
+      - opencode
+
 volumes:
   postgres_data:
