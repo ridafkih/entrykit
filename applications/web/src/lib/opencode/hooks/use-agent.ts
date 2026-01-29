@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useSessionLifecycle } from "../session/use-session-lifecycle";
 import { useOpenCodeState } from "./use-opencode-state";
 import { usePermissions } from "./use-permissions";
+import type { OpencodeClient } from "@opencode-ai/sdk/client";
 import type {
   SessionState,
   MessageState,
@@ -36,6 +37,8 @@ interface UseAgentResult {
   clearError: () => void;
   activePermission: PermissionRequest | null;
   respondToPermission: (permissionId: string, response: PermissionResponse) => Promise<void>;
+  opencodeClient: OpencodeClient;
+  opencodeSessionId: string | null;
 }
 
 export function useAgent(labSessionId: string): UseAgentResult {
@@ -197,5 +200,7 @@ export function useAgent(labSessionId: string): UseAgentResult {
     clearError,
     activePermission,
     respondToPermission,
+    opencodeClient,
+    opencodeSessionId,
   };
 }
