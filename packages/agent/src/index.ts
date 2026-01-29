@@ -1,5 +1,3 @@
-export { AgentManager } from "./manager";
-export { AgentSession } from "./session";
 export type {
   AgentConfig,
   AgentSessionConfig,
@@ -7,4 +5,5 @@ export type {
   ToolInvocation,
   AgentMessage,
   AgentEvents,
+  ModelSelection,
 } from "./types";

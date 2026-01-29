@@ -26,7 +26,7 @@ import {
 import { Box } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMultiplayer } from "@/lib/multiplayer/client";
-import { useCreateSession } from "@/lib/api";
+import { useCreateSession, OpenCodeEventsProvider } from "@/lib/api";
 
 interface ProjectSessionsPanelProps {
   project: { id: string; name: string };
@@ -89,88 +89,90 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     : null;
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <div className="flex flex-1 min-h-0">
-        <Sidebar>
-          <SidebarPanel>
-            <div className="h-8 border-b border-border">
-              <Dropdown className="w-full h-full">
-                <DropdownTrigger className="flex items-center gap-1 w-full h-full px-2 text-xs text-muted-foreground hover:bg-muted/50">
-                  <span className="flex-1 text-left truncate">Acme Inc</span>
-                  <ChevronDown className="size-3" />
-                </DropdownTrigger>
-                <DropdownMenu>
-                  {projects.map((project) => (
+    <OpenCodeEventsProvider>
+      <div className="flex flex-col h-screen bg-background text-foreground">
+        <div className="flex flex-1 min-h-0">
+          <Sidebar>
+            <SidebarPanel>
+              <div className="h-8 border-b border-border">
+                <Dropdown className="w-full h-full">
+                  <DropdownTrigger className="flex items-center gap-1 w-full h-full px-2 text-xs text-muted-foreground hover:bg-muted/50">
+                    <span className="flex-1 text-left truncate">Acme Inc</span>
+                    <ChevronDown className="size-3" />
+                  </DropdownTrigger>
+                  <DropdownMenu>
+                    {projects.map((project) => (
+                      <DropdownItem
+                        key={project.id}
+                        icon={<Box className="size-3" />}
+                        onClick={() => router.push(`/projects/${project.id}/settings`)}
+                      >
+                        {project.name}
+                      </DropdownItem>
+                    ))}
+                    <DropdownSeparator />
                     <DropdownItem
-                      key={project.id}
-                      icon={<Box className="size-3" />}
-                      onClick={() => router.push(`/projects/${project.id}/settings`)}
+                      icon={<FolderKanban className="size-3" />}
+                      onClick={() => router.push("/projects/new")}
                     >
-                      {project.name}
+                      New Project
                     </DropdownItem>
-                  ))}
-                  <DropdownSeparator />
-                  <DropdownItem
-                    icon={<FolderKanban className="size-3" />}
-                    onClick={() => router.push("/projects/new")}
-                  >
-                    New Project
-                  </DropdownItem>
-                  <DropdownItem
-                    icon={<Cpu className="size-3" />}
-                    onClick={() => router.push("/settings/providers")}
-                  >
-                    Providers
-                  </DropdownItem>
-                  <DropdownItem
-                    icon={<GitBranch className="size-3" />}
-                    onClick={() => router.push("/settings/git")}
-                  >
-                    Git Settings
-                  </DropdownItem>
-                </DropdownMenu>
-              </Dropdown>
-            </div>
-            <SidebarBody>
-              {projects.map((project) => (
-                <SidebarProject
-                  key={project.id}
-                  name={project.name}
-                  active={projectId === project.id}
-                  onClick={() => router.push(projectId === project.id ? "/" : `/${project.id}`)}
-                />
-              ))}
-            </SidebarBody>
-            <SidebarFooter>
-              <div className="flex items-center gap-1.5">
-                <Avatar size="xs" fallback="JD" presence="online" />
-                <Copy as="span" size="xs" className="flex-1 truncate">
-                  john@acme.com
-                </Copy>
-                <SidebarAction icon={<Settings />} label="Settings" />
+                    <DropdownItem
+                      icon={<Cpu className="size-3" />}
+                      onClick={() => router.push("/settings/providers")}
+                    >
+                      Providers
+                    </DropdownItem>
+                    <DropdownItem
+                      icon={<GitBranch className="size-3" />}
+                      onClick={() => router.push("/settings/git")}
+                    >
+                      Git Settings
+                    </DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
               </div>
-            </SidebarFooter>
-          </SidebarPanel>
-
-          {projectId && (
-            <SidebarPanelGroup>
-              {projects
-                .filter((project) => project.id === projectId)
-                .map((project) => (
-                  <ProjectSessionsPanel
+              <SidebarBody>
+                {projects.map((project) => (
+                  <SidebarProject
                     key={project.id}
-                    project={project}
-                    sessions={sessions.filter((session) => session.projectId === project.id)}
-                    activeSessionId={sessionId}
+                    name={project.name}
+                    active={projectId === project.id}
+                    onClick={() => router.push(projectId === project.id ? "/" : `/${project.id}`)}
                   />
                 ))}
-            </SidebarPanelGroup>
-          )}
-        </Sidebar>
+              </SidebarBody>
+              <SidebarFooter>
+                <div className="flex items-center gap-1.5">
+                  <Avatar size="xs" fallback="JD" presence="online" />
+                  <Copy as="span" size="xs" className="flex-1 truncate">
+                    john@acme.com
+                  </Copy>
+                  <SidebarAction icon={<Settings />} label="Settings" />
+                </div>
+              </SidebarFooter>
+            </SidebarPanel>
 
-        <main className="flex-1 flex flex-col">{children}</main>
+            {projectId && (
+              <SidebarPanelGroup>
+                {projects
+                  .filter((project) => project.id === projectId)
+                  .map((project) => (
+                    <ProjectSessionsPanel
+                      key={project.id}
+                      project={project}
+                      sessions={sessions.filter((session) => session.projectId === project.id)}
+                      activeSessionId={sessionId}
+                    />
+                  ))}
+              </SidebarPanelGroup>
+            )}
+          </Sidebar>
+
+          <main className="flex-1 flex flex-col">{children}</main>
+        </div>
+        <footer className="h-8 border-t border-border" />
       </div>
-      <footer className="h-8 border-t border-border" />
-    </div>
+    </OpenCodeEventsProvider>
   );
 }

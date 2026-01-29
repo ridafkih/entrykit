@@ -77,7 +77,9 @@ const POST: RouteHandler = async (_request, params) => {
 
       const hostname = containerDefinition.hostname ?? containerDefinition.id;
 
-      const containerName = `lab-${session.id}-${containerDefinition.id}`;
+      const projectName = `lab-${session.id}`;
+      const containerName = `${projectName}-${containerDefinition.id}`;
+
       const dockerId = await docker.createContainer({
         name: containerName,
         image: containerDefinition.image,
@@ -86,7 +88,7 @@ const POST: RouteHandler = async (_request, params) => {
         env: Object.keys(env).length > 0 ? env : undefined,
         ports: ports.map(({ port }) => ({ container: port, host: undefined })),
         labels: {
-          "com.docker.compose.project": `lab-${session.id}`,
+          "com.docker.compose.project": projectName,
           "com.docker.compose.service": hostname,
           "lab.session": session.id,
           "lab.project": projectId,
@@ -160,7 +162,7 @@ const POST: RouteHandler = async (_request, params) => {
     session: {
       id: session.id,
       projectId: session.projectId,
-      title: `Session ${session.id.slice(0, 8)}`,
+      title: `${session.id.slice(0, 8)}`,
     },
   });
 

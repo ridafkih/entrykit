@@ -1,18 +1,28 @@
-import type { ReactNode } from "react";
+"use client";
+
 import { cn } from "@lab/ui/utils/cn";
-import { Copy } from "@lab/ui/components/copy";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
+import { streamdownComponents } from "./streamdown-components";
 
 interface MessageBlockProps {
-  children: ReactNode;
+  children: string;
   variant?: "user" | "assistant";
+  isStreaming?: boolean;
 }
 
-export function MessageBlock({ children, variant = "user" }: MessageBlockProps) {
+export function MessageBlock({
+  children,
+  variant = "user",
+  isStreaming = false,
+}: MessageBlockProps) {
   const isAssistant = variant === "assistant";
 
   return (
     <div className={cn("border-b border-border px-4 py-3", isAssistant && "bg-muted")}>
-      <Copy size="sm">{children}</Copy>
+      <Streamdown plugins={{ code }} components={streamdownComponents} isAnimating={isStreaming}>
+        {children}
+      </Streamdown>
     </div>
   );
 }

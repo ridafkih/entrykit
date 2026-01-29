@@ -11,7 +11,6 @@ import { sessionContainers } from "@lab/database/schema/session-containers";
 import { containers } from "@lab/database/schema/containers";
 import { containerPorts } from "@lab/database/schema/container-ports";
 import { eq } from "drizzle-orm";
-import { getAgentSession } from "../agent";
 
 const PROXY_BASE_DOMAIN = process.env.PROXY_BASE_DOMAIN;
 if (!PROXY_BASE_DOMAIN) throw new Error("PROXY_BASE_DOMAIN must be defined");
@@ -43,7 +42,7 @@ const handlers: SchemaHandlers<Schema, Auth> = {
         .from(sessions);
       return allSessions.map((session) => ({
         ...session,
-        title: `Session ${session.id.slice(0, 8)}`,
+        title: session.id.slice(0, 8),
       }));
     },
   },
@@ -90,16 +89,6 @@ const handlers: SchemaHandlers<Schema, Auth> = {
       return result;
     },
   },
-  sessionMessages: {
-    getSnapshot: async ({ params }) => {
-      const sessionId = params.uuid;
-      const agentSession = getAgentSession(sessionId);
-      if (!agentSession) {
-        return [];
-      }
-      return agentSession.getMessages();
-    },
-  },
   sessionTyping: {
     getSnapshot: async () => [],
   },
@@ -116,12 +105,6 @@ const handlers: SchemaHandlers<Schema, Auth> = {
     getSnapshot: async () => [],
   },
   sessionLogs: {
-    getSnapshot: async () => [],
-  },
-  sessionStream: {
-    getSnapshot: async () => ({ active: false }),
-  },
-  sessionAgentTools: {
     getSnapshot: async () => [],
   },
 };

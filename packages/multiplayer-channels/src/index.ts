@@ -1,13 +1,6 @@
 import { z } from "zod";
 import { defineChannel, defineSchema } from "@lab/multiplayer-shared";
 
-const MessageSchema = z.object({
-  id: z.string(),
-  role: z.enum(["user", "assistant"]),
-  content: z.string(),
-  timestamp: z.number(),
-});
-
 const ReviewableFileSchema = z.object({
   path: z.string(),
   originalContent: z.string(),
@@ -27,15 +20,6 @@ const LogEntrySchema = z.object({
   timestamp: z.number(),
   level: z.enum(["debug", "info", "warn", "error"]),
   message: z.string(),
-});
-
-const AgentToolSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  status: z.enum(["pending", "running", "completed", "failed"]),
-  args: z.record(z.unknown()).optional(),
-  result: z.string().optional(),
-  error: z.string().optional(),
 });
 
 const SessionSchema = z.object({
@@ -98,17 +82,6 @@ export const schema = defineSchema({
         }),
       ),
       default: [],
-    }),
-
-    sessionMessages: defineChannel({
-      path: "session/{uuid}/messages",
-      snapshot: z.array(MessageSchema),
-      default: [],
-      delta: z.object({
-        type: z.enum(["append", "update", "stream"]),
-        message: MessageSchema.optional(),
-        chunk: z.string().optional(),
-      }),
     }),
 
     sessionTyping: defineChannel({
@@ -174,26 +147,6 @@ export const schema = defineSchema({
       snapshot: z.array(LogSourceSchema),
       default: [],
       event: LogEntrySchema,
-    }),
-
-    sessionStream: defineChannel({
-      path: "session/{uuid}/stream",
-      snapshot: z.object({ active: z.boolean() }),
-      default: { active: false },
-      event: z.object({
-        type: z.enum(["token", "complete", "error"]),
-        content: z.string().optional(),
-      }),
-    }),
-
-    sessionAgentTools: defineChannel({
-      path: "session/{uuid}/agent/tools",
-      snapshot: z.array(AgentToolSchema),
-      default: [],
-      delta: z.object({
-        type: z.enum(["add", "update", "remove"]),
-        tool: AgentToolSchema,
-      }),
     }),
   },
 

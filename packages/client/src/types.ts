@@ -29,12 +29,11 @@ export interface CreateContainerInput {
 export interface Session {
   id: string;
   projectId: string;
+  opencodeSessionId: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
 }
-
-export type AgentStatus = { status: "inactive" } | { status: "active"; isProcessing: boolean };
 
 export interface Model {
   providerId: string;

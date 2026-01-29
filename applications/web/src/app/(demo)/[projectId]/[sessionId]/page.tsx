@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { SessionView } from "@/components/session-view";
 import { SessionSidebar } from "@/components/session-sidebar";
@@ -13,24 +13,13 @@ export default function SessionPage() {
   const params = useParams();
   const sessionId = typeof params.sessionId !== "string" ? "" : params.sessionId;
 
-  const { send, connectionState, useChannel, useChannelEvent } = useMultiplayer();
-  const { sendMessage, isSending, state, setProcessingComplete } = useAgent(sessionId);
+  const { send, connectionState, useChannel } = useMultiplayer();
+  const { sendMessage, isSending, state, messages, streamingContent } = useAgent(sessionId);
   const isProcessing = state.status === "active" && state.isProcessing;
 
-  const handleStreamEvent = useCallback(
-    (event: { type: "token" | "complete" | "error"; content?: string }) => {
-      if (event.type === "complete" || event.type === "error") {
-        setProcessingComplete();
-      }
-    },
-    [setProcessingComplete],
-  );
-
-  useChannelEvent("sessionStream", handleStreamEvent, { uuid: sessionId });
   const { models } = useModels();
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
 
-  const messages = useChannel("sessionMessages", { uuid: sessionId });
   const changedFiles = useChannel("sessionChangedFiles", { uuid: sessionId });
   const branches = useChannel("sessionBranches", { uuid: sessionId });
   const links = useChannel("sessionLinks", { uuid: sessionId });
@@ -74,6 +63,7 @@ export default function SessionPage() {
           role,
           content,
         }))}
+        streamingContent={streamingContent}
         reviewFiles={reviewFiles}
         onDismissFile={handleDismissFile}
         onSendMessage={handleSendMessage}

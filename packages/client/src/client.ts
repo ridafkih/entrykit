@@ -4,7 +4,6 @@ import type {
   Container,
   CreateContainerInput,
   Session,
-  AgentStatus,
   Model,
 } from "./types";
 
@@ -67,33 +66,17 @@ export function createClient(config: ClientConfig) {
     sessions: {
       list: (projectId: string) => request<Session[]>(`/projects/${projectId}/sessions`),
 
+      get: (sessionId: string) => request<Session>(`/sessions/${sessionId}`),
+
       create: (projectId: string) =>
         request<Session>(`/projects/${projectId}/sessions`, {
           method: "POST",
         }),
-    },
 
-    agent: {
-      status: (sessionId: string) => request<AgentStatus>(`/sessions/${sessionId}/agent`),
-
-      start: (sessionId: string) =>
-        request<{ started: boolean }>(`/sessions/${sessionId}/agent`, {
-          method: "POST",
-        }),
-
-      sendMessage: (
-        sessionId: string,
-        message: string,
-        model?: { providerId: string; modelId: string },
-      ) =>
-        request<{ accepted: boolean }>(`/sessions/${sessionId}/agent/message`, {
-          method: "POST",
-          body: JSON.stringify({ message, model }),
-        }),
-
-      stop: (sessionId: string) =>
-        request<void>(`/sessions/${sessionId}/agent`, {
-          method: "DELETE",
+      update: (sessionId: string, data: { opencodeSessionId?: string }) =>
+        request<Session>(`/sessions/${sessionId}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
         }),
     },
 

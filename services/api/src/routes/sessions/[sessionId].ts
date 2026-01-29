@@ -35,6 +35,29 @@ const GET: RouteHandler = async (_request, params) => {
   });
 };
 
+const PATCH: RouteHandler = async (request, params) => {
+  const { sessionId } = params;
+
+  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+
+  if (!session) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const body = await request.json();
+
+  if (typeof body.opencodeSessionId === "string") {
+    await db
+      .update(sessions)
+      .set({ opencodeSessionId: body.opencodeSessionId, updatedAt: new Date() })
+      .where(eq(sessions.id, sessionId));
+  }
+
+  const [updated] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+
+  return Response.json(updated);
+};
+
 const DELETE: RouteHandler = async (_request, params) => {
   const { sessionId } = params;
 
@@ -61,4 +84,4 @@ const DELETE: RouteHandler = async (_request, params) => {
   return new Response(null, { status: 204 });
 };
 
-export { DELETE, GET };
+export { DELETE, GET, PATCH };

@@ -1,12 +1,13 @@
 import { type WebSocketData } from "@lab/multiplayer-server";
 import { websocketHandler, upgrade, type Auth } from "./handlers/websocket";
+import { handleOpenCodeProxy } from "./handlers/opencode-proxy";
 import { isHttpMethod, isRouteModule } from "./utils/route-handler";
 import { join } from "node:path";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Lab-Session-Id",
 };
 
 const HTTP_NOT_FOUND = 404;
@@ -43,6 +44,10 @@ export const server = Bun.serve<WebSocketData<Auth>>({
 
     if (url.pathname === "/ws") {
       return upgrade(request, server);
+    }
+
+    if (url.pathname.startsWith("/opencode/")) {
+      return handleOpenCodeProxy(request, url);
     }
 
     const match = router.match(request);

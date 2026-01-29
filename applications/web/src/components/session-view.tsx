@@ -60,6 +60,7 @@ type Message = {
 
 type SessionViewProps = {
   messages: Message[];
+  streamingContent?: string | null;
   reviewFiles: ReviewableFile[];
   onDismissFile: (path: string) => void;
   frameUrl?: string;
@@ -76,6 +77,7 @@ type SessionViewProps = {
 
 export function SessionView({
   messages,
+  streamingContent,
   reviewFiles,
   onDismissFile,
   frameUrl,
@@ -156,6 +158,11 @@ export function SessionView({
             }
             return items;
           })}
+          {streamingContent && (
+            <MessageBlock key="streaming" variant="assistant" isStreaming>
+              {streamingContent}
+            </MessageBlock>
+          )}
         </div>
         <ChatInput>
           <ChatInputTextarea
