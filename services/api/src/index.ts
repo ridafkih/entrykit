@@ -13,7 +13,11 @@ const router = new Bun.FileSystemRouter({
   style: "nextjs",
 });
 
-const port = process.env.API_PORT ?? 3001;
+const port = process.env.API_PORT;
+
+if (port === undefined) {
+  throw Error("API_PORT must be defined");
+}
 
 const server = Bun.serve<WebSocketData<Auth>>({
   port,
