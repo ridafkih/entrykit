@@ -1,0 +1,40 @@
+{
+  "name": "@lab/multiplayer-client",
+  "version": "0.1.0",
+  "type": "module",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "types": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt"
+  },
+  "dependencies": {
+    "@lab/multiplayer-shared": "workspace:*",
+    "jotai": "^2.12.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "oxfmt": "0.27.0",
+    "oxlint": "1.42.0",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  }
+}

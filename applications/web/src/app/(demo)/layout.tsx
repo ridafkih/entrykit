@@ -25,38 +25,17 @@ import {
 } from "@lab/ui/components/dropdown";
 import { Box } from "lucide-react";
 import type { ReactNode } from "react";
-
-type Project = {
-  id: string;
-  name: string;
-};
-
-type Session = {
-  id: string;
-  projectId: string;
-  title: string;
-  hasUnread?: boolean;
-  isWorking?: boolean;
-  timestamp: string;
-};
-
-const projects: Project[] = [
-  { id: "1", name: "acme/web-app" },
-  { id: "2", name: "acme/api" },
-  { id: "3", name: "acme/mobile" },
-];
-
-const sessions: Session[] = [
-  { id: "s1", projectId: "1", title: "Fix auth redirect loop", isWorking: true, timestamp: "2m" },
-  { id: "s2", projectId: "1", title: "Add dark mode support", timestamp: "1h" },
-  { id: "s3", projectId: "1", title: "Refactor user settings", timestamp: "3h" },
-  { id: "s4", projectId: "2", title: "Add rate limiting", isWorking: true, timestamp: "5m" },
-  { id: "s5", projectId: "2", title: "Fix N+1 queries", hasUnread: true, timestamp: "1d" },
-];
+import { useMultiplayerState } from "@/lib/multiplayer/client";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
+
+  const projectsState = useMultiplayerState("projects");
+  const sessionsState = useMultiplayerState("sessions");
+
+  const projects = projectsState.status === "connected" ? projectsState.data : [];
+  const sessions = sessionsState.status === "connected" ? sessionsState.data : [];
 
   const projectId = params.projectId
     ? typeof params.projectId === "string"
@@ -151,7 +130,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                             isWorking={session.isWorking}
                             active={sessionId === session.id}
                             onClick={() => router.push(`/${project.id}/${session.id}`)}
-                            timestamp={session.timestamp}
                           />
                         ))}
                       </SidebarBody>
