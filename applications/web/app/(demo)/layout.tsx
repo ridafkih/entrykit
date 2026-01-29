@@ -54,7 +54,7 @@ const sessions: Session[] = [
   { id: "s5", projectId: "2", title: "Fix N+1 queries", hasUnread: true, timestamp: "1d" },
 ];
 
-export default function DemoLayout({ children }: { children: ReactNode }) {
+export default function MainLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
 
@@ -82,11 +82,11 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
                   <ChevronDown className="size-3" />
                 </DropdownTrigger>
                 <DropdownMenu>
-                                    {projects.map((project) => (
+                  {projects.map((project) => (
                     <DropdownItem
                       key={project.id}
                       icon={<Box className="size-3" />}
-                      onClick={() => router.push(`/demo/projects/${project.id}/settings`)}
+                      onClick={() => router.push(`/projects/${project.id}/settings`)}
                     >
                       {project.name}
                     </DropdownItem>
@@ -94,7 +94,7 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
                   <DropdownSeparator />
                   <DropdownItem
                     icon={<FolderKanban className="size-3" />}
-                    onClick={() => router.push("/demo/projects/new")}
+                    onClick={() => router.push("/projects/new")}
                   >
                     New Project
                   </DropdownItem>
@@ -107,9 +107,7 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
                   key={project.id}
                   name={project.name}
                   active={projectId === project.id}
-                  onClick={() =>
-                    router.push(projectId === project.id ? "/demo" : `/demo/${project.id}`)
-                  }
+                  onClick={() => router.push(projectId === project.id ? "/" : `/${project.id}`)}
                 />
               ))}
             </SidebarBody>
@@ -134,11 +132,7 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
                     <SidebarPanel key={project.id}>
                       <SidebarHeader
                         action={
-                          <SidebarAction
-                            icon={<X />}
-                            label="Close"
-                            onClick={() => router.push("/demo")}
-                          />
+                          <SidebarAction icon={<X />} label="Close" onClick={() => router.push("/")} />
                         }
                       >
                         {project.name}
@@ -152,7 +146,7 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
                             hasUnread={session.hasUnread}
                             isWorking={session.isWorking}
                             active={sessionId === session.id}
-                            onClick={() => router.push(`/demo/${project.id}/${session.id}`)}
+                            onClick={() => router.push(`/${project.id}/${session.id}`)}
                             timestamp={session.timestamp}
                           />
                         ))}
