@@ -12,6 +12,7 @@ import type { RouteHandler } from "../../../utils/route-handler";
 import { publisher } from "../../../publisher";
 
 const docker = new DockerClient();
+const WORKSPACES_VOLUME = "lab_session_workspaces";
 
 interface ContainerResult {
   id: string;
@@ -85,8 +86,10 @@ const POST: RouteHandler = async (_request, params) => {
         image: containerDefinition.image,
         hostname,
         networkMode: networkName,
+        workdir: `/workspaces/${session.id}`,
         env: Object.keys(env).length > 0 ? env : undefined,
         ports: ports.map(({ port }) => ({ container: port, host: undefined })),
+        volumes: [{ source: WORKSPACES_VOLUME, target: "/workspaces" }],
         labels: {
           "com.docker.compose.project": projectName,
           "com.docker.compose.service": hostname,

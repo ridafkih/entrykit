@@ -110,15 +110,26 @@ function isSseResponse(path: string, proxyResponse: Response): boolean {
   );
 }
 
+function buildTargetUrl(path: string, url: URL, labSessionId: string | null): string {
+  const targetParams = new URLSearchParams(url.search);
+
+  if (labSessionId) {
+    targetParams.set("directory", `/workspaces/${labSessionId}`);
+  }
+
+  const queryString = targetParams.toString();
+  return `${opencodeUrl}${path}${queryString ? `?${queryString}` : ""}`;
+}
+
 export async function handleOpenCodeProxy(request: Request, url: URL): Promise<Response> {
   if (!opencodeUrl) {
     return new Response("OPENCODE_URL not configured", { status: 500 });
   }
 
   const path = url.pathname.replace(/^\/opencode/, "");
-  const targetUrl = `${opencodeUrl}${path}${url.search}`;
-
   const labSessionId = request.headers.get("X-Lab-Session-Id");
+  const targetUrl = buildTargetUrl(path, url, labSessionId);
+
   const forwardHeaders = buildForwardHeaders(request);
   const body = await buildProxyBody(request, path, labSessionId);
 

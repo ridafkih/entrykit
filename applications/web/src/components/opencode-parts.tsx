@@ -37,6 +37,15 @@ export function OpencodeParts({ messageState }: OpencodePartsProps) {
   const { info, parts, partOrder, isStreaming, streamingPartId } = messageState;
   const isAssistant = info.role === "assistant";
 
+  console.log(
+    "[OpencodeParts] Rendering message:",
+    info.id,
+    "parts:",
+    partOrder.length,
+    "isStreaming:",
+    isStreaming,
+  );
+
   const elements: ReactNode[] = [];
   let accumulatedText = "";
   let accumulatedTextIsStreaming = false;
@@ -65,6 +74,8 @@ export function OpencodeParts({ messageState }: OpencodePartsProps) {
     const { part, delta } = partState;
     const isCurrentlyStreaming = isStreaming && streamingPartId === partId;
     const isLastPart = i === partOrder.length - 1;
+
+    console.log("[OpencodeParts] Processing part:", partId, "type:", part.type);
 
     if (isTextPart(part)) {
       if (part.synthetic) continue;
@@ -144,6 +155,13 @@ export function OpencodeParts({ messageState }: OpencodePartsProps) {
   }
 
   flushText();
+
+  console.log(
+    "[OpencodeParts] Final elements count:",
+    elements.length,
+    "isAssistant:",
+    isAssistant,
+  );
 
   if (elements.length === 0 && !isAssistant) {
     return null;

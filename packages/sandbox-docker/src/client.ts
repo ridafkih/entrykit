@@ -203,8 +203,8 @@ export class DockerClient implements SandboxProvider {
     let buffer = Buffer.alloc(0);
 
     for await (const chunk of stream) {
-      const data = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-      buffer = Buffer.concat([buffer, data]);
+      const chunkBuffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+      buffer = Buffer.concat([buffer, chunkBuffer]);
 
       while (buffer.length >= 8) {
         const streamType = buffer[0];
@@ -212,12 +212,12 @@ export class DockerClient implements SandboxProvider {
 
         if (buffer.length < 8 + size) break;
 
-        const data = buffer.subarray(8, 8 + size);
+        const frameData = buffer.subarray(8, 8 + size);
         buffer = buffer.subarray(8 + size);
 
         yield {
           stream: streamType === 1 ? "stdout" : "stderr",
-          data: new Uint8Array(data),
+          data: new Uint8Array(frameData),
         };
       }
     }

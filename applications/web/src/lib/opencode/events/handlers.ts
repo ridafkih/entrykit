@@ -17,6 +17,8 @@ import {
 import { extractErrorMessage } from "./utils";
 
 export function createActionsFromEvent(event: Event): OpenCodeAction[] {
+  console.log("[Handler] Processing event:", event.type);
+
   if (isSessionCreatedEvent(event)) {
     return [{ type: "SESSION_CREATED", payload: { session: event.properties.info } }];
   }

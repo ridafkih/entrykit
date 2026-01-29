@@ -23,13 +23,14 @@ const OpenCodeEventsContext = createContext<OpenCodeEventsContextValue | null>(n
 
 interface OpenCodeEventsProviderProps {
   children: ReactNode;
+  sessionId?: string | null;
 }
 
 const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 const RECONNECT_MULTIPLIER = 2;
 
-export function OpenCodeEventsProvider({ children }: OpenCodeEventsProviderProps) {
+export function OpenCodeEventsProvider({ children, sessionId }: OpenCodeEventsProviderProps) {
   const handlersRef = useRef<Set<EventHandler>>(new Set());
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY);
@@ -47,7 +48,12 @@ export function OpenCodeEventsProvider({ children }: OpenCodeEventsProviderProps
         return;
       }
 
-      const client = createOpencodeClient({ baseUrl: `${apiUrl}/opencode` });
+      const headers: Record<string, string> = {};
+      if (sessionId) {
+        headers["X-Lab-Session-Id"] = sessionId;
+      }
+
+      const client = createOpencodeClient({ baseUrl: `${apiUrl}/opencode`, headers });
 
       try {
         setConnectionStatus((prev) =>
@@ -71,6 +77,8 @@ export function OpenCodeEventsProvider({ children }: OpenCodeEventsProviderProps
           }
 
           reconnectDelayRef.current = INITIAL_RECONNECT_DELAY;
+
+          console.log("[OpenCode Event]", event.type, event);
 
           for (const handler of handlersRef.current) {
             handler(event);
@@ -117,7 +125,7 @@ export function OpenCodeEventsProvider({ children }: OpenCodeEventsProviderProps
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, []);
+  }, [sessionId]);
 
   const subscribe = useCallback((handler: EventHandler) => {
     handlersRef.current.add(handler);
