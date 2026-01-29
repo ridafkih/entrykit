@@ -1,6 +1,13 @@
 "use client";
 
-import { type ReactNode, useState, useCallback, type KeyboardEvent } from "react";
+import {
+  type ReactNode,
+  useState,
+  useCallback,
+  useRef,
+  useLayoutEffect,
+  type KeyboardEvent,
+} from "react";
 import { Copy } from "@lab/ui/components/copy";
 import { Button } from "@lab/ui/components/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@lab/ui/components/tabs";
@@ -92,6 +99,32 @@ export function SessionView({
   onModelChange,
 }: SessionViewProps) {
   const [inputValue, setInputValue] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+
+  const checkIfAtBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    const threshold = 50;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isAtBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [messages, streamingContent, scrollToBottom]);
+
+  const handleScroll = useCallback(() => {
+    isAtBottomRef.current = checkIfAtBottom();
+  }, [checkIfAtBottom]);
 
   const handleSend = useCallback(() => {
     const trimmed = inputValue.trim();
@@ -101,7 +134,9 @@ export function SessionView({
       : undefined;
     onSendMessage(trimmed, model);
     setInputValue("");
-  }, [inputValue, isSending, onSendMessage, selectedModel]);
+    isAtBottomRef.current = true;
+    scrollToBottom();
+  }, [inputValue, isSending, onSendMessage, selectedModel, scrollToBottom]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -136,7 +171,7 @@ export function SessionView({
         </TabsTrigger>
       </TabsList>
       <TabsContent value="chat" className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
           {messages.flatMap((message) => {
             const items: ReactNode[] = [
               <MessageBlock key={message.id} variant={message.role}>
