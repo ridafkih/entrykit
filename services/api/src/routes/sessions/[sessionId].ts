@@ -1,135 +1,50 @@
-import { db } from "@lab/database/client";
-import { sessions } from "@lab/database/schema/sessions";
-import { sessionContainers } from "@lab/database/schema/session-containers";
-import { eq } from "drizzle-orm";
-import { DockerClient } from "@lab/sandbox-docker";
-import { proxyManager, isProxyInitialized } from "../../proxy";
-import { publisher } from "../../publisher";
-
-import type { RouteHandler } from "../../utils/route-handler";
-
-const docker = new DockerClient();
+import { docker } from "../../clients/docker";
+import { notFoundResponse, noContentResponse } from "../../shared/http";
+import {
+  findSessionById,
+  updateSessionOpencodeId,
+} from "../../utils/repositories/session.repository";
+import { findSessionContainersBySessionId } from "../../utils/repositories/container.repository";
+import { cleanupSession } from "../../utils/session/session-cleanup";
+import type { RouteHandler } from "../../utils/handlers/route-handler";
 
 const GET: RouteHandler = async (_request, params) => {
-  const { sessionId } = params;
+  const session = await findSessionById(params.sessionId);
+  if (!session) return notFoundResponse();
 
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-
-  if (!session) {
-    return new Response("Not found", { status: 404 });
-  }
-
-  const containers = await db
-    .select()
-    .from(sessionContainers)
-    .where(eq(sessionContainers.sessionId, sessionId));
+  const containers = await findSessionContainersBySessionId(params.sessionId);
 
   const containersWithStatus = await Promise.all(
     containers.map(async (container) => {
-      if (!container.dockerId) {
-        return { ...container, info: null };
-      }
+      if (!container.dockerId) return { ...container, info: null };
       const info = await docker.inspectContainer(container.dockerId);
       return { ...container, info };
     }),
   );
 
-  return Response.json({
-    ...session,
-    containers: containersWithStatus,
-  });
+  return Response.json({ ...session, containers: containersWithStatus });
 };
 
 const PATCH: RouteHandler = async (request, params) => {
-  const { sessionId } = params;
-
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-
-  if (!session) {
-    return new Response("Not found", { status: 404 });
-  }
+  const session = await findSessionById(params.sessionId);
+  if (!session) return notFoundResponse();
 
   const body = await request.json();
 
-  if (typeof body.opencodeSessionId === "string") {
-    await db
-      .update(sessions)
-      .set({ opencodeSessionId: body.opencodeSessionId, updatedAt: new Date() })
-      .where(eq(sessions.id, sessionId));
+  if (typeof body.opcodeSessionId === "string") {
+    const updated = await updateSessionOpencodeId(params.sessionId, body.opcodeSessionId);
+    return Response.json(updated);
   }
 
-  const [updated] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-
-  return Response.json(updated);
+  return Response.json(session);
 };
 
 const DELETE: RouteHandler = async (_request, params, context) => {
-  const { sessionId } = params;
+  const session = await findSessionById(params.sessionId);
+  if (!session) return notFoundResponse();
 
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-
-  if (!session) {
-    return new Response("Not found", { status: 404 });
-  }
-
-  const containers = await db
-    .select()
-    .from(sessionContainers)
-    .where(eq(sessionContainers.sessionId, sessionId));
-
-  await Promise.all(
-    containers
-      .filter((container) => container.dockerId)
-      .map(async (container) => {
-        await docker.stopContainer(container.dockerId);
-        await docker.removeContainer(container.dockerId);
-      }),
-  );
-
-  const networkName = `lab-${sessionId}`;
-
-  await context.browserService.forceStopBrowser(sessionId);
-
-  if (isProxyInitialized()) {
-    try {
-      await proxyManager.unregisterCluster(sessionId);
-    } catch (error) {
-      console.warn(`Failed to unregister proxy cluster for session ${sessionId}:`, error);
-    }
-  }
-
-  const caddyContainerName = process.env.CADDY_CONTAINER_NAME;
-  if (caddyContainerName) {
-    try {
-      await docker.disconnectFromNetwork(caddyContainerName, networkName);
-    } catch (error) {
-      console.warn(`Failed to disconnect caddy from network ${networkName}:`, error);
-    }
-  }
-
-  const browserContainerName = process.env.BROWSER_CONTAINER_NAME;
-  if (browserContainerName) {
-    try {
-      await docker.disconnectFromNetwork(browserContainerName, networkName);
-    } catch (error) {
-      console.warn(`Failed to disconnect browser from network ${networkName}:`, error);
-    }
-  }
-
-  await docker.removeNetwork(networkName);
-
-  await db.delete(sessions).where(eq(sessions.id, sessionId));
-
-  publisher.publishDelta("sessions", {
-    type: "remove",
-    session: {
-      id: session.id,
-      projectId: session.projectId,
-      title: session.id.slice(0, 8),
-    },
-  });
-
-  return new Response(null, { status: 204 });
+  await cleanupSession(params.sessionId, context.browserService);
+  return noContentResponse();
 };
 
 export { DELETE, GET, PATCH };

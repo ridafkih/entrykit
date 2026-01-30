@@ -1,5 +1,5 @@
-import type { RouteHandler } from "../utils/route-handler";
-import { opencode } from "../opencode";
+import type { RouteHandler } from "../utils/handlers/route-handler";
+import { opencode } from "../clients/opencode";
 
 const GET: RouteHandler = async () => {
   const response = await opencode.provider.list();

@@ -1,5 +1,5 @@
-import { opencode } from "../../opencode";
-import type { RouteHandler } from "../../utils/route-handler";
+import { opencode } from "../../clients/opencode";
+import type { RouteHandler } from "../../utils/handlers/route-handler";
 
 const DELETE: RouteHandler = async (_request, params) => {
   const { provider } = params;

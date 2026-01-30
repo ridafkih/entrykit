@@ -1,23 +1,18 @@
-import { db } from "@lab/database/client";
-import { projects } from "@lab/database/schema/projects";
-
-import type { RouteHandler } from "../utils/route-handler";
-import { publisher } from "../publisher";
+import { findAllProjects, createProject } from "../utils/repositories/project.repository";
+import { publisher } from "../clients/publisher";
+import type { RouteHandler } from "../utils/handlers/route-handler";
 
 const GET: RouteHandler = async () => {
-  const allProjects = await db.select().from(projects);
-  return Response.json(allProjects);
+  const projects = await findAllProjects();
+  return Response.json(projects);
 };
 
 const POST: RouteHandler = async (request) => {
   const body = await request.json();
-  const [project] = await db
-    .insert(projects)
-    .values({
-      name: body.name,
-      systemPrompt: body.systemPrompt,
-    })
-    .returning();
+  const project = await createProject({
+    name: body.name,
+    systemPrompt: body.systemPrompt,
+  });
 
   publisher.publishDelta("projects", {
     type: "add",
