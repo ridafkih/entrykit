@@ -23,7 +23,7 @@
     "types": "tsc --noEmit"
   },
   "dependencies": {
-    "@lab/multiplayer-shared": "workspace:*",
+    "@lab/multiplayer-sdk": "workspace:*",
     "zod": "^3.24.2"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import type { WireClientMessage, WireServerMessage } from "@lab/multiplayer-shared";
+import type { WireClientMessage, WireServerMessage } from "@lab/multiplayer-sdk";
 
 function hasType(value: object): value is { type: unknown } {
   return "type" in value;

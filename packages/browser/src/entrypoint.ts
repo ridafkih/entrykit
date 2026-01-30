@@ -138,7 +138,7 @@ Bun.serve({
       }
 
       const result = await startSessionDaemon(sessionId, { streamPort });
-      return Response.json({ sessionId, ...result });
+      return Response.json(result);
     }
 
     if (req.method === "DELETE" && path.startsWith("/daemons/")) {
@@ -147,7 +147,7 @@ Bun.serve({
         return Response.json({ error: "Session ID required" }, { status: 400 });
       }
       const result = stopSessionDaemon(sessionId);
-      return Response.json({ sessionId, ...result });
+      return Response.json(result);
     }
 
     if (req.method === "GET" && path === "/daemons") {
@@ -160,6 +160,7 @@ Bun.serve({
         return Response.json({ error: "Session ID required" }, { status: 400 });
       }
       return Response.json({
+        type: "status",
         sessionId,
         running: isSessionActive(sessionId) && isDaemonRunning(sessionId),
         ready: isSessionReady(sessionId),

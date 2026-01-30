@@ -6,8 +6,8 @@ import type {
   WireServerMessage,
   SnapshotOf,
   ClientMessageOf,
-} from "@lab/multiplayer-shared";
-import { parsePath } from "@lab/multiplayer-shared";
+} from "@lab/multiplayer-sdk";
+import { parsePath } from "@lab/multiplayer-sdk";
 
 function hasType(value: object): value is { type: unknown } {
   return "type" in value;

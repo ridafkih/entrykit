@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useContext, useMemo } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import type { ChannelConfig, SnapshotOf } from "@lab/multiplayer-shared";
-import { resolvePath, hasParams } from "@lab/multiplayer-shared";
+import type { ChannelConfig, SnapshotOf } from "@lab/multiplayer-sdk";
+import { resolvePath, hasParams } from "@lab/multiplayer-sdk";
 import type { ConnectionManager } from "./connection";
 import { connectionStateAtom, channelStateFamily, type ChannelState } from "./atoms";
 import { MultiplayerContext } from "./provider";

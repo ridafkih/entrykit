@@ -117,10 +117,10 @@ export function getActiveSessions(): Array<{ sessionId: string; port: number; re
 export async function startSessionDaemon(
   sessionId: string,
   options: { streamPort?: number } = {},
-): Promise<{ status: "started" | "already_running"; port: number; ready: boolean }> {
+): Promise<{ type: "started" | "already_running"; sessionId: string; port: number; ready: boolean }> {
   const existing = activeSessions.get(sessionId);
   if (existing) {
-    return { status: "already_running", port: existing.port, ready: existing.ready };
+    return { type: "already_running", sessionId, port: existing.port, ready: existing.ready };
   }
 
   const port = options.streamPort ?? allocatePort();
@@ -181,19 +181,19 @@ export async function startSessionDaemon(
   pollReady();
 
   console.log(`Starting daemon for session: ${sessionId} on port ${port}`);
-  return { status: "started", port, ready: false };
+  return { type: "started", sessionId, port, ready: false };
 }
 
-export function stopSessionDaemon(sessionId: string): { status: "stopped" | "not_found" } {
+export function stopSessionDaemon(sessionId: string): { type: "stopped" | "not_found"; sessionId: string } {
   const wasTracked = activeSessions.has(sessionId);
   const killed = killDaemonProcess(sessionId);
 
   activeSessions.delete(sessionId);
 
   if (!wasTracked && !killed) {
-    return { status: "not_found" };
+    return { type: "not_found", sessionId };
   }
 
   console.log(`Stopped daemon for session: ${sessionId}`);
-  return { status: "stopped" };
+  return { type: "stopped", sessionId };
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineChannel, defineSchema } from "@lab/multiplayer-shared";
+import { defineChannel, defineSchema } from "@lab/multiplayer-sdk";
 
 const ReviewableFileSchema = z.object({
   path: z.string(),

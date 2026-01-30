@@ -1,6 +1,6 @@
 import type { Server } from "bun";
-import type { WireServerMessage } from "@lab/multiplayer-shared";
-import { resolvePath, hasParams } from "@lab/multiplayer-shared";
+import type { WireServerMessage } from "@lab/multiplayer-sdk";
+import { resolvePath, hasParams } from "@lab/multiplayer-sdk";
 import type { z } from "zod";
 
 type AnyChannelConfig = {

@@ -1,5 +1,5 @@
 {
-  "name": "@lab/multiplayer-server",
+  "name": "@lab/multiplayer-sdk",
   "version": "0.1.0",
   "type": "module",
   "typesVersions": {
@@ -25,16 +25,11 @@
     "format": "oxfmt ."
   },
   "dependencies": {
-    "@lab/multiplayer-shared": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.2.15",
-    "oxfmt": "0.27.0",
-    "oxlint": "1.42.0",
-    "typescript": "^5",
     "zod": "^3.25.46"
   },
-  "peerDependencies": {
-    "bun-types": "*"
+  "devDependencies": {
+    "oxfmt": "0.27.0",
+    "oxlint": "1.42.0",
+    "typescript": "^5"
   }
 }
