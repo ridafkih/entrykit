@@ -1,4 +1,5 @@
 import type { RouteHandler } from "../../utils/route-handler";
+import { notFoundResponse } from "../../shared/http";
 
 export const GET: RouteHandler = (_request, params, { daemonManager }) => {
   const sessionId = params.sessionId!;
@@ -27,7 +28,7 @@ export const DELETE: RouteHandler = (_request, params, { daemonManager }) => {
   const result = daemonManager.stop(sessionId);
 
   if (result.type === "not_found") {
-    return Response.json(result, { status: 404 });
+    return notFoundResponse(`Session ${sessionId} not found`);
   }
 
   return Response.json(result);

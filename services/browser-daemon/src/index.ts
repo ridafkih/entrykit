@@ -1,10 +1,7 @@
 import { join } from "node:path";
-import { createDaemonManager, type DaemonManager } from "./daemon-manager";
+import { config } from "./config/environment";
+import { createDaemonManager, type DaemonManager } from "./utils/daemon-manager";
 import { isHttpMethod, isRouteModule, type RouteContext } from "./utils/route-handler";
-
-const API_PORT = parseInt(process.env.BROWSER_API_PORT ?? "80", 10);
-const BASE_STREAM_PORT = parseInt(process.env.AGENT_BROWSER_STREAM_PORT ?? "9224", 10);
-const PROFILE_DIR = process.env.AGENT_BROWSER_PROFILE_DIR;
 
 const router = new Bun.FileSystemRouter({
   dir: join(import.meta.dirname, "routes"),
@@ -12,17 +9,16 @@ const router = new Bun.FileSystemRouter({
 });
 
 const daemonManager: DaemonManager = createDaemonManager({
-  baseStreamPort: BASE_STREAM_PORT,
-  profileDir: PROFILE_DIR,
+  baseStreamPort: config.baseStreamPort,
+  profileDir: config.profileDir,
 });
 
-// Start the default daemon
 await daemonManager.start("default");
 
 const context: RouteContext = { daemonManager };
 
 Bun.serve({
-  port: API_PORT,
+  port: config.apiPort,
   async fetch(request) {
     const match = router.match(request);
 
@@ -55,7 +51,7 @@ Bun.serve({
   },
 });
 
-console.log(`[Server] Browser daemon listening on port ${API_PORT}`);
+console.log(`[Server] Browser daemon listening on port ${config.apiPort}`);
 
 function gracefulShutdown() {
   console.log("[Server] Shutting down...");

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { RouteHandler } from "../../../utils/route-handler";
 import { navigate } from "../../../utils/agent-browser";
+import { notFoundResponse, badRequestResponse, errorResponse, serviceUnavailableResponse } from "../../../shared/http";
 
 const NavigateBody = z.object({
   url: z.string().url(),
@@ -11,23 +12,23 @@ export const POST: RouteHandler = async (request, params, { daemonManager }) => 
 
   const session = daemonManager.getSession(sessionId);
   if (!session) {
-    return Response.json({ error: "Session not found" }, { status: 404 });
+    return notFoundResponse("Session not found");
   }
 
   if (!daemonManager.isReady(sessionId)) {
-    return Response.json({ error: "Session not ready" }, { status: 503 });
+    return serviceUnavailableResponse("Session not ready");
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+    return badRequestResponse("Invalid JSON body");
   }
 
   const parsed = NavigateBody.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ error: "URL required", details: parsed.error.flatten() }, { status: 400 });
+    return badRequestResponse("URL required");
   }
 
   const { url } = parsed.data;
@@ -41,6 +42,6 @@ export const POST: RouteHandler = async (request, params, { daemonManager }) => 
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`[Navigate] ${sessionId} failed: ${message}`);
-    return Response.json({ error: message }, { status: 500 });
+    return errorResponse(message);
   }
 };

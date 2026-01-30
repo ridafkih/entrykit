@@ -1,13 +1,14 @@
 import { UrlResponse } from "@lab/browser-protocol";
 import type { RouteHandler } from "../../../utils/route-handler";
 import { getCurrentUrl } from "../../../utils/agent-browser";
+import { notFoundResponse, errorResponse } from "../../../shared/http";
 
 export const GET: RouteHandler = async (_request, params, { daemonManager }) => {
   const sessionId = params.sessionId!;
 
   const session = daemonManager.getSession(sessionId);
   if (!session) {
-    return Response.json({ error: "Session not found" }, { status: 404 });
+    return notFoundResponse("Session not found");
   }
 
   try {
@@ -16,6 +17,6 @@ export const GET: RouteHandler = async (_request, params, { daemonManager }) => 
     return Response.json(response);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return errorResponse(message);
   }
 };

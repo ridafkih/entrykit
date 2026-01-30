@@ -1,18 +1,5 @@
-import type { DaemonManager } from "../daemon-manager";
-
-export type HttpMethod = "GET" | "POST" | "DELETE";
-
-export interface RouteContext {
-  daemonManager: DaemonManager;
-}
-
-export type RouteHandler = (
-  request: Request,
-  params: Record<string, string>,
-  context: RouteContext,
-) => Response | Promise<Response>;
-
-export type RouteModule = Partial<Record<HttpMethod, RouteHandler>>;
+export type { HttpMethod, RouteHandler, RouteContext, RouteModule } from "../types/route";
+import type { HttpMethod, RouteModule } from "../types/route";
 
 const HTTP_METHODS: Set<string> = new Set(["GET", "POST", "DELETE"]);
 

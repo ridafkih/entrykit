@@ -1,15 +1,16 @@
 import type { RouteHandler } from "../../../utils/route-handler";
 import { getCurrentUrl } from "../../../utils/agent-browser";
+import { notFoundResponse, badRequestResponse, errorResponse } from "../../../shared/http";
 
 export const POST: RouteHandler = async (_request, params, { daemonManager }) => {
   const sessionId = params.sessionId;
   if (!sessionId) {
-    return Response.json({ error: "Session ID required" }, { status: 400 });
+    return badRequestResponse("Session ID required");
   }
 
   const session = daemonManager.getOrRecoverSession(sessionId);
   if (!session) {
-    return Response.json({ error: "Session not found" }, { status: 404 });
+    return notFoundResponse("Session not found");
   }
 
   try {
@@ -17,6 +18,6 @@ export const POST: RouteHandler = async (_request, params, { daemonManager }) =>
     return Response.json({ sessionId, launched: true, url, port: session.port, ready: session.ready });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return errorResponse(message);
   }
 };
