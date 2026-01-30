@@ -1,17 +1,8 @@
-import { type BrowserSessionState, type CurrentState } from "../types/schema";
-import { computeRequiredAction, type Action } from "../types/state";
-import { type StateStore, type StateStoreOptions } from "./state-store";
-import { type DaemonController } from "./daemon-controller";
+import { type BrowserSessionState, type CurrentState } from "../types/session";
+import { computeRequiredAction, type Action } from "../utils/state-machine";
+import type { StateStore, StateStoreOptions, DaemonController, Reconciler, ReconcilerConfig } from "../types/orchestrator";
 
-export interface ReconcilerConfig {
-  maxRetries: number;
-  getFirstExposedPort?: (sessionId: string) => Promise<number | null>;
-}
-
-export interface Reconciler {
-  reconcileSession(session: BrowserSessionState): Promise<void>;
-  reconcileAll(): Promise<void>;
-}
+export type { Reconciler, ReconcilerConfig } from "../types/orchestrator";
 
 export const createReconciler = (
   stateStore: StateStore,

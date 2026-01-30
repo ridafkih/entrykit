@@ -2,10 +2,7 @@ import {
   type DaemonStatus,
   StatusResponse,
   UrlResponse,
-  connectionFailed,
-  daemonStartFailed,
-  daemonStopFailed,
-  navigationFailed,
+  BrowserError,
 } from "@lab/browser-protocol";
 
 export const start = async (
@@ -21,7 +18,7 @@ export const start = async (
 
   if (!response.ok) {
     const body = await response.text();
-    throw daemonStartFailed(sessionId, `HTTP ${response.status}: ${body}`);
+    throw BrowserError.daemonStartFailed(sessionId, `HTTP ${response.status}: ${body}`);
   }
 
   const data = await response.json();
@@ -35,7 +32,7 @@ export const stop = async (baseUrl: string, sessionId: string): Promise<void> =>
 
   if (!response.ok && response.status !== 404) {
     const body = await response.text();
-    throw daemonStopFailed(sessionId, `HTTP ${response.status}: ${body}`);
+    throw BrowserError.daemonStopFailed(sessionId, `HTTP ${response.status}: ${body}`);
   }
 };
 
@@ -48,7 +45,7 @@ export const navigate = async (baseUrl: string, sessionId: string, url: string):
 
   if (!response.ok) {
     const body = await response.text();
-    throw navigationFailed(sessionId, url, `HTTP ${response.status}: ${body}`);
+    throw BrowserError.navigationFailed(sessionId, url, `HTTP ${response.status}: ${body}`);
   }
 };
 
@@ -61,7 +58,7 @@ export const getStatus = async (
     response = await fetch(`${baseUrl}/daemons/${sessionId}`);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    throw connectionFailed(sessionId, message);
+    throw BrowserError.connectionFailed(sessionId, message);
   }
 
   if (response.status === 404) {
@@ -70,7 +67,7 @@ export const getStatus = async (
 
   if (!response.ok) {
     const body = await response.text();
-    throw connectionFailed(sessionId, `HTTP ${response.status}: ${body}`);
+    throw BrowserError.connectionFailed(sessionId, `HTTP ${response.status}: ${body}`);
   }
 
   let data: unknown;
@@ -78,12 +75,15 @@ export const getStatus = async (
     data = await response.json();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown parse error";
-    throw connectionFailed(sessionId, `Invalid JSON response: ${message}`);
+    throw BrowserError.connectionFailed(sessionId, `Invalid JSON response: ${message}`);
   }
 
   const parsed = StatusResponse.safeParse(data);
   if (!parsed.success) {
-    throw connectionFailed(sessionId, `Invalid status response: ${parsed.error.message}`);
+    throw BrowserError.connectionFailed(
+      sessionId,
+      `Invalid status response: ${parsed.error.message}`,
+    );
   }
 
   return {
@@ -99,7 +99,7 @@ export const getCurrentUrl = async (baseUrl: string, sessionId: string): Promise
     response = await fetch(`${baseUrl}/daemons/${sessionId}/url`);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    throw connectionFailed(sessionId, message);
+    throw BrowserError.connectionFailed(sessionId, message);
   }
 
   if (response.status === 404) {
@@ -108,7 +108,7 @@ export const getCurrentUrl = async (baseUrl: string, sessionId: string): Promise
 
   if (!response.ok) {
     const body = await response.text();
-    throw connectionFailed(sessionId, `HTTP ${response.status}: ${body}`);
+    throw BrowserError.connectionFailed(sessionId, `HTTP ${response.status}: ${body}`);
   }
 
   let data: unknown;
@@ -116,12 +116,12 @@ export const getCurrentUrl = async (baseUrl: string, sessionId: string): Promise
     data = await response.json();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown parse error";
-    throw connectionFailed(sessionId, `Invalid JSON response: ${message}`);
+    throw BrowserError.connectionFailed(sessionId, `Invalid JSON response: ${message}`);
   }
 
   const parsed = UrlResponse.safeParse(data);
   if (!parsed.success) {
-    throw connectionFailed(sessionId, `Invalid URL response: ${parsed.error.message}`);
+    throw BrowserError.connectionFailed(sessionId, `Invalid URL response: ${parsed.error.message}`);
   }
 
   return parsed.data.url;
@@ -135,12 +135,12 @@ export const launch = async (baseUrl: string, sessionId: string): Promise<void> 
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    throw connectionFailed(sessionId, message);
+    throw BrowserError.connectionFailed(sessionId, message);
   }
 
   if (!response.ok) {
     const body = await response.text();
-    throw connectionFailed(sessionId, `HTTP ${response.status}: ${body}`);
+    throw BrowserError.connectionFailed(sessionId, `HTTP ${response.status}: ${body}`);
   }
 };
 

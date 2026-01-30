@@ -1,9 +1,6 @@
-import { type Reconciler } from "./reconciler";
+import type { Reconciler, ReconcilerLoop } from "../types/orchestrator";
 
-export interface ReconcilerLoop {
-  start(): void;
-  stop(): void;
-}
+export type { ReconcilerLoop } from "../types/orchestrator";
 
 export const createReconcilerLoop = (
   reconciler: Reconciler,

@@ -1,36 +1,13 @@
-import { sessionNotFound, validationFailed } from "../types/errors";
+import { BrowserError } from "../types/error";
 import {
   type BrowserSessionState,
   type DesiredState,
   type CurrentState,
   BrowserSessionState as BrowserSessionStateSchema,
-} from "../types/schema";
+} from "../types/session";
+import type { StateStore, StateStoreOptions } from "../types/orchestrator";
 
-export interface StateStoreOptions {
-  streamPort?: number | null;
-  errorMessage?: string | null;
-  retryCount?: number;
-  lastUrl?: string | null;
-}
-
-export interface StateStore {
-  getState(sessionId: string): Promise<BrowserSessionState | null>;
-  setState(state: BrowserSessionState): Promise<void>;
-  setDesiredState(sessionId: string, desiredState: DesiredState): Promise<BrowserSessionState>;
-  setCurrentState(
-    sessionId: string,
-    currentState: CurrentState,
-    options?: StateStoreOptions,
-  ): Promise<BrowserSessionState>;
-  transitionState(
-    sessionId: string,
-    transition: (current: BrowserSessionState) => BrowserSessionState,
-  ): Promise<BrowserSessionState>;
-  getAllSessions(): Promise<BrowserSessionState[]>;
-  deleteSession(sessionId: string): Promise<void>;
-  updateHeartbeat(sessionId: string): Promise<void>;
-  setLastUrl(sessionId: string, url: string | null): Promise<void>;
-}
+export type { StateStore, StateStoreOptions } from "../types/orchestrator";
 
 export const createInMemoryStateStore = (): StateStore => {
   const sessions = new Map<string, BrowserSessionState>();
@@ -42,7 +19,7 @@ export const createInMemoryStateStore = (): StateStore => {
   const setState = async (state: BrowserSessionState): Promise<void> => {
     const parsed = BrowserSessionStateSchema.safeParse(state);
     if (!parsed.success) {
-      throw validationFailed(parsed.error.message, state.sessionId);
+      throw BrowserError.validationFailed(parsed.error.message, state.sessionId);
     }
     sessions.set(state.sessionId, parsed.data);
   };
@@ -80,7 +57,7 @@ export const createInMemoryStateStore = (): StateStore => {
   ): Promise<BrowserSessionState> => {
     const existing = sessions.get(sessionId);
     if (!existing) {
-      throw sessionNotFound(sessionId);
+      throw BrowserError.sessionNotFound(sessionId);
     }
 
     const now = new Date();
@@ -104,13 +81,13 @@ export const createInMemoryStateStore = (): StateStore => {
   ): Promise<BrowserSessionState> => {
     const existing = sessions.get(sessionId);
     if (!existing) {
-      throw sessionNotFound(sessionId);
+      throw BrowserError.sessionNotFound(sessionId);
     }
 
     const newState = transition(existing);
     const parsed = BrowserSessionStateSchema.safeParse(newState);
     if (!parsed.success) {
-      throw validationFailed(parsed.error.message, sessionId);
+      throw BrowserError.validationFailed(parsed.error.message, sessionId);
     }
 
     sessions.set(sessionId, parsed.data);
@@ -128,7 +105,7 @@ export const createInMemoryStateStore = (): StateStore => {
   const updateHeartbeat = async (sessionId: string): Promise<void> => {
     const existing = sessions.get(sessionId);
     if (!existing) {
-      throw sessionNotFound(sessionId);
+      throw BrowserError.sessionNotFound(sessionId);
     }
 
     sessions.set(sessionId, {
@@ -141,7 +118,7 @@ export const createInMemoryStateStore = (): StateStore => {
   const setLastUrl = async (sessionId: string, url: string | null): Promise<void> => {
     const existing = sessions.get(sessionId);
     if (!existing) {
-      throw sessionNotFound(sessionId);
+      throw BrowserError.sessionNotFound(sessionId);
     }
 
     sessions.set(sessionId, {

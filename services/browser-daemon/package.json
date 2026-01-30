@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "start": "bun src/server.ts",
+    "start": "bun src/index.ts",
     "types": "tsc --noEmit"
   },
   "dependencies": {

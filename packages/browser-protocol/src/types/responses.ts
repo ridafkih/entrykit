@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BrowserErrorKind } from "../types/errors";
+import { BrowserErrorKind } from "./error";
 
 const BrowserErrorSchema = z.object({
   kind: BrowserErrorKind,

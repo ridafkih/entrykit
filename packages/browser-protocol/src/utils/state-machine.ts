@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type CurrentState, type DesiredState } from "./schema";
+import { type CurrentState, type DesiredState } from "../types/session";
 
 export const Action = z.enum([
   "StartDaemon",

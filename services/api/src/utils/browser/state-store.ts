@@ -8,8 +8,7 @@ import {
   BrowserSessionState as BrowserSessionStateSchema,
   DesiredState,
   CurrentState,
-  sessionNotFound,
-  validationFailed,
+  BrowserError,
 } from "@lab/browser-protocol";
 
 const mapDbToState = (session: typeof browserSessions.$inferSelect): BrowserSessionState => ({
@@ -38,7 +37,7 @@ export const getState = async (sessionId: string): Promise<BrowserSessionState |
 export const setState = async (state: BrowserSessionState): Promise<void> => {
   const parsed = BrowserSessionStateSchema.safeParse(state);
   if (!parsed.success) {
-    throw validationFailed(parsed.error.message, state.sessionId);
+    throw BrowserError.validationFailed(parsed.error.message, state.sessionId);
   }
 
   await db
@@ -79,7 +78,7 @@ export const setDesiredState = async (
     .limit(1);
 
   if (!parentSession) {
-    throw sessionNotFound(sessionId);
+    throw BrowserError.sessionNotFound(sessionId);
   }
 
   const [session] = await db
@@ -99,7 +98,7 @@ export const setDesiredState = async (
     .returning();
 
   if (!session) {
-    throw sessionNotFound(sessionId);
+    throw BrowserError.sessionNotFound(sessionId);
   }
 
   return mapDbToState(session);
@@ -135,7 +134,7 @@ export const setCurrentState = async (
     .returning();
 
   if (!session) {
-    throw sessionNotFound(sessionId);
+    throw BrowserError.sessionNotFound(sessionId);
   }
 
   return mapDbToState(session);
@@ -147,13 +146,13 @@ export const transitionState = async (
 ): Promise<BrowserSessionState> => {
   const current = await getState(sessionId);
   if (!current) {
-    throw sessionNotFound(sessionId);
+    throw BrowserError.sessionNotFound(sessionId);
   }
 
   const newState = transition(current);
   const parsed = BrowserSessionStateSchema.safeParse(newState);
   if (!parsed.success) {
-    throw validationFailed(parsed.error.message, sessionId);
+    throw BrowserError.validationFailed(parsed.error.message, sessionId);
   }
 
   await setState(parsed.data);
@@ -180,7 +179,7 @@ export const updateHeartbeat = async (sessionId: string): Promise<void> => {
     .returning();
 
   if (!session) {
-    throw sessionNotFound(sessionId);
+    throw BrowserError.sessionNotFound(sessionId);
   }
 };
 
@@ -195,7 +194,7 @@ export const setLastUrl = async (sessionId: string, url: string | null): Promise
     .returning();
 
   if (!session) {
-    throw sessionNotFound(sessionId);
+    throw BrowserError.sessionNotFound(sessionId);
   }
 };
 

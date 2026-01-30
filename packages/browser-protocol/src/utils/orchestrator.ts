@@ -1,40 +1,24 @@
-import { type BrowserSessionState, type SessionSnapshot } from "../types/schema";
-import { type StateStore } from "./state-store";
-import { type DaemonController } from "./daemon-controller";
+import { type BrowserSessionState, type SessionSnapshot } from "../types/session";
+import type {
+  StateStore,
+  DaemonController,
+  Orchestrator,
+  OrchestratorConfig,
+  StateChangeHandler,
+  ErrorHandler,
+} from "../types/orchestrator";
 import { createReconciler } from "./reconciler";
-import { createReconcilerLoop, type ReconcilerLoop } from "./reconciler-loop";
-import { createSessionManager, type SessionManager } from "./session-manager";
+import { createReconcilerLoop } from "./reconciler-loop";
+import { createSessionManager } from "./session-manager";
 
-export interface OrchestratorConfig {
-  maxRetries: number;
-  reconcileIntervalMs: number;
-  cleanupDelayMs: number;
-  getFirstExposedPort?: (sessionId: string) => Promise<number | null>;
-}
-
-export type StateChangeHandler = (sessionId: string, state: BrowserSessionState) => void;
-export type ErrorHandler = (error: unknown) => void;
-
-export interface Orchestrator {
-  subscribe(sessionId: string): Promise<SessionSnapshot>;
-  unsubscribe(sessionId: string): Promise<SessionSnapshot>;
-  forceStop(sessionId: string): Promise<void>;
-  getSnapshot(sessionId: string): Promise<SessionSnapshot>;
-  getCachedFrame(sessionId: string): string | null;
-  setCachedFrame(sessionId: string, frame: string): void;
-  launchBrowser(sessionId: string): Promise<void>;
-  startReconciler(): void;
-  stopReconciler(): void;
-  onStateChange(handler: StateChangeHandler): void;
-  onError(handler: ErrorHandler): void;
-}
+export type { Orchestrator, OrchestratorConfig, StateChangeHandler, ErrorHandler } from "../types/orchestrator";
 
 export const createOrchestrator = (
   stateStore: StateStore,
   daemonController: DaemonController,
   config: OrchestratorConfig,
 ): Orchestrator => {
-  const sessions: SessionManager = createSessionManager();
+  const sessions = createSessionManager();
   const stateChangeHandlers: StateChangeHandler[] = [];
   const errorHandlers: ErrorHandler[] = [];
 
@@ -62,7 +46,7 @@ export const createOrchestrator = (
     getFirstExposedPort: config.getFirstExposedPort,
   });
 
-  const reconcilerLoop: ReconcilerLoop = createReconcilerLoop(
+  const reconcilerLoop = createReconcilerLoop(
     reconciler,
     config.reconcileIntervalMs,
     notifyError,

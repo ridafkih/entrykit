@@ -43,3 +43,11 @@ export const SessionSnapshot = z.object({
   subscriberCount: z.number().int().nonnegative(),
 });
 export type SessionSnapshot = z.infer<typeof SessionSnapshot>;
+
+export interface FrameReceiver {
+  close: () => void;
+}
+
+export interface FrameReceiverConfig {
+  wsHost: string;
+}

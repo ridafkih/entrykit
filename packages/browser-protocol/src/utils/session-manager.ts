@@ -1,20 +1,12 @@
+import type { SessionManager } from "../types/orchestrator";
+
+export type { SessionManager } from "../types/orchestrator";
+
 interface LocalSessionState {
   subscriberCount: number;
   cleanupTimer: ReturnType<typeof setTimeout> | null;
   lastFrame: string | null;
   lastFrameTime: number | null;
-}
-
-export interface SessionManager {
-  getSubscriberCount(sessionId: string): number;
-  incrementSubscribers(sessionId: string): number;
-  decrementSubscribers(sessionId: string): number;
-  setCleanupTimer(sessionId: string, callback: () => void, delayMs: number): void;
-  clearCleanupTimer(sessionId: string): void;
-  resetSession(sessionId: string): void;
-  delete(sessionId: string): void;
-  getFrame(sessionId: string): string | null;
-  setFrame(sessionId: string, frame: string): void;
 }
 
 export const createSessionManager = (): SessionManager => {
