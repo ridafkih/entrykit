@@ -1,5 +1,6 @@
 import { createServer } from "net";
 import type { PortAllocator as IPortAllocator, PortAllocatorOptions } from "@lab/sandbox-sdk";
+import { SandboxError, DEFAULT_PORT_RANGE } from "@lab/sandbox-sdk";
 
 export class PortAllocator implements IPortAllocator {
   private minPort: number;
@@ -7,8 +8,8 @@ export class PortAllocator implements IPortAllocator {
   private allocated = new Set<number>();
 
   constructor(options: PortAllocatorOptions = {}) {
-    this.minPort = options.minPort ?? 32768;
-    this.maxPort = options.maxPort ?? 60999;
+    this.minPort = options.minPort ?? DEFAULT_PORT_RANGE.min;
+    this.maxPort = options.maxPort ?? DEFAULT_PORT_RANGE.max;
   }
 
   async allocate(count = 1): Promise<number[]> {
@@ -45,7 +46,7 @@ export class PortAllocator implements IPortAllocator {
       if (available) return port;
     }
 
-    throw new Error(`No available ports in range ${this.minPort}-${this.maxPort}`);
+    throw SandboxError.portRangeExhausted(this.minPort, this.maxPort);
   }
 
   private isPortAvailable(port: number): Promise<boolean> {

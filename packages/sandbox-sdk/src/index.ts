@@ -1,3 +1,4 @@
+// Types
 export type {
   ContainerCreateOptions,
   PortMapping,
@@ -7,9 +8,33 @@ export type {
   ExitResult,
   LogChunk,
   NetworkCreateOptions,
-  SandboxProvider,
-  PortAllocator,
-  PortAllocatorOptions,
   ExecOptions,
   ExecResult,
+  PortAllocator,
+  PortAllocatorOptions,
+  SandboxProvider,
 } from "./types";
+
+// Schemas
+export {
+  PortMappingSchema,
+  VolumeBindingSchema,
+  ContainerCreateOptionsSchema,
+  ContainerStateSchema,
+  NetworkCreateOptionsSchema,
+  PortAllocatorOptionsSchema,
+} from "./schemas";
+
+// Error
+export { SandboxError, SandboxErrorKind } from "./error";
+
+// Guards
+export { isContainerState, isSandboxError } from "./guards";
+
+// Constants
+export {
+  VALID_CONTAINER_STATES,
+  DEFAULT_PORT_RANGE,
+  DEFAULT_STOP_TIMEOUT,
+  DEFAULT_PROTOCOL,
+} from "./constants";

@@ -3,56 +3,27 @@ import type {
   SandboxProvider,
   ContainerCreateOptions,
   ContainerInfo,
-  ContainerState,
   ExitResult,
   LogChunk,
   NetworkCreateOptions,
   ExecOptions,
   ExecResult,
 } from "@lab/sandbox-sdk";
-
-export type DockerContainerEventAction =
-  | "start"
-  | "stop"
-  | "die"
-  | "kill"
-  | "restart"
-  | "pause"
-  | "unpause"
-  | "oom"
-  | "health_status";
-
-export interface DockerContainerEvent {
-  containerId: string;
-  action: DockerContainerEventAction;
-  attributes: Record<string, string>;
-  time: number;
-}
-
-const VALID_CONTAINER_STATES: readonly string[] = [
-  "created",
-  "running",
-  "paused",
-  "restarting",
-  "removing",
-  "exited",
-  "dead",
-];
-
-function isContainerState(status: string): status is ContainerState {
-  return VALID_CONTAINER_STATES.includes(status);
-}
-
-function toContainerState(status: string): ContainerState {
-  return isContainerState(status) ? status : "dead";
-}
-
-export interface DockerClientOptions {
-  socketPath?: string;
-  host?: string;
-  port?: number;
-  protocol?: "http" | "https";
-}
+import { SandboxError } from "@lab/sandbox-sdk";
+import type {
+  DockerClientOptions,
+  DockerContainerEvent,
+  DockerContainerEventAction,
+} from "../types";
+import { isNotFoundError, isNotRunningError } from "../utils";
+import { toContainerState } from "../utils";
+import {
+  DEFAULT_SOCKET_PATH,
+  DEFAULT_DOCKER_PORT,
+  DEFAULT_DOCKER_PROTOCOL,
+  ALPINE_IMAGE,
+  VOLUME_CLONE_COMMAND,
+} from "../constants";
 
 export class DockerClient implements SandboxProvider {
   private docker: Dockerode;
@@ -61,12 +32,12 @@ export class DockerClient implements SandboxProvider {
     if (options.host) {
       this.docker = new Dockerode({
         host: options.host,
-        port: options.port ?? 2375,
-        protocol: options.protocol ?? "http",
+        port: options.port ?? DEFAULT_DOCKER_PORT,
+        protocol: options.protocol ?? DEFAULT_DOCKER_PROTOCOL,
       });
     } else {
       this.docker = new Dockerode({
-        socketPath: options.socketPath ?? "/var/run/docker.sock",
+        socketPath: options.socketPath ?? DEFAULT_SOCKET_PATH,
       });
     }
   }
@@ -288,8 +259,8 @@ export class DockerClient implements SandboxProvider {
     await this.createVolume(target);
 
     const containerId = await this.createContainer({
-      image: "alpine:latest",
-      command: ["sh", "-c", "cp -a /source/. /target/"],
+      image: ALPINE_IMAGE,
+      command: VOLUME_CLONE_COMMAND,
       volumes: [
         { source, target: "/source", readonly: true },
         { source: target, target: "/target" },
@@ -300,7 +271,7 @@ export class DockerClient implements SandboxProvider {
       await this.startContainer(containerId);
       const { exitCode } = await this.waitContainer(containerId);
       if (exitCode !== 0) {
-        throw new Error(`Volume clone failed with exit code ${exitCode}`);
+        throw SandboxError.volumeCloneFailed(source, target, `exit code ${exitCode}`);
       }
     } finally {
       await this.removeContainer(containerId, true);
@@ -408,15 +379,29 @@ export class DockerClient implements SandboxProvider {
   }
 
   async *streamContainerEvents(options?: {
-    filters?: { label?: string[] };
+    filters?: { label?: string[]; container?: string[] };
   }): AsyncGenerator<DockerContainerEvent> {
     const filters: Record<string, string[]> = {
       type: ["container"],
-      event: ["start", "stop", "die", "kill", "restart", "pause", "unpause", "oom", "health_status"],
+      event: [
+        "start",
+        "stop",
+        "die",
+        "kill",
+        "restart",
+        "pause",
+        "unpause",
+        "oom",
+        "health_status",
+      ],
     };
 
     if (options?.filters?.label) {
       filters.label = options.filters.label;
+    }
+
+    if (options?.filters?.container) {
+      filters.container = options.filters.container;
     }
 
     const stream = await this.docker.getEvents({ filters });
@@ -441,16 +426,4 @@ export class DockerClient implements SandboxProvider {
       }
     }
   }
-}
-
-function hasStatusCode(err: unknown): err is { statusCode: number } {
-  return typeof err === "object" && err !== null && "statusCode" in err;
-}
-
-function isNotFoundError(err: unknown): boolean {
-  return hasStatusCode(err) && err.statusCode === 404;
-}
-
-function isNotRunningError(err: unknown): boolean {
-  return hasStatusCode(err) && err.statusCode === 304;
 }

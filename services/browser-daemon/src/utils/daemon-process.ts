@@ -1,4 +1,4 @@
-import { cleanupSocket, getSocketDir, getPidFile } from "agent-browser";
+import { cleanupSocket, getSocketDir, getPidFile, isDaemonRunning } from "agent-browser";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Subprocess } from "bun";
@@ -61,4 +61,16 @@ export function killByPidFile(sessionId: string): boolean {
     console.warn(`[DaemonProcess] Failed to kill process for ${sessionId}:`, error);
     return false;
   }
+}
+
+export async function waitForSocket(sessionId: string, timeoutMs = 3000): Promise<void> {
+  const start = Date.now();
+  const pollInterval = 50;
+
+  while (Date.now() - start < timeoutMs) {
+    if (isDaemonRunning(sessionId)) return;
+    await Bun.sleep(pollInterval);
+  }
+
+  throw new Error(`Timeout waiting for daemon socket: ${sessionId}`);
 }

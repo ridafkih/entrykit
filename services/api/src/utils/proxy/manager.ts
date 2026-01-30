@@ -158,13 +158,25 @@ export class CaddyProxyManager implements ProxyManager {
     };
   }
 
-  private async waitForCaddy(maxAttempts = 30, intervalMs = 1000): Promise<void> {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      if (await this.caddy.isHealthy()) {
+  private async waitForCaddy(timeoutMs = 30000): Promise<void> {
+    if (await this.caddy.isHealthy()) {
+      return;
+    }
+
+    const startTime = Date.now();
+
+    for await (const event of this.docker.streamContainerEvents({
+      filters: { container: [this.caddyContainerId!] },
+    })) {
+      if (Date.now() - startTime > timeoutMs) {
+        throw new Error("Caddy failed to become healthy: timeout");
+      }
+
+      if (event.action === "health_status: healthy") {
         return;
       }
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
-    throw new Error(`Caddy failed to become healthy after ${maxAttempts} attempts`);
+
+    throw new Error("Caddy container event stream ended unexpectedly");
   }
 }
