@@ -28,6 +28,8 @@
     "zod": "^3.25.46"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.8",
+    "@types/node": "^25.1.0",
     "oxfmt": "0.27.0",
     "oxlint": "1.42.0",
     "typescript": "^5"

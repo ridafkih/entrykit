@@ -58,7 +58,7 @@ export const schema = defineSchema({
     }),
 
     sessionMetadata: defineChannel({
-      path: "session/{uuid}/metadata",
+      path: "session/:uuid/metadata",
       snapshot: z.object({
         title: z.string(),
         lastMessage: z.string().optional(),
@@ -72,7 +72,7 @@ export const schema = defineSchema({
     }),
 
     sessionContainers: defineChannel({
-      path: "session/{uuid}/containers",
+      path: "session/:uuid/containers",
       snapshot: z.array(
         z.object({
           id: z.string(),
@@ -92,7 +92,7 @@ export const schema = defineSchema({
     }),
 
     sessionTyping: defineChannel({
-      path: "session/{uuid}/typing",
+      path: "session/:uuid/typing",
       snapshot: z.array(
         z.object({
           userId: z.string(),
@@ -103,7 +103,7 @@ export const schema = defineSchema({
     }),
 
     sessionPromptEngineers: defineChannel({
-      path: "session/{uuid}/prompt-engineers",
+      path: "session/:uuid/prompt-engineers",
       snapshot: z.array(
         z.object({
           id: z.string(),
@@ -115,7 +115,7 @@ export const schema = defineSchema({
     }),
 
     sessionChangedFiles: defineChannel({
-      path: "session/{uuid}/changed_files",
+      path: "session/:uuid/changed_files",
       snapshot: z.array(ReviewableFileSchema),
       default: [],
       delta: z.object({
@@ -125,7 +125,7 @@ export const schema = defineSchema({
     }),
 
     sessionBranches: defineChannel({
-      path: "session/{uuid}/branches",
+      path: "session/:uuid/branches",
       snapshot: z.array(
         z.object({
           id: z.string(),
@@ -138,7 +138,7 @@ export const schema = defineSchema({
     }),
 
     sessionLinks: defineChannel({
-      path: "session/{uuid}/links",
+      path: "session/:uuid/links",
       snapshot: z.array(
         z.object({
           id: z.string(),
@@ -150,14 +150,14 @@ export const schema = defineSchema({
     }),
 
     sessionLogs: defineChannel({
-      path: "session/{uuid}/logs",
+      path: "session/:uuid/logs",
       snapshot: z.array(LogSourceSchema),
       default: [],
       event: LogEntrySchema,
     }),
 
     sessionMessages: defineChannel({
-      path: "session/{uuid}/messages",
+      path: "session/:uuid/messages",
       snapshot: z.array(z.never()),
       default: [],
       event: z.object({
@@ -170,7 +170,7 @@ export const schema = defineSchema({
     }),
 
     sessionBrowserState: defineChannel({
-      path: "session/{uuid}/browser-state",
+      path: "session/:uuid/browser-state",
       snapshot: z.object({
         desiredState: z.enum(["running", "stopped"]),
         currentState: z.enum([
@@ -196,7 +196,7 @@ export const schema = defineSchema({
     }),
 
     sessionBrowserFrames: defineChannel({
-      path: "session/{uuid}/browser-frames",
+      path: "session/:uuid/browser-frames",
       snapshot: z.object({
         lastFrame: z.string().nullable(),
         timestamp: z.number().nullable(),
@@ -210,7 +210,7 @@ export const schema = defineSchema({
     }),
 
     sessionBrowserInput: defineChannel({
-      path: "session/{uuid}/browser-input",
+      path: "session/:uuid/browser-input",
       snapshot: z.object({}),
       default: {},
       event: z.discriminatedUnion("type", [
