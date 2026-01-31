@@ -71,6 +71,9 @@ export function createHooks<S extends Schema>(schema: S) {
         throw new Error(`Unknown channel: ${channelName}`);
       }
       const params = args[0] ?? {};
+      const hasEmptyParams =
+        hasParams(channel.path) &&
+        Object.values(params).some((v) => v === "" || v === null || v === undefined);
 
       const resolvedPath = useMemo(() => {
         if (hasParams(channel.path)) {
@@ -83,6 +86,8 @@ export function createHooks<S extends Schema>(schema: S) {
       const [state, setState] = useAtom(stateAtom);
 
       useEffect(() => {
+        if (hasEmptyParams) return;
+
         setState({ status: "connecting" });
 
         const unsubscribe = connection.subscribe(resolvedPath, (message) => {
@@ -104,7 +109,11 @@ export function createHooks<S extends Schema>(schema: S) {
         return () => {
           unsubscribe();
         };
-      }, [resolvedPath, setState]);
+      }, [resolvedPath, setState, hasEmptyParams]);
+
+      if (hasEmptyParams) {
+        return channel.default;
+      }
 
       if (state.status === "connected") {
         return parseSnapshot(channel, state.data);
