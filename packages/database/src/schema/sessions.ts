@@ -6,7 +6,7 @@ export const sessions = pgTable("sessions", {
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
-  title: text("title").notNull().default("New Session"),
+  title: text("title"),
   opencodeSessionId: text("opencode_session_id"),
   status: text("status").notNull().default("running"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

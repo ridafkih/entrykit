@@ -1,6 +1,6 @@
 import { docker } from "../../clients/docker";
 import { config } from "../../config/environment";
-import { formatNetworkName, formatSessionTitle } from "../../types/session";
+import { formatNetworkName } from "../../types/session";
 import { findSessionContainersBySessionId } from "../repositories/container.repository";
 import { deleteSession, findSessionById } from "../repositories/session.repository";
 import { proxyManager, isProxyInitialized } from "../proxy";
@@ -60,7 +60,7 @@ export async function cleanupSession(
     session: {
       id: session.id,
       projectId: session.projectId,
-      title: formatSessionTitle(session.id),
+      title: session.title,
     },
   });
 }

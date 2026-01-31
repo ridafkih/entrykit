@@ -1,7 +1,7 @@
 import { config } from "../../config/environment";
 import { isContainerStatus } from "../../types/container";
 import { getChangeType } from "../../types/file";
-import { formatSessionTitle, formatProxyUrl } from "../../types/session";
+import { formatProxyUrl } from "../../types/session";
 import { findProjectSummaries } from "../repositories/project.repository";
 import { findAllSessionSummaries, getSessionOpencodeId } from "../repositories/session.repository";
 import {
@@ -20,7 +20,7 @@ export async function loadSessions() {
   const sessions = await findAllSessionSummaries();
   return sessions.map((session) => ({
     ...session,
-    title: formatSessionTitle(session.id),
+    title: session.title ?? null,
   }));
 }
 

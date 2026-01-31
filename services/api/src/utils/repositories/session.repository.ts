@@ -59,9 +59,11 @@ export async function getAllSessionsWithOpencodeId(): Promise<
     .from(sessions);
 }
 
-export async function findAllSessionSummaries(): Promise<{ id: string; projectId: string }[]> {
+export async function findAllSessionSummaries(): Promise<
+  { id: string; projectId: string; title: string | null }[]
+> {
   return db
-    .select({ id: sessions.id, projectId: sessions.projectId })
+    .select({ id: sessions.id, projectId: sessions.projectId, title: sessions.title })
     .from(sessions)
     .where(ne(sessions.status, "deleting"));
 }

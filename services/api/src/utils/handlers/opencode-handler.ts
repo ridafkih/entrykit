@@ -113,6 +113,7 @@ export function createOpenCodeProxyHandler(promptService: PromptService): OpenCo
       method: request.method,
       headers: forwardHeaders,
       body,
+      signal: request.signal,
       ...(body ? { duplex: "half" } : {}),
     });
 

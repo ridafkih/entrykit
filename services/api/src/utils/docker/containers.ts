@@ -6,7 +6,6 @@ import {
   formatContainerName,
   formatUniqueHostname,
   formatNetworkAlias,
-  formatSessionTitle,
 } from "../../types/session";
 import {
   findContainersByProjectId,
@@ -156,6 +155,6 @@ async function handleInitializationError(
 
   publisher.publishDelta("sessions", {
     type: "remove",
-    session: { id: sessionId, projectId, title: formatSessionTitle(sessionId) },
+    session: { id: sessionId, projectId, title: null },
   });
 }

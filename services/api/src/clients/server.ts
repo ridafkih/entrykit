@@ -67,14 +67,14 @@ const bootstrap = async () => {
 
   const server = Bun.serve<WebSocketData<Auth>>({
     port: config.apiPort,
-    idleTimeout: 0,
+    idleTimeout: 255,
     websocket: websocketHandler,
     async fetch(request): Promise<Response | undefined> {
-      const url = new URL(request.url);
-
       if (request.method === "OPTIONS") {
         return optionsResponse();
       }
+
+      const url = new URL(request.url);
 
       if (url.pathname === "/ws") {
         return upgrade(request, server);

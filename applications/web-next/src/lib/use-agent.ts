@@ -128,10 +128,12 @@ export function useAgent(labSessionId: string): UseAgentResult {
   const [isSending, setIsSending] = useState(false);
   const currentOpencodeSessionRef = useRef<string | null>(null);
 
+  const isTemp = labSessionId.startsWith("temp-");
+
   const opencodeClient = useMemo(() => {
-    if (!labSessionId) return null;
+    if (!labSessionId || isTemp) return null;
     return createSessionClient(labSessionId);
-  }, [labSessionId]);
+  }, [labSessionId, isTemp]);
 
   useEffect(() => {
     setOpencodeSessionId(null);
@@ -148,7 +150,7 @@ export function useAgent(labSessionId: string): UseAgentResult {
 
     setMessages([]);
 
-    if (!labSessionId || !opencodeClient) {
+    if (!labSessionId || isTemp || !opencodeClient) {
       setIsLoading(false);
       return;
     }

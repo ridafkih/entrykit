@@ -1,5 +1,4 @@
 import { docker } from "../../clients/docker";
-import { formatSessionTitle } from "../../types/session";
 import { findSessionContainersBySessionId } from "../repositories/container.repository";
 import {
   deleteSession,
@@ -25,7 +24,7 @@ export async function cleanupSession(
     session: {
       id: session.id,
       projectId: session.projectId,
-      title: formatSessionTitle(session.id),
+      title: session.title,
     },
   });
 
