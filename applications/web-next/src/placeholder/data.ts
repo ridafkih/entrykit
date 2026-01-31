@@ -1,7 +1,15 @@
-export const navItems = [
-  { label: "Projects", href: "/projects" },
+import type { AppViewType } from "@/components/app-view";
+
+type NavItem = {
+  label: string;
+  href: string;
+  view?: AppViewType;
+};
+
+export const navItems: NavItem[] = [
+  { label: "Projects", href: "/projects", view: "projects" },
   { label: "Team", href: "/team" },
-  { label: "Settings", href: "/settings" },
+  { label: "Settings", href: "/settings", view: "settings" },
 ];
 
 type Session = {

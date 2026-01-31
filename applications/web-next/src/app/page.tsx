@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { AppView, useAppView } from "@/components/app-view";
 import { Nav } from "@/components/nav";
 import { Chat } from "@/components/chat";
+import { Settings } from "@/components/settings";
 import { MessagePart } from "@/components/message-part";
 import { Orchestration, useOrchestration } from "@/components/orchestration";
 import { ProjectNavigator } from "@/components/project-navigator-list";
@@ -414,31 +416,52 @@ function PromptArea() {
   );
 }
 
+function SettingsView() {
+  return (
+    <Settings.Frame>
+      <Settings.Header />
+      <Settings.Content />
+    </Settings.Frame>
+  );
+}
+
+function AppViewContent({ selected }: { selected: string | null }) {
+  const { view } = useAppView();
+
+  if (view === "settings") {
+    return <SettingsView />;
+  }
+
+  return (
+    <div className="flex h-full">
+      <div className="flex-1 min-w-0 border-r border-border">
+        <ConversationView sessionId={selected} />
+      </div>
+      <div className="min-w-64 shrink-0">
+        <SessionInfoView />
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   return (
-    <Orchestration.Provider>
-      <div className="flex flex-col h-screen">
-        <Nav items={navItems} activeHref="/projects" />
-        <SplitPane.Root>
-          <SplitPane.Primary>
-            <ProjectNavigatorView>
-              <PromptArea />
-            </ProjectNavigatorView>
-          </SplitPane.Primary>
-          <SplitPane.Secondary>
-            {(selected) => (
-              <div className="flex h-full">
-                <div className="flex-1 min-w-0 border-r border-border">
-                  <ConversationView sessionId={selected} />
-                </div>
-                <div className="min-w-64 shrink-0">
-                  <SessionInfoView />
-                </div>
-              </div>
-            )}
-          </SplitPane.Secondary>
-        </SplitPane.Root>
-      </div>
-    </Orchestration.Provider>
+    <AppView.Provider>
+      <Orchestration.Provider>
+        <div className="flex flex-col h-screen">
+          <Nav items={navItems} />
+          <SplitPane.Root>
+            <SplitPane.Primary>
+              <ProjectNavigatorView>
+                <PromptArea />
+              </ProjectNavigatorView>
+            </SplitPane.Primary>
+            <SplitPane.Secondary>
+              {(selected) => <AppViewContent selected={selected} />}
+            </SplitPane.Secondary>
+          </SplitPane.Root>
+        </div>
+      </Orchestration.Provider>
+    </AppView.Provider>
   );
 }

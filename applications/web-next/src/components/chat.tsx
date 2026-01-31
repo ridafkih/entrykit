@@ -3,6 +3,7 @@
 import { createContext, use, useState, type ReactNode } from "react";
 import { tv } from "tailwind-variants";
 import { TextAreaGroup } from "./textarea-group";
+import { Tabs, useTabs } from "./tabs";
 
 type ChatRole = "user" | "assistant";
 
@@ -80,21 +81,6 @@ function ChatHeaderTitle({ children }: { children: ReactNode }) {
 
 type ChatTab = "chat" | "review" | "frame" | "stream";
 
-type TabsContextValue = {
-  state: { active: ChatTab };
-  actions: { setActive: (tab: ChatTab) => void };
-};
-
-const TabsContext = createContext<TabsContextValue | null>(null);
-
-function useTabs() {
-  const context = use(TabsContext);
-  if (!context) {
-    throw new Error("Tabs components must be used within Chat.Tabs");
-  }
-  return context;
-}
-
 function ChatTabs({
   children,
   defaultTab = "chat",
@@ -102,48 +88,15 @@ function ChatTabs({
   children: ReactNode;
   defaultTab?: ChatTab;
 }) {
-  const [active, setActive] = useState<ChatTab>(defaultTab);
-
-  return (
-    <TabsContext value={{ state: { active }, actions: { setActive } }}>{children}</TabsContext>
-  );
+  return <Tabs.Root<ChatTab> defaultTab={defaultTab}>{children}</Tabs.Root>;
 }
-
-function ChatTabList({ children }: { children: ReactNode }) {
-  return <div className="flex items-center gap-px px-0 border-b border-border">{children}</div>;
-}
-
-const tab = tv({
-  base: "px-2 py-1 text-xs cursor-pointer border-b",
-  variants: {
-    active: {
-      true: "text-text border-text",
-      false: "text-text-muted border-transparent hover:text-text-secondary",
-    },
-  },
-});
 
 function ChatTabItem({ value, children }: { value: ChatTab; children: ReactNode }) {
-  const { state, actions } = useTabs();
-  const isActive = state.active === value;
-
-  return (
-    <div className="px-1">
-      <button
-        type="button"
-        onClick={() => actions.setActive(value)}
-        className={tab({ active: isActive })}
-      >
-        {children}
-      </button>
-    </div>
-  );
+  return <Tabs.Tab<ChatTab> value={value}>{children}</Tabs.Tab>;
 }
 
 function ChatTabContent({ value, children }: { value: ChatTab; children: ReactNode }) {
-  const { state } = useTabs();
-  if (state.active !== value) return null;
-  return <>{children}</>;
+  return <Tabs.Content<ChatTab> value={value}>{children}</Tabs.Content>;
 }
 
 function ChatMessageList({ children }: { children: ReactNode }) {
@@ -201,7 +154,7 @@ const Chat = {
   HeaderDivider: ChatHeaderDivider,
   HeaderTitle: ChatHeaderTitle,
   Tabs: ChatTabs,
-  TabList: ChatTabList,
+  TabList: Tabs.List,
   Tab: ChatTabItem,
   TabContent: ChatTabContent,
   MessageList: ChatMessageList,
