@@ -21,7 +21,7 @@ function ProjectNavigatorView({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col justify-between">
-      <div className="flex flex-col gap-px bg-border py-pb">
+      <div className="flex flex-col gap-px bg-border pb-px">
         {mockProjects.map((project) => (
           <ProjectNavigator.List key={project.id}>
             <ProjectNavigator.Header onAdd={() => console.log("Add session to", project.name)}>
