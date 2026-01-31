@@ -67,58 +67,52 @@ export function createHooks<S extends Schema>(schema: S) {
       ...args: ChannelParams<S, K> extends undefined ? [] : [params: ChannelParams<S, K>]
     ): SnapshotOf<S["channels"][K]> {
       const channel = schema.channels[channelName];
-      if (!channel) {
-        throw new Error(`Unknown channel: ${channelName}`);
-      }
-      const params = args[0] ?? {};
-      const hasEmptyParams =
-        hasParams(channel.path) &&
-        Object.values(params).some((v) => v === "" || v === null || v === undefined);
+      if (!channel) throw new Error(`Unknown channel: ${channelName}`);
 
-      const resolvedPath = useMemo(() => {
-        if (hasParams(channel.path)) {
-          return resolvePath(channel.path, toStringRecord(params));
-        }
-        return channel.path;
-      }, [channel.path, params]);
+      const params = args[0] ?? {};
+      const isInvalidParam = (value: unknown) =>
+        value === "" || value == null || String(value).startsWith("temp-");
+      const shouldSkip = hasParams(channel.path) && Object.values(params).some(isInvalidParam);
+
+      const resolvedPath = useMemo(
+        () =>
+          hasParams(channel.path)
+            ? resolvePath(channel.path, toStringRecord(params))
+            : channel.path,
+        [channel.path, params],
+      );
 
       const stateAtom = useMemo(() => channelStateFamily(resolvedPath), [resolvedPath]);
       const [state, setState] = useAtom(stateAtom);
 
       useEffect(() => {
-        if (hasEmptyParams) return;
+        if (shouldSkip) return;
 
         setState({ status: "connecting" });
 
         const unsubscribe = connection.subscribe(resolvedPath, (message) => {
-          if (message.type === "snapshot") {
-            setState({ status: "connected", data: message.data });
-          } else if (message.type === "delta") {
-            setState((prev: ChannelState<unknown>) => {
-              if (prev.status !== "connected") return prev;
-              return {
-                status: "connected",
-                data: applyDelta(prev.data, message.data, channel),
-              };
-            });
-          } else if (message.type === "error") {
-            setState({ status: "error", error: message.error });
+          switch (message.type) {
+            case "snapshot":
+              setState({ status: "connected", data: message.data });
+              break;
+            case "delta":
+              setState((prev: ChannelState<unknown>) =>
+                prev.status === "connected"
+                  ? { status: "connected", data: applyDelta(prev.data, message.data, channel) }
+                  : prev,
+              );
+              break;
+            case "error":
+              setState({ status: "error", error: message.error });
+              break;
           }
         });
 
-        return () => {
-          unsubscribe();
-        };
-      }, [resolvedPath, setState, hasEmptyParams]);
+        return unsubscribe;
+      }, [resolvedPath, setState, shouldSkip]);
 
-      if (hasEmptyParams) {
-        return channel.default;
-      }
-
-      if (state.status === "connected") {
-        return parseSnapshot(channel, state.data);
-      }
-      return channel.default;
+      if (shouldSkip || state.status !== "connected") return channel.default;
+      return parseSnapshot(channel, state.data);
     }
 
     function useChannelEvent<K extends ChannelName<S>>(
