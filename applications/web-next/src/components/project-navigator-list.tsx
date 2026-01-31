@@ -95,15 +95,16 @@ type ItemProps = {
   children: ReactNode;
   selected?: boolean;
   onClick?: () => void;
+  onMouseDown?: () => void;
 };
 
-function ProjectNavigatorItem({ children, selected, onClick }: ItemProps) {
+function ProjectNavigatorItem({ children, selected, onClick, onMouseDown }: ItemProps) {
   const { expanded } = useProjectNavigator();
 
   if (!expanded) return null;
 
   return (
-    <div onClick={onClick} className={listItem({ selected })}>
+    <div onClick={onClick} onMouseDown={onMouseDown} className={listItem({ selected })}>
       {children}
     </div>
   );

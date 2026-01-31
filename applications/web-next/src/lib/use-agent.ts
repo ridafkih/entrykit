@@ -28,10 +28,43 @@ interface UseAgentResult {
   isSending: boolean;
 }
 
+interface CachedSessionData {
+  opencodeSessionId: string;
+  messages: MessageState[];
+}
+
+const sessionCache = new Map<string, CachedSessionData>();
+const pendingPrefetches = new Map<string, Promise<CachedSessionData | null>>();
+
+function getApiUrl(): string {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL must be set");
+  return apiUrl;
+}
+
+function createSessionClient(labSessionId: string) {
+  return createOpencodeClient({
+    baseUrl: `${getApiUrl()}/opencode`,
+    headers: { "X-Lab-Session-Id": labSessionId },
+  });
+}
+
+function createGlobalEventClient() {
+  return createOpencodeClient({
+    baseUrl: `${getApiUrl()}/opencode`,
+  });
+}
+
+function parseLoadedMessages(data: LoadedMessage[]): MessageState[] {
+  return data.map((message) => ({
+    id: message.info.id,
+    role: message.info.role,
+    parts: message.parts,
+  }));
+}
+
 function getSessionIdFromEvent(event: Event): string | undefined {
-  if (!("properties" in event)) {
-    return undefined;
-  }
+  if (!("properties" in event)) return undefined;
 
   const properties = event.properties;
 
@@ -56,13 +89,40 @@ function getSessionIdFromEvent(event: Event): string | undefined {
   return undefined;
 }
 
-function createGlobalEventClient() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL must be set");
+async function fetchSessionMessages(labSessionId: string): Promise<CachedSessionData | null> {
+  const labSession = await api.sessions.get(labSessionId);
+  if (!labSession.opencodeSessionId) return null;
 
-  return createOpencodeClient({
-    baseUrl: `${apiUrl}/opencode`,
+  const client = createSessionClient(labSessionId);
+  const messagesResponse = await client.session.messages({
+    path: { id: labSession.opencodeSessionId },
   });
+
+  if (!messagesResponse.data) return null;
+
+  return {
+    opencodeSessionId: labSession.opencodeSessionId,
+    messages: parseLoadedMessages(messagesResponse.data),
+  };
+}
+
+export async function prefetchSessionMessages(labSessionId: string): Promise<void> {
+  if (sessionCache.has(labSessionId)) return;
+  if (pendingPrefetches.has(labSessionId)) return;
+
+  const prefetchPromise = (async (): Promise<CachedSessionData | null> => {
+    try {
+      const data = await fetchSessionMessages(labSessionId);
+      if (data) sessionCache.set(labSessionId, data);
+      return data;
+    } catch {
+      return null;
+    } finally {
+      pendingPrefetches.delete(labSessionId);
+    }
+  })();
+
+  pendingPrefetches.set(labSessionId, prefetchPromise);
 }
 
 export function useAgent(labSessionId: string): UseAgentResult {
@@ -75,20 +135,23 @@ export function useAgent(labSessionId: string): UseAgentResult {
 
   const opencodeClient = useMemo(() => {
     if (!labSessionId) return null;
-
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL must be set");
-
-    return createOpencodeClient({
-      baseUrl: `${apiUrl}/opencode`,
-      headers: { "X-Lab-Session-Id": labSessionId },
-    });
+    return createSessionClient(labSessionId);
   }, [labSessionId]);
 
   useEffect(() => {
-    setMessages([]);
     setOpencodeSessionId(null);
     currentOpencodeSessionRef.current = null;
+
+    const cached = sessionCache.get(labSessionId);
+    if (cached) {
+      setMessages(cached.messages);
+      setOpencodeSessionId(cached.opencodeSessionId);
+      currentOpencodeSessionRef.current = cached.opencodeSessionId;
+      setIsLoading(false);
+      return;
+    }
+
+    setMessages([]);
 
     if (!labSessionId || !opencodeClient) {
       setIsLoading(false);
@@ -97,44 +160,52 @@ export function useAgent(labSessionId: string): UseAgentResult {
 
     let cancelled = false;
 
+    const applySessionData = (sessionId: string, sessionMessages: MessageState[]) => {
+      setMessages(sessionMessages);
+      setOpencodeSessionId(sessionId);
+      currentOpencodeSessionRef.current = sessionId;
+      sessionCache.set(labSessionId, { opencodeSessionId: sessionId, messages: sessionMessages });
+      setIsLoading(false);
+    };
+
+    const getOrCreateOpencodeSession = async (): Promise<string> => {
+      const labSession = await api.sessions.get(labSessionId);
+      if (labSession.opencodeSessionId) return labSession.opencodeSessionId;
+
+      const response = await opencodeClient.session.create({});
+      if (response.error || !response.data) {
+        throw new Error("Failed to create OpenCode session");
+      }
+
+      await api.sessions.update(labSessionId, { opencodeSessionId: response.data.id });
+      return response.data.id;
+    };
+
     const initialize = async () => {
+      setIsLoading(true);
+      setError(null);
+
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const labSession = await api.sessions.get(labSessionId);
-        let sessionId = labSession.opencodeSessionId;
-
-        if (!sessionId) {
-          const response = await opencodeClient.session.create({});
-          if (response.error || !response.data) {
-            throw new Error("Failed to create OpenCode session");
+        const pending = pendingPrefetches.get(labSessionId);
+        if (pending) {
+          const prefetched = await pending;
+          if (cancelled) return;
+          if (prefetched) {
+            applySessionData(prefetched.opencodeSessionId, prefetched.messages);
+            return;
           }
-          sessionId = response.data.id;
-          await api.sessions.update(labSessionId, { opencodeSessionId: sessionId });
         }
 
+        const sessionId = await getOrCreateOpencodeSession();
         if (cancelled) return;
-        setOpencodeSessionId(sessionId);
-        currentOpencodeSessionRef.current = sessionId;
 
         const messagesResponse = await opencodeClient.session.messages({
           path: { id: sessionId },
         });
-
         if (cancelled) return;
 
-        if (messagesResponse.data) {
-          setMessages(
-            messagesResponse.data.map((message: LoadedMessage) => ({
-              id: message.info.id,
-              role: message.info.role,
-              parts: message.parts,
-            })),
-          );
-        }
-
-        setIsLoading(false);
+        const loadedMessages = parseLoadedMessages(messagesResponse.data ?? []);
+        applySessionData(sessionId, loadedMessages);
       } catch (error) {
         if (cancelled) return;
         setError(error instanceof Error ? error : new Error("Failed to initialize"));
@@ -153,6 +224,48 @@ export function useAgent(labSessionId: string): UseAgentResult {
     const globalClient = createGlobalEventClient();
     const abortController = new AbortController();
 
+    const handleMessageUpdated = (info: Message) => {
+      setMessages((previous) => {
+        const existing = previous.find((message) => message.id === info.id);
+        if (existing) return previous;
+        return [...previous, { id: info.id, role: info.role, parts: [] }];
+      });
+    };
+
+    const handleMessagePartUpdated = (part: Part) => {
+      setMessages((previous) =>
+        previous.map((message) => {
+          if (message.id !== part.messageID) return message;
+
+          const partIndex = message.parts.findIndex((existing) => existing.id === part.id);
+          if (partIndex === -1) {
+            return { ...message, parts: [...message.parts, part] };
+          }
+
+          const newParts = [...message.parts];
+          newParts[partIndex] = part;
+          return { ...message, parts: newParts };
+        }),
+      );
+    };
+
+    const processEvent = (event: Event) => {
+      const eventSessionId = getSessionIdFromEvent(event);
+      if (eventSessionId !== currentOpencodeSessionRef.current) return;
+
+      if (event.type === "message.updated") {
+        handleMessageUpdated(event.properties.info);
+      }
+
+      if (event.type === "message.part.updated") {
+        handleMessagePartUpdated(event.properties.part);
+      }
+
+      if (event.type === "session.idle") {
+        setIsSending(false);
+      }
+    };
+
     const subscribe = async () => {
       try {
         const { stream } = await globalClient.event.subscribe({
@@ -161,43 +274,11 @@ export function useAgent(labSessionId: string): UseAgentResult {
 
         for await (const event of stream) {
           if (abortController.signal.aborted) break;
-
-          const eventSessionId = getSessionIdFromEvent(event);
-          if (eventSessionId !== currentOpencodeSessionRef.current) continue;
-
-          if (event.type === "message.updated") {
-            const info = event.properties.info;
-            setMessages((previous) => {
-              const existing = previous.find((message) => message.id === info.id);
-              if (existing) return previous;
-              return [...previous, { id: info.id, role: info.role, parts: [] }];
-            });
-          }
-
-          if (event.type === "message.part.updated") {
-            const { part } = event.properties;
-            setMessages((previous) =>
-              previous.map((message) => {
-                if (message.id !== part.messageID) return message;
-                const partIndex = message.parts.findIndex((existing) => existing.id === part.id);
-                if (partIndex === -1) {
-                  return { ...message, parts: [...message.parts, part] };
-                }
-                const newParts = [...message.parts];
-                newParts[partIndex] = part;
-                return { ...message, parts: newParts };
-              }),
-            );
-          }
-
-          if (event.type === "session.idle") {
-            setIsSending(false);
-          }
+          processEvent(event);
         }
       } catch (error) {
-        if (!abortController.signal.aborted) {
-          console.error("Event stream error:", error);
-        }
+        if (abortController.signal.aborted) return;
+        console.error("Event stream error:", error);
       }
     };
 
