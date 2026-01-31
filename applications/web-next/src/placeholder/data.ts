@@ -18,6 +18,83 @@ type Project = {
   sessions: Session[];
 };
 
+type ReviewableFile = {
+  path: string;
+  originalContent: string;
+  currentContent: string;
+  status: "pending" | "dismissed";
+  changeType: "modified" | "created" | "deleted";
+};
+
+export const mockReviewFiles: Record<string, ReviewableFile[]> = {
+  a1b2c3: [
+    {
+      path: "src/auth/provider.tsx",
+      originalContent: `import { createContext, useContext } from "react";
+
+export const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  return <AuthContext.Provider value={null}>{children}</AuthContext.Provider>;
+}`,
+      currentContent: `import { createContext, useContext, useState } from "react";
+
+type AuthState = {
+  user: User | null;
+  isLoading: boolean;
+};
+
+export const AuthContext = createContext<AuthState | null>(null);
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  return (
+    <AuthContext.Provider value={{ user, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}`,
+      status: "pending",
+      changeType: "modified",
+    },
+    {
+      path: "src/auth/hooks.ts",
+      originalContent: "",
+      currentContent: `import { useContext } from "react";
+import { AuthContext } from "./provider";
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+}
+
+export function useUser() {
+  const { user } = useAuth();
+  return user;
+}`,
+      status: "pending",
+      changeType: "created",
+    },
+  ],
+  d4e5f6: [],
+  x7y8z9: [
+    {
+      path: "src/components/theme-toggle.tsx",
+      originalContent: "",
+      currentContent: `export function ThemeToggle() {
+  return <button>Toggle</button>;
+}`,
+      status: "dismissed",
+      changeType: "created",
+    },
+  ],
+};
+
 export const mockProjects: Project[] = [
   {
     id: "1",

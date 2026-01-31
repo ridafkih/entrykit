@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Nav } from "@/components/nav";
 import { Chat } from "@/components/chat";
 import { MessagePart } from "@/components/message-part";
@@ -12,8 +12,9 @@ import { Hash } from "@/components/hash";
 import { TextAreaGroup } from "@/components/textarea-group";
 import { SplitPane, useSplitPane } from "@/components/split-pane";
 import { SessionInfoPane } from "@/components/session-info-pane";
-import { navItems, mockProjects } from "@/placeholder/data";
+import { navItems, mockProjects, mockReviewFiles } from "@/placeholder/data";
 import { mockPartsMessages } from "@/placeholder/parts";
+import { Review, type ReviewableFile } from "@/components/review";
 import { modelGroups, defaultModel } from "@/placeholder/models";
 
 function ProjectNavigatorView({ children }: { children?: React.ReactNode }) {
@@ -53,6 +54,28 @@ function ProjectNavigatorView({ children }: { children?: React.ReactNode }) {
 
 function ConversationView({ sessionId }: { sessionId: string | null }) {
   const [model, setModel] = useState(defaultModel);
+  const [reviewFiles, setReviewFiles] = useState<ReviewableFile[]>([]);
+
+  useEffect(() => {
+    if (sessionId && mockReviewFiles[sessionId]) {
+      setReviewFiles(mockReviewFiles[sessionId]);
+    } else {
+      setReviewFiles([]);
+    }
+  }, [sessionId]);
+
+  const handleDismiss = (path: string) => {
+    setReviewFiles((prev) =>
+      prev.map((f) => (f.path === path ? { ...f, status: "dismissed" as const } : f)),
+    );
+  };
+
+  const handleSubmitFeedback = (
+    selection: { filePath: string; range: { start: number; end: number } },
+    feedback: string,
+  ) => {
+    console.log("Feedback submitted:", { selection, feedback });
+  };
 
   if (!sessionId) {
     return (
@@ -119,9 +142,38 @@ function ConversationView({ sessionId }: { sessionId: string | null }) {
             </Chat.MessageList>
           </Chat.TabContent>
           <Chat.TabContent value="review">
-            <div className="flex-1 flex items-center justify-center text-text-muted">
-              Review coming soon
-            </div>
+            <Review.Provider
+              files={reviewFiles}
+              onDismiss={handleDismiss}
+              onSubmitFeedback={handleSubmitFeedback}
+            >
+              <Review.Frame>
+                <Review.Empty />
+                <Review.DiffList>
+                  {reviewFiles
+                    .filter((f) => f.status === "pending")
+                    .map((file) => (
+                      <Review.DiffItem key={file.path} file={file}>
+                        <Review.FileHeader>
+                          <Review.FileHeaderIcon />
+                          <Review.FileHeaderLabel />
+                          <Review.FileHeaderDismiss />
+                        </Review.FileHeader>
+                        <Review.Diff />
+                      </Review.DiffItem>
+                    ))}
+                </Review.DiffList>
+                <Review.Feedback>
+                  <Review.FeedbackHeader>
+                    <Review.FeedbackLocation />
+                  </Review.FeedbackHeader>
+                  <TextAreaGroup.Input placeholder="Provide feedback..." rows={2} />
+                  <TextAreaGroup.Toolbar>
+                    <TextAreaGroup.Submit />
+                  </TextAreaGroup.Toolbar>
+                </Review.Feedback>
+              </Review.Frame>
+            </Review.Provider>
           </Chat.TabContent>
           <Chat.TabContent value="frame">
             <div className="flex-1 flex items-center justify-center text-text-muted">
