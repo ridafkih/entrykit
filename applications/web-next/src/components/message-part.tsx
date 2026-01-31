@@ -86,7 +86,7 @@ function MessagePartReasoningHeader({ children }: { children: ReactNode }) {
     <button
       type="button"
       onClick={actions.toggle}
-      className="flex items-center gap-1.5 w-full px-4 py-1 text-xs cursor-pointer hover:bg-bg-hover"
+      className="flex items-center gap-1.5 w-full px-3 py-1 text-xs cursor-pointer hover:bg-bg-hover"
     >
       {children}
     </button>
@@ -219,7 +219,7 @@ function MessagePartToolHeader({ children }: { children: ReactNode }) {
     <button
       type="button"
       onClick={actions.toggle}
-      className="flex items-center gap-1.5 w-full px-4 py-1 text-xs cursor-pointer hover:bg-bg-hover"
+      className="flex items-center gap-1.5 w-full px-3 py-1 text-xs cursor-pointer hover:bg-bg-hover"
     >
       {children}
     </button>

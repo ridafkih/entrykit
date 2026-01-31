@@ -174,6 +174,7 @@ function ReviewTabContent({ sessionId }: { sessionId: string }) {
         <Review.MainPanel>
           <Review.Empty />
           <Review.DiffView>
+            <Review.DiffHeader />
             <Review.DiffList>
               {pendingFiles.map((file) => (
                 <Review.DiffItem key={file.path} file={file}>

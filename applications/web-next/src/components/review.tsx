@@ -184,23 +184,37 @@ function ReviewProvider({ children, files, onDismiss, onSubmitFeedback, browser 
 }
 
 function ReviewFrame({ children }: { children: ReactNode }) {
-  return <div className="flex flex-1 min-h-0 min-w-0">{children}</div>;
+  return (
+    <div className="grid grid-cols-[1fr_auto] grid-rows-[auto_1fr_auto] flex-1 min-h-0 min-w-0">
+      {children}
+    </div>
+  );
 }
 
 function ReviewMainPanel({ children }: { children: ReactNode }) {
-  return <div className="flex flex-1 flex-col min-h-0 min-w-0">{children}</div>;
+  return <div className="contents">{children}</div>;
 }
 
-function ReviewSidePanel({ children, width = "w-56" }: { children: ReactNode; width?: string }) {
-  return <div className={cn("shrink-0 border-l border-border", width)}>{children}</div>;
+function ReviewSidePanel({ children }: { children: ReactNode }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const toggle = useCallback(() => setCollapsed((prev) => !prev), []);
+
+  return (
+    <SidePanelContext value={{ collapsed, toggle }}>
+      <div className="contents">{children}</div>
+    </SidePanelContext>
+  );
 }
 
 const emptyState = tv({
-  base: "flex-1 flex flex-col items-center justify-center gap-2 text-center",
+  base: "col-start-1 row-start-1 row-span-2 flex flex-col items-center justify-center gap-2 text-center",
 });
 
 function ReviewEmpty() {
   const { state } = useReview();
+
+  if (state.view === "preview") return null;
+  if (state.selection) return null;
 
   if (state.files.length === 0) {
     return (
@@ -226,11 +240,20 @@ function ReviewEmpty() {
 function ReviewDiffView({ children }: { children: ReactNode }) {
   const { state } = useReview();
   if (state.view !== "diff") return null;
-  return <>{children}</>;
+  return <div className="contents">{children}</div>;
+}
+
+function ReviewDiffHeader({ children }: { children?: ReactNode }) {
+  return (
+    <div className="col-start-1 row-start-1 flex items-center gap-1.5 px-2 py-1.5 border-b border-border">
+      <span className="flex-1 text-xs text-text-muted">{children ?? "Changes"}</span>
+      <span className={dismissButton({ className: "invisible" })}>Close</span>
+    </div>
+  );
 }
 
 const diffList = tv({
-  base: "flex-1 overflow-auto min-w-0",
+  base: "col-start-1 row-start-2 overflow-auto min-w-0 min-h-0",
 });
 
 function ReviewDiffList({ children }: { children: ReactNode }) {
@@ -361,7 +384,7 @@ function ReviewFileHeaderIcon() {
 
 function ReviewFileHeaderLabel() {
   const { path } = useFileHeader();
-  return <span className="flex-1 truncate text-xs text-text-muted font-mono">{path}</span>;
+  return <span className="flex-1 truncate text-xs text-text-muted ">{path}</span>;
 }
 
 const dismissButton = tv({
@@ -380,7 +403,7 @@ function ReviewFileHeaderDismiss() {
 }
 
 const feedback = tv({
-  base: "border-t border-border",
+  base: "col-start-1 row-start-3 border-t border-border",
 });
 
 function ReviewFeedback({ children }: { children: ReactNode }) {
@@ -436,7 +459,7 @@ function ReviewFeedbackLocation() {
   const lineText = range.end !== range.start ? `L${range.start}-${range.end}` : `L${range.start}`;
 
   return (
-    <span className="text-xs font-mono text-text-muted">
+    <span className="text-xs  text-text-muted">
       {filePath} {lineText}
     </span>
   );
@@ -448,7 +471,7 @@ function ReviewPreviewView({ children }: { children?: ReactNode }) {
 
   if (state.browser.previewLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="col-start-1 row-span-2 flex items-center justify-center">
         <Loader2 className="size-6 animate-spin text-text-muted" />
       </div>
     );
@@ -456,13 +479,13 @@ function ReviewPreviewView({ children }: { children?: ReactNode }) {
 
   if (!state.browser.previewContent) {
     return (
-      <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
+      <div className="col-start-1 row-span-2 flex items-center justify-center text-text-muted text-sm">
         Unable to load file
       </div>
     );
   }
 
-  return <div className="flex flex-1 flex-col min-h-0 min-w-0">{children}</div>;
+  return <div className="contents">{children}</div>;
 }
 
 function ReviewPreviewHeader({ children }: { children?: ReactNode }) {
@@ -470,10 +493,8 @@ function ReviewPreviewHeader({ children }: { children?: ReactNode }) {
   if (!state.browser.selectedPath) return null;
 
   return (
-    <div className={fileHeader()}>
-      <span className="flex-1 truncate text-xs text-text-muted font-mono">
-        {state.browser.selectedPath}
-      </span>
+    <div className={fileHeader({ className: "col-start-1 row-start-1" })}>
+      <span className="flex-1 truncate text-xs text-text-muted ">{state.browser.selectedPath}</span>
       {children}
       <button
         type="button"
@@ -500,7 +521,7 @@ function ReviewPreviewContent() {
     state.selection?.filePath !== state.browser.selectedPath;
 
   return (
-    <div className="flex-1 overflow-auto min-w-0">
+    <div className="col-start-1 row-start-2 overflow-auto min-w-0 min-h-0">
       <FileViewer
         file={previewFile}
         selectedLines={shouldClearSelection ? null : undefined}
@@ -518,15 +539,55 @@ function ReviewPreviewContent() {
   );
 }
 
+type SidePanelContextValue = {
+  collapsed: boolean;
+  toggle: () => void;
+};
+
+const SidePanelContext = createContext<SidePanelContextValue | null>(null);
+
+function useSidePanel() {
+  const context = use(SidePanelContext);
+  if (!context) {
+    throw new Error("SidePanel components must be used within Review.SidePanel");
+  }
+  return context;
+}
+
 function ReviewBrowser({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col h-full">{children}</div>;
+  const { collapsed, toggle } = useSidePanel();
+
+  if (collapsed) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={toggle}
+          className="col-start-2 row-start-1 flex items-center justify-center w-8 px-2 py-1.5 border-l border-b border-border hover:bg-bg-muted"
+          aria-label="Expand files panel"
+        >
+          <ChevronRight className="size-3 text-text-muted rotate-180" />
+        </button>
+        <div className="col-start-2 row-start-2 w-8 border-l border-border" />
+      </>
+    );
+  }
+
+  return <div className="contents">{children}</div>;
 }
 
 function ReviewBrowserHeader({ children }: { children?: ReactNode }) {
+  const { toggle } = useSidePanel();
+
   return (
-    <div className="flex items-center h-8 px-2 border-b border-border shrink-0">
+    <button
+      type="button"
+      onClick={toggle}
+      className="col-start-2 row-start-1 flex items-center gap-1 min-w-56 px-2 py-1.5 border-l border-b border-border text-left hover:bg-bg-muted"
+    >
+      <ChevronRight className="size-3 text-text-muted" />
       <span className="text-xs text-text-muted">{children ?? "Files"}</span>
-    </div>
+    </button>
   );
 }
 
@@ -535,7 +596,7 @@ function ReviewBrowserTree() {
 
   if (state.browser.rootLoading) {
     return (
-      <div className="flex items-center justify-center p-4">
+      <div className="col-start-2 row-start-2 flex items-center justify-center p-4 min-w-56 border-l border-border">
         <Loader2 className="size-4 animate-spin text-text-muted" />
       </div>
     );
@@ -543,14 +604,14 @@ function ReviewBrowserTree() {
 
   if (state.browser.rootNodes.length === 0) {
     return (
-      <div className="flex items-center justify-center p-4 text-text-muted text-xs">
+      <div className="col-start-2 row-start-2 flex items-center justify-center p-4 min-w-56 border-l border-border text-text-muted text-xs">
         No files found
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="col-start-2 row-start-2 row-span-2 min-w-56 border-l border-border overflow-auto">
       <TreeNodes nodes={state.browser.rootNodes} depth={0} />
     </div>
   );
@@ -572,6 +633,7 @@ function TreeNodes({ nodes, depth }: { nodes: FileNode[]; depth: number }) {
           if (isDirectory) {
             actions.browser.toggleDirectory(node.path);
           } else {
+            actions.clearSelection();
             actions.browser.selectFile(node.path);
           }
         };
@@ -623,6 +685,7 @@ const Review = {
   SidePanel: ReviewSidePanel,
   Empty: ReviewEmpty,
   DiffView: ReviewDiffView,
+  DiffHeader: ReviewDiffHeader,
   DiffList: ReviewDiffList,
   DiffItem: ReviewDiffItem,
   Diff: ReviewDiff,
