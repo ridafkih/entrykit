@@ -145,7 +145,7 @@ function ChatTabContent({ value, children }: { value: ChatTab; children: ReactNo
 }
 
 function ChatMessageList({ children }: { children: ReactNode }) {
-  return <div className="flex-1 overflow-y-auto">{children}</div>;
+  return <div className="flex-1 overflow-y-auto flex flex-col justify-between">{children}</div>;
 }
 
 function ChatMessages({ children }: { children: ReactNode }) {

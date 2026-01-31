@@ -19,7 +19,7 @@ function ProjectNavigatorView({ children }: { children?: React.ReactNode }) {
   const { selected, select } = useSplitPane();
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto flex flex-col justify-between">
       <div className="flex flex-col gap-px bg-border py-pb">
         {mockProjects.map((project) => (
           <ProjectNavigator.List key={project.id}>
