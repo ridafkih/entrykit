@@ -656,7 +656,7 @@ function TreeNodes({ nodes, depth }: { nodes: FileNode[]; depth: number }) {
                     <Loader2 className="size-3 animate-spin" />
                   ) : (
                     <ChevronRight
-                      className={cn("size-3 transition-transform", isExpanded && "rotate-90")}
+                      className={cn("size-3", isExpanded && "rotate-90")}
                     />
                   )}
                 </span>
