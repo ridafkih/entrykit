@@ -12,9 +12,22 @@ import { Hash } from "@/components/hash";
 import { TextAreaGroup } from "@/components/textarea-group";
 import { SplitPane, useSplitPane } from "@/components/split-pane";
 import { SessionInfoPane } from "@/components/session-info-pane";
-import { navItems, mockProjects, mockReviewFiles } from "@/placeholder/data";
+import {
+  navItems,
+  mockProjects,
+  mockReviewFiles,
+  mockFileTree,
+  mockFileTreeContents,
+  mockFileContents,
+} from "@/placeholder/data";
 import { mockPartsMessages } from "@/placeholder/parts";
-import { Review, type ReviewableFile } from "@/components/review";
+import {
+  Review,
+  type ReviewableFile,
+  type BrowserState,
+  type BrowserActions,
+  type FileNode,
+} from "@/components/review";
 import { modelGroups, defaultModel } from "@/placeholder/models";
 
 function ProjectNavigatorView({ children }: { children?: React.ReactNode }) {
@@ -52,32 +65,176 @@ function ProjectNavigatorView({ children }: { children?: React.ReactNode }) {
   );
 }
 
-function ConversationView({ sessionId }: { sessionId: string | null }) {
-  const [model, setModel] = useState(defaultModel);
-  const [reviewFiles, setReviewFiles] = useState<ReviewableFile[]>([]);
+function useSessionData(sessionId: string | null) {
+  if (!sessionId) return null;
+
+  const project = mockProjects.find((proj) => proj.sessions.some((sess) => sess.id === sessionId));
+  if (!project) return null;
+
+  const session = project.sessions.find((sess) => sess.id === sessionId);
+  if (!session) return null;
+
+  return { project, session };
+}
+
+function useMockFileBrowser(sessionId: string | null) {
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [loadedContents, setLoadedContents] = useState<Map<string, FileNode[]>>(new Map());
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
 
   useEffect(() => {
-    if (sessionId && mockReviewFiles[sessionId]) {
-      setReviewFiles(mockReviewFiles[sessionId]);
-    } else {
-      setReviewFiles([]);
-    }
+    setExpandedPaths(new Set());
+    setLoadedContents(new Map());
+    setSelectedPath(null);
+    setPreviewContent(null);
   }, [sessionId]);
 
-  const handleDismiss = (path: string) => {
-    setReviewFiles((prev) =>
-      prev.map((f) => (f.path === path ? { ...f, status: "dismissed" as const } : f)),
+  const state: BrowserState = {
+    rootNodes: mockFileTree,
+    expandedPaths,
+    loadedContents,
+    loadingPaths: new Set(),
+    rootLoading: false,
+    selectedPath,
+    previewContent,
+    previewLoading: false,
+  };
+
+  const actions: BrowserActions = {
+    toggleDirectory: (path) => {
+      if (expandedPaths.has(path)) {
+        setExpandedPaths((prev) => {
+          const next = new Set(prev);
+          next.delete(path);
+          return next;
+        });
+        return;
+      }
+
+      if (!loadedContents.has(path) && mockFileTreeContents[path]) {
+        setLoadedContents((prev) => new Map(prev).set(path, mockFileTreeContents[path]));
+      }
+      setExpandedPaths((prev) => new Set([...prev, path]));
+    },
+    selectFile: (path) => {
+      setSelectedPath(path);
+      setPreviewContent(mockFileContents[path] ?? "// File not found");
+    },
+    clearFileSelection: () => {
+      setSelectedPath(null);
+      setPreviewContent(null);
+    },
+  };
+
+  return { state, actions };
+}
+
+function useReviewFiles(sessionId: string | null) {
+  const [files, setFiles] = useState<ReviewableFile[]>([]);
+
+  useEffect(() => {
+    const initialFiles = sessionId ? (mockReviewFiles[sessionId] ?? []) : [];
+    setFiles(initialFiles);
+  }, [sessionId]);
+
+  const dismiss = (path: string) => {
+    setFiles((prev) =>
+      prev.map((file) => (file.path === path ? { ...file, status: "dismissed" as const } : file)),
     );
   };
 
-  const handleSubmitFeedback = (
-    selection: { filePath: string; range: { start: number; end: number } },
-    feedback: string,
-  ) => {
-    console.log("Feedback submitted:", { selection, feedback });
-  };
+  const pendingFiles = files.filter((file) => file.status === "pending");
 
-  if (!sessionId) {
+  return { files, pendingFiles, dismiss };
+}
+
+function ReviewFeedbackForm() {
+  return (
+    <Review.Feedback>
+      <Review.FeedbackHeader>
+        <Review.FeedbackLocation />
+      </Review.FeedbackHeader>
+      <TextAreaGroup.Input placeholder="Your feedback will be submitted to the agent..." rows={2} />
+      <TextAreaGroup.Toolbar>
+        <TextAreaGroup.Submit />
+      </TextAreaGroup.Toolbar>
+    </Review.Feedback>
+  );
+}
+
+function ReviewTabContent({ sessionId }: { sessionId: string }) {
+  const { files, pendingFiles, dismiss } = useReviewFiles(sessionId);
+  const browser = useMockFileBrowser(sessionId);
+
+  return (
+    <Review.Provider files={files} onDismiss={dismiss} browser={browser}>
+      <Review.Frame>
+        <Review.MainPanel>
+          <Review.Empty />
+          <Review.DiffView>
+            <Review.DiffList>
+              {pendingFiles.map((file) => (
+                <Review.DiffItem key={file.path} file={file}>
+                  <Review.FileHeader>
+                    <Review.FileHeaderIcon />
+                    <Review.FileHeaderLabel />
+                    <Review.FileHeaderDismiss />
+                  </Review.FileHeader>
+                  <Review.Diff />
+                </Review.DiffItem>
+              ))}
+            </Review.DiffList>
+            <ReviewFeedbackForm />
+          </Review.DiffView>
+          <Review.PreviewView>
+            <Review.PreviewHeader />
+            <Review.PreviewContent />
+            <ReviewFeedbackForm />
+          </Review.PreviewView>
+        </Review.MainPanel>
+        <Review.SidePanel>
+          <Review.Browser>
+            <Review.BrowserHeader />
+            <Review.BrowserTree />
+          </Review.Browser>
+        </Review.SidePanel>
+      </Review.Frame>
+    </Review.Provider>
+  );
+}
+
+function ChatTabContent({ sessionId }: { sessionId: string }) {
+  const [model, setModel] = useState(defaultModel);
+  const messages = mockPartsMessages[sessionId];
+
+  return (
+    <Chat.MessageList>
+      <Chat.Messages>
+        {messages?.flatMap((message) =>
+          message.parts.map((part) => (
+            <Chat.Block key={part.id} role={message.role}>
+              <MessagePart.Root
+                part={part}
+                isStreaming={
+                  message.role === "assistant" && message === messages[messages.length - 1]
+                }
+              />
+            </Chat.Block>
+          )),
+        )}
+      </Chat.Messages>
+      <Chat.Input>
+        <TextAreaGroup.ModelSelector value={model} groups={modelGroups} onChange={setModel} />
+      </Chat.Input>
+    </Chat.MessageList>
+  );
+}
+
+function ConversationView({ sessionId }: { sessionId: string | null }) {
+  const sessionData = useSessionData(sessionId);
+
+  if (!sessionData) {
     return (
       <div className="flex items-center justify-center h-full text-text-muted">
         Select a session to preview
@@ -85,17 +242,7 @@ function ConversationView({ sessionId }: { sessionId: string | null }) {
     );
   }
 
-  const project = mockProjects.find((project) =>
-    project.sessions.some((session) => session.id === sessionId),
-  );
-
-  if (!project) return null;
-
-  const session = project.sessions.find((session) => session.id === sessionId);
-
-  if (!session) return null;
-
-  const partsMessages = mockPartsMessages[sessionId];
+  const { project, session } = sessionData;
 
   return (
     <Chat.Provider key={sessionId}>
@@ -116,64 +263,10 @@ function ConversationView({ sessionId }: { sessionId: string | null }) {
             <Chat.Tab value="stream">Stream</Chat.Tab>
           </Chat.TabList>
           <Chat.TabContent value="chat">
-            <Chat.MessageList>
-              <Chat.Messages>
-                {partsMessages?.flatMap((message) =>
-                  message.parts.map((part) => (
-                    <Chat.Block key={part.id} role={message.role}>
-                      <MessagePart.Root
-                        part={part}
-                        isStreaming={
-                          message.role === "assistant" &&
-                          message === partsMessages[partsMessages.length - 1]
-                        }
-                      />
-                    </Chat.Block>
-                  )),
-                )}
-              </Chat.Messages>
-              <Chat.Input>
-                <TextAreaGroup.ModelSelector
-                  value={model}
-                  groups={modelGroups}
-                  onChange={setModel}
-                />
-              </Chat.Input>
-            </Chat.MessageList>
+            <ChatTabContent sessionId={sessionId!} />
           </Chat.TabContent>
           <Chat.TabContent value="review">
-            <Review.Provider
-              files={reviewFiles}
-              onDismiss={handleDismiss}
-              onSubmitFeedback={handleSubmitFeedback}
-            >
-              <Review.Frame>
-                <Review.Empty />
-                <Review.DiffList>
-                  {reviewFiles
-                    .filter((f) => f.status === "pending")
-                    .map((file) => (
-                      <Review.DiffItem key={file.path} file={file}>
-                        <Review.FileHeader>
-                          <Review.FileHeaderIcon />
-                          <Review.FileHeaderLabel />
-                          <Review.FileHeaderDismiss />
-                        </Review.FileHeader>
-                        <Review.Diff />
-                      </Review.DiffItem>
-                    ))}
-                </Review.DiffList>
-                <Review.Feedback>
-                  <Review.FeedbackHeader>
-                    <Review.FeedbackLocation />
-                  </Review.FeedbackHeader>
-                  <TextAreaGroup.Input placeholder="Provide feedback..." rows={2} />
-                  <TextAreaGroup.Toolbar>
-                    <TextAreaGroup.Submit />
-                  </TextAreaGroup.Toolbar>
-                </Review.Feedback>
-              </Review.Frame>
-            </Review.Provider>
+            <ReviewTabContent sessionId={sessionId!} />
           </Chat.TabContent>
           <Chat.TabContent value="frame">
             <div className="flex-1 flex items-center justify-center text-text-muted">

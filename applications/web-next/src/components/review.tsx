@@ -12,10 +12,11 @@ import {
   type RefObject,
 } from "react";
 import { tv } from "tailwind-variants";
-import { MultiFileDiff } from "@pierre/diffs/react";
+import { MultiFileDiff, File as FileViewer } from "@pierre/diffs/react";
 import type { FileContents, SelectedLineRange } from "@pierre/diffs";
-import { File, FilePlus, FileX, X, Check } from "lucide-react";
+import { File, FilePlus, FileX, Folder, X, Check, ChevronRight, Loader2 } from "lucide-react";
 import { TextAreaGroup } from "./textarea-group";
+import { cn } from "@/lib/cn";
 
 type FileChangeType = "modified" | "created" | "deleted";
 type FileStatus = "pending" | "dismissed";
@@ -33,10 +34,35 @@ type LineSelection = {
   range: SelectedLineRange;
 };
 
+type FileNode = {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+};
+
+type BrowserState = {
+  rootNodes: FileNode[];
+  expandedPaths: Set<string>;
+  loadedContents: Map<string, FileNode[]>;
+  loadingPaths: Set<string>;
+  rootLoading: boolean;
+  selectedPath: string | null;
+  previewContent: string | null;
+  previewLoading: boolean;
+};
+
+type BrowserActions = {
+  toggleDirectory: (path: string) => void;
+  selectFile: (path: string) => void;
+  clearFileSelection: () => void;
+};
+
 type ReviewState = {
   files: ReviewableFile[];
   pendingFiles: ReviewableFile[];
   selection: LineSelection | null;
+  view: "diff" | "preview";
+  browser: BrowserState;
 };
 
 type ReviewActions = {
@@ -44,6 +70,7 @@ type ReviewActions = {
   selectLines: (filePath: string, range: SelectedLineRange | null) => void;
   clearSelection: () => void;
   submitFeedback: (feedback: string) => void;
+  browser: BrowserActions;
 };
 
 type ReviewMeta = {
@@ -72,9 +99,13 @@ type ProviderProps = {
   files: ReviewableFile[];
   onDismiss: (path: string) => void;
   onSubmitFeedback?: (selection: LineSelection, feedback: string) => void;
+  browser?: {
+    state: BrowserState;
+    actions: BrowserActions;
+  };
 };
 
-function ReviewProvider({ children, files, onDismiss, onSubmitFeedback }: ProviderProps) {
+function ReviewProvider({ children, files, onDismiss, onSubmitFeedback, browser }: ProviderProps) {
   const [selection, setSelection] = useState<LineSelection | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const prevSelectionRef = useRef<LineSelection | null>(null);
@@ -110,13 +141,41 @@ function ReviewProvider({ children, files, onDismiss, onSubmitFeedback }: Provid
     [selection, onSubmitFeedback, clearSelection],
   );
 
-  const state: ReviewState = { files, pendingFiles, selection };
+  const defaultBrowserState: BrowserState = {
+    rootNodes: [],
+    expandedPaths: new Set(),
+    loadedContents: new Map(),
+    loadingPaths: new Set(),
+    rootLoading: false,
+    selectedPath: null,
+    previewContent: null,
+    previewLoading: false,
+  };
+
+  const defaultBrowserActions: BrowserActions = {
+    toggleDirectory: () => {},
+    selectFile: () => {},
+    clearFileSelection: () => {},
+  };
+
+  const view = browser?.state.selectedPath ? "preview" : "diff";
+
+  const state: ReviewState = {
+    files,
+    pendingFiles,
+    selection,
+    view,
+    browser: browser?.state ?? defaultBrowserState,
+  };
+
   const actions: ReviewActions = {
     dismissFile: onDismiss,
     selectLines,
     clearSelection,
     submitFeedback,
+    browser: browser?.actions ?? defaultBrowserActions,
   };
+
   const meta: ReviewMeta = { textareaRef, prevSelectionRef };
 
   const value = useMemo(() => ({ state, actions, meta }), [state, actions, meta]);
@@ -125,7 +184,15 @@ function ReviewProvider({ children, files, onDismiss, onSubmitFeedback }: Provid
 }
 
 function ReviewFrame({ children }: { children: ReactNode }) {
+  return <div className="flex flex-1 min-h-0 min-w-0">{children}</div>;
+}
+
+function ReviewMainPanel({ children }: { children: ReactNode }) {
   return <div className="flex flex-1 flex-col min-h-0 min-w-0">{children}</div>;
+}
+
+function ReviewSidePanel({ children, width = "w-56" }: { children: ReactNode; width?: string }) {
+  return <div className={cn("shrink-0 border-l border-border", width)}>{children}</div>;
 }
 
 const emptyState = tv({
@@ -154,6 +221,12 @@ function ReviewEmpty() {
   }
 
   return null;
+}
+
+function ReviewDiffView({ children }: { children: ReactNode }) {
+  const { state } = useReview();
+  if (state.view !== "diff") return null;
+  return <>{children}</>;
 }
 
 const diffList = tv({
@@ -369,10 +442,187 @@ function ReviewFeedbackLocation() {
   );
 }
 
+function ReviewPreviewView({ children }: { children?: ReactNode }) {
+  const { state } = useReview();
+  if (state.view !== "preview") return null;
+
+  if (state.browser.previewLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-text-muted" />
+      </div>
+    );
+  }
+
+  if (!state.browser.previewContent) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
+        Unable to load file
+      </div>
+    );
+  }
+
+  return <div className="flex flex-1 flex-col min-h-0 min-w-0">{children}</div>;
+}
+
+function ReviewPreviewHeader({ children }: { children?: ReactNode }) {
+  const { state, actions } = useReview();
+  if (!state.browser.selectedPath) return null;
+
+  return (
+    <div className={fileHeader()}>
+      <span className="flex-1 truncate text-xs text-text-muted font-mono">
+        {state.browser.selectedPath}
+      </span>
+      {children}
+      <button
+        type="button"
+        onClick={actions.browser.clearFileSelection}
+        className={dismissButton()}
+      >
+        Close
+      </button>
+    </div>
+  );
+}
+
+function ReviewPreviewContent() {
+  const { state, actions, meta } = useReview();
+  if (!state.browser.selectedPath || !state.browser.previewContent) return null;
+
+  const previewFile: FileContents = {
+    name: state.browser.selectedPath,
+    contents: state.browser.previewContent,
+  };
+
+  const shouldClearSelection =
+    meta.prevSelectionRef.current?.filePath === state.browser.selectedPath &&
+    state.selection?.filePath !== state.browser.selectedPath;
+
+  return (
+    <div className="flex-1 overflow-auto min-w-0">
+      <FileViewer
+        file={previewFile}
+        selectedLines={shouldClearSelection ? null : undefined}
+        options={{
+          theme: "pierre-light",
+          overflow: "scroll",
+          disableFileHeader: true,
+          enableLineSelection: true,
+          onLineSelected: (range) => actions.selectLines(state.browser.selectedPath!, range),
+          unsafeCSS: DIFF_CSS,
+        }}
+        style={{ "--diffs-font-size": "12px", minWidth: 0 } as React.CSSProperties}
+      />
+    </div>
+  );
+}
+
+function ReviewBrowser({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col h-full">{children}</div>;
+}
+
+function ReviewBrowserHeader({ children }: { children?: ReactNode }) {
+  return (
+    <div className="flex items-center h-8 px-2 border-b border-border shrink-0">
+      <span className="text-xs text-text-muted">{children ?? "Files"}</span>
+    </div>
+  );
+}
+
+function ReviewBrowserTree() {
+  const { state } = useReview();
+
+  if (state.browser.rootLoading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <Loader2 className="size-4 animate-spin text-text-muted" />
+      </div>
+    );
+  }
+
+  if (state.browser.rootNodes.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-4 text-text-muted text-xs">
+        No files found
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-auto">
+      <TreeNodes nodes={state.browser.rootNodes} depth={0} />
+    </div>
+  );
+}
+
+function TreeNodes({ nodes, depth }: { nodes: FileNode[]; depth: number }) {
+  const { state, actions } = useReview();
+
+  return (
+    <div className="flex flex-col">
+      {nodes.map((node) => {
+        const isExpanded = state.browser.expandedPaths.has(node.path);
+        const isLoading = state.browser.loadingPaths.has(node.path);
+        const isSelected = state.browser.selectedPath === node.path;
+        const children = state.browser.loadedContents.get(node.path) ?? [];
+        const isDirectory = node.type === "directory";
+
+        const handleClick = () => {
+          if (isDirectory) {
+            actions.browser.toggleDirectory(node.path);
+          } else {
+            actions.browser.selectFile(node.path);
+          }
+        };
+
+        return (
+          <div key={node.path}>
+            <button
+              type="button"
+              onClick={handleClick}
+              className={cn(
+                "flex items-center gap-1 w-full px-2 py-0.5 text-left text-text-muted hover:bg-bg-muted",
+                isSelected && "bg-bg-muted",
+              )}
+              style={{ paddingLeft: `${depth * 12 + 8}px` }}
+            >
+              {isDirectory && (
+                <span className="grid size-3 place-items-center">
+                  {isLoading ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <ChevronRight
+                      className={cn("size-3 transition-transform", isExpanded && "rotate-90")}
+                    />
+                  )}
+                </span>
+              )}
+              {!isDirectory && <span className="size-3" />}
+              {isDirectory ? (
+                <Folder className="size-3 text-text-muted" />
+              ) : (
+                <File className="size-3 text-text-muted" />
+              )}
+              <span className="flex-1 truncate text-xs">{node.name}</span>
+            </button>
+            {isDirectory && isExpanded && children.length > 0 && (
+              <TreeNodes nodes={children} depth={depth + 1} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const Review = {
   Provider: ReviewProvider,
   Frame: ReviewFrame,
+  MainPanel: ReviewMainPanel,
+  SidePanel: ReviewSidePanel,
   Empty: ReviewEmpty,
+  DiffView: ReviewDiffView,
   DiffList: ReviewDiffList,
   DiffItem: ReviewDiffItem,
   Diff: ReviewDiff,
@@ -383,6 +633,21 @@ const Review = {
   Feedback: ReviewFeedback,
   FeedbackHeader: ReviewFeedbackHeader,
   FeedbackLocation: ReviewFeedbackLocation,
+  PreviewView: ReviewPreviewView,
+  PreviewHeader: ReviewPreviewHeader,
+  PreviewContent: ReviewPreviewContent,
+  Browser: ReviewBrowser,
+  BrowserHeader: ReviewBrowserHeader,
+  BrowserTree: ReviewBrowserTree,
 };
 
-export { Review, useReview, type ReviewableFile, type LineSelection, type FileChangeType };
+export {
+  Review,
+  useReview,
+  type ReviewableFile,
+  type LineSelection,
+  type FileChangeType,
+  type FileNode,
+  type BrowserState,
+  type BrowserActions,
+};
