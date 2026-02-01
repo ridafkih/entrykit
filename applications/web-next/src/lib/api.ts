@@ -1,4 +1,5 @@
 import { createClient } from "@lab/client";
+import { mutate } from "swr";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -13,4 +14,16 @@ export async function fetchChannelSnapshot<T>(channel: string, sessionId: string
   if (!response.ok) throw new Error(`Failed to fetch ${channel} snapshot`);
   const { data } = await response.json();
   return data as T;
+}
+
+const pendingContainerPrefetches = new Set<string>();
+
+export function prefetchSessionContainers(sessionId: string): void {
+  const cacheKey = `sessionContainers-${sessionId}`;
+  if (pendingContainerPrefetches.has(sessionId)) return;
+
+  pendingContainerPrefetches.add(sessionId);
+  fetchChannelSnapshot("sessionContainers", sessionId)
+    .then((data) => mutate(cacheKey, data, false))
+    .finally(() => pendingContainerPrefetches.delete(sessionId));
 }

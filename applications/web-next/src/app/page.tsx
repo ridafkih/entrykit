@@ -45,7 +45,7 @@ import { defaultModel } from "@/placeholder/models";
 import { Trash2 } from "lucide-react";
 import { useMultiplayer } from "@/lib/multiplayer";
 import { useAgent, prefetchSessionMessages, type MessageState } from "@/lib/use-agent";
-import { fetchChannelSnapshot } from "@/lib/api";
+import { fetchChannelSnapshot, prefetchSessionContainers } from "@/lib/api";
 import { useSessionStatus } from "@/lib/use-session-status";
 import { useSessionsSync } from "@/lib/use-sessions-sync";
 
@@ -55,6 +55,7 @@ function SessionItem({ session }: { session: Session }) {
 
   const handleMouseDown = () => {
     prefetchSessionMessages(session.id);
+    prefetchSessionContainers(session.id);
   };
 
   return (

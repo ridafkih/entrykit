@@ -44,6 +44,13 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
   const browserState = useChannel("sessionBrowserState", { uuid: sessionId });
   const frameSnapshot = useChannel("sessionBrowserFrames", { uuid: sessionId });
 
+  useEffect(() => {
+    setBitmap((prev) => {
+      prev?.close();
+      return null;
+    });
+  }, [sessionId]);
+
   const processFrame = useCallback((base64: string) => {
     fetch(`data:image/jpeg;base64,${base64}`)
       .then((res) => res.blob())
