@@ -29,13 +29,15 @@ export function FrameTabContent({ frameUrl }: FrameTabContentProps) {
   return (
     <div className="flex flex-1 flex-col min-h-0">
       <UrlBar url={frameUrl} isLoading={isLoading} onRefresh={handleRefresh} />
-      <iframe
-        key={key}
-        src={frameUrl}
-        className="flex-1 border-none"
-        onLoad={() => setIsLoading(false)}
-        title="Frame"
-      />
+      <div className="flex grow bg-white">
+        <iframe
+          key={key}
+          src={frameUrl}
+          className="flex-1 border-none"
+          onLoad={() => setIsLoading(false)}
+          title="Frame"
+        />
+      </div>
     </div>
   );
 }
