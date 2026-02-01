@@ -5,11 +5,12 @@ import { useParams } from "next/navigation";
 import { Nav } from "@/components/nav";
 import { ProjectNavigatorView } from "@/components/project-navigator-view";
 import { OpenCodeSessionProvider } from "@/lib/opencode-session";
+import { defaultSettingsTab } from "@/config/settings";
 
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Editor", href: "/editor" },
-  { label: "Settings", href: "/settings" },
+  { label: "Settings", href: defaultSettingsTab.href, match: "/settings" },
 ];
 
 function Sidebar({ selectedSessionId }: { selectedSessionId: string | null }) {

@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { tv } from "tailwind-variants";
 import { IconButton } from "@/components/icon-button";
 import { PageFrame, Header } from "@/components/layout-primitives";
+import { settingsTabs } from "@/config/settings";
 
 const tab = tv({
   base: "px-3 py-1 text-xs border-b-2 -mb-px",
@@ -17,17 +18,6 @@ const tab = tv({
     },
   },
 });
-
-type SettingsTab = {
-  label: string;
-  href: string;
-};
-
-const tabs: SettingsTab[] = [
-  { label: "GitHub", href: "/settings/github" },
-  { label: "Providers", href: "/settings/providers" },
-  { label: "Projects", href: "/settings/projects" },
-];
 
 function SettingsHeader() {
   return (
@@ -54,7 +44,7 @@ function SettingsTabs() {
 
   return (
     <div className="flex border-b border-border">
-      {tabs.map((t) => (
+      {settingsTabs.map((t) => (
         <Link key={t.href} href={t.href} className={tab({ active: isActive(t.href) })}>
           {t.label}
         </Link>

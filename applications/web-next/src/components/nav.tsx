@@ -17,6 +17,7 @@ const link = tv({
 type NavItem = {
   label: string;
   href: string;
+  match?: string; // Optional pattern to match against pathname (defaults to href)
 };
 
 type NavProps = {
@@ -27,10 +28,11 @@ export function Nav({ items }: NavProps) {
   const pathname = usePathname();
 
   const getIsActive = (item: NavItem) => {
-    if (item.href === "/") {
+    const pattern = item.match ?? item.href;
+    if (pattern === "/") {
       return pathname === "/";
     }
-    return pathname.startsWith(item.href);
+    return pathname.startsWith(pattern);
   };
 
   return (

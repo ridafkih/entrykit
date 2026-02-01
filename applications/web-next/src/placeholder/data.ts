@@ -1,9 +1,10 @@
 import type { NavItem } from "@/components/nav";
+import { defaultSettingsTab } from "@/config/settings";
 
 export const navItems: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "Editor", href: "/editor" },
-  { label: "Settings", href: "/settings" },
+  { label: "Settings", href: defaultSettingsTab.href, match: "/settings" },
 ];
 
 type ReviewableFile = {

@@ -28,7 +28,7 @@ function SessionItem({ session, isSelected }: SessionItemProps) {
   };
 
   return (
-    <Link href={`/editor/${session.id}`} className="contents">
+    <Link href={`/editor/${session.id}/chat`} className="contents">
       <ProjectNavigator.Item selected={isSelected} onMouseDown={handleMouseDown}>
         <StatusIcon status={status} />
         <Hash>{session.id.slice(0, 6)}</Hash>
@@ -64,7 +64,7 @@ function ProjectSessionsList({ project, selectedSessionId }: ProjectSessionsList
     if (sessionCount > creationState.sessionCountAtCreation) {
       const newSession = sessions[sessions.length - 1];
       if (newSession) {
-        router.push(`/editor/${newSession.id}`);
+        router.push(`/editor/${newSession.id}/chat`);
         setCreationState({ isCreating: false, projectId: null, sessionCountAtCreation: 0 });
       }
     }

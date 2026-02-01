@@ -66,7 +66,7 @@ function SessionListItem({ session }: { session: Session }) {
   const router = useRouter();
 
   const handleClick = () => {
-    router.push(`/editor/${session.id}`);
+    router.push(`/editor/${session.id}/chat`);
   };
 
   return (
