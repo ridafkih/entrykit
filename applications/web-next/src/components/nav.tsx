@@ -39,7 +39,12 @@ export function Nav({ items }: NavProps) {
   return (
     <Header as="nav" spacing="wide" className="whitespace-nowrap font-medium">
       {items.map((item) => (
-        <Link key={item.href} href={item.href} className={link({ active: getIsActive(item) })}>
+        <Link
+          draggable={false}
+          key={item.href}
+          href={item.href}
+          className={link({ active: getIsActive(item) })}
+        >
           {item.label}
         </Link>
       ))}

@@ -13,11 +13,11 @@ import { Hash } from "./hash";
 import { IconButton } from "./icon-button";
 
 const row = tv({
-  base: "flex items-center gap-3 py-2 cursor-pointer",
+  base: "flex items-center gap-3 py-2",
   variants: {
     type: {
-      project: "text-text-secondary",
-      session: "hover:brightness-75",
+      project: "text-text-secondary cursor-default",
+      session: "hover:brightness-75 cursor-pointer",
     },
   },
 });

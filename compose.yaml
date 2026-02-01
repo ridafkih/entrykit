@@ -83,6 +83,7 @@ services:
       BROWSER_API_URL: "http://browser:80"
       BROWSER_WS_HOST: "browser"
       BROWSER_CONTAINER_NAME: "lab-browser"
+      POOL_SIZE: 1
     depends_on:
       - postgres
       - opencode

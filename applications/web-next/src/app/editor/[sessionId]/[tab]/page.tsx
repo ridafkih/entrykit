@@ -1,11 +1,11 @@
 "use client";
 
 import { use } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { tv } from "tailwind-variants";
 import { Chat } from "@/components/chat";
 import { StatusIcon } from "@/components/status-icon";
+import { Breadcrumb } from "@/components/breadcrumb";
+import { NavTabs } from "@/components/nav-tabs";
 import { ChatTabContent } from "@/components/chat-tab-content";
 import { ReviewTabContent } from "@/components/review-tab-content";
 import { FrameTabContent } from "@/components/frame-tab-content";
@@ -18,63 +18,35 @@ import { useSessionContext } from "../layout";
 
 type TabValue = "chat" | "review" | "frame" | "stream";
 
-const tabStyles = tv({
-  base: "px-3 py-1 text-xs",
-  variants: {
-    active: {
-      true: "text-text border-b-2 border-text -mb-px",
-      false: "text-text-muted hover:text-text",
-    },
-  },
-});
-
 function SessionHeader() {
   const { session, project } = useSessionContext();
 
   return (
     <Header>
       <StatusIcon status={session?.status ?? "idle"} />
-      <div className="flex items-center gap-1">
-        <span className="text-text-muted text-nowrap overflow-x-hidden truncate">
-          {project?.name}
-        </span>
-        <span className="text-text-muted">/</span>
+      <Breadcrumb.Root>
+        <Breadcrumb.MutedItem>{project?.name}</Breadcrumb.MutedItem>
+        <Breadcrumb.Separator />
         {session?.title ? (
-          <span className="text-text font-medium text-nowrap overflow-x-hidden truncate">
-            {session.title}
-          </span>
+          <Breadcrumb.Item>{session.title}</Breadcrumb.Item>
         ) : (
-          <span className="text-text-muted italic text-nowrap overflow-x-hidden truncate">
-            Unnamed Session
-          </span>
+          <Breadcrumb.Item muted>Unnamed Session</Breadcrumb.Item>
         )}
-      </div>
+      </Breadcrumb.Root>
     </Header>
   );
 }
 
-function SessionTabs({ currentTab }: { currentTab: TabValue }) {
+function SessionTabs() {
   const { sessionId } = useSessionContext();
 
-  const tabs: { value: TabValue; label: string }[] = [
-    { value: "chat", label: "Chat" },
-    { value: "review", label: "Review" },
-    { value: "frame", label: "Frame" },
-    { value: "stream", label: "Stream" },
-  ];
-
   return (
-    <div className="flex border-b border-border">
-      {tabs.map((tab) => (
-        <Link
-          key={tab.value}
-          href={`/editor/${sessionId}/${tab.value}`}
-          className={tabStyles({ active: currentTab === tab.value })}
-        >
-          {tab.label}
-        </Link>
-      ))}
-    </div>
+    <NavTabs.List>
+      <NavTabs.Tab href={`/editor/${sessionId}/chat`}>Chat</NavTabs.Tab>
+      <NavTabs.Tab href={`/editor/${sessionId}/review`}>Review</NavTabs.Tab>
+      <NavTabs.Tab href={`/editor/${sessionId}/frame`}>Frame</NavTabs.Tab>
+      <NavTabs.Tab href={`/editor/${sessionId}/stream`}>Stream</NavTabs.Tab>
+    </NavTabs.List>
   );
 }
 
@@ -140,7 +112,7 @@ export default function TabPage({ params }: TabPageProps) {
       <div className="flex-1 min-w-0 border-r border-border">
         <PageFrame position="relative">
           <SessionHeader />
-          <SessionTabs currentTab={currentTab} />
+          <SessionTabs />
           <PageContent display="flex">
             <TabContent tab={currentTab} />
           </PageContent>
