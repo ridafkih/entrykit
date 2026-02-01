@@ -1,10 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { use } from "react";
+import { use, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
 import { BrowserStreamProvider } from "@/components/browser-stream";
-import { useProjects } from "@/lib/hooks";
+import { useProjects, useSession } from "@/lib/hooks";
 import { fetchChannelSnapshot } from "@/lib/api";
 import { useMultiplayer } from "@/lib/multiplayer";
 import type { Session, Project } from "@lab/client";
@@ -60,9 +61,21 @@ type SessionLayoutProps = {
 };
 
 export default function SessionLayout({ children, params }: SessionLayoutProps) {
+  const router = useRouter();
   const { sessionId } = use(params);
+  const { error: sessionError } = useSession(sessionId);
   const { data: sessionData } = useSessionData(sessionId);
   const containers = useSessionContainers(sessionId);
+
+  useEffect(() => {
+    if (sessionError) {
+      router.replace("/editor");
+    }
+  }, [sessionError, router]);
+
+  if (sessionError) {
+    return null;
+  }
 
   const containerUrls = containers.flatMap((container) => container.urls.map(({ url }) => url));
 

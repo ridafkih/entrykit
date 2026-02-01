@@ -17,16 +17,21 @@ export function createChannelRestHandler(browserService: BrowserService) {
     }
 
     const session = searchParams.get("session");
-    const data = await loaders[channelName](session);
 
-    if (data === null) {
-      return Response.json({ error: "Missing session parameter" }, { status: 400 });
+    try {
+      const data = await loaders[channelName](session);
+
+      if (data === null) {
+        return Response.json({ error: "Missing session parameter" }, { status: 400 });
+      }
+
+      return Response.json({
+        channel: channelName,
+        data,
+        timestamp: Date.now(),
+      });
+    } catch {
+      return Response.json({ error: "Session not found" }, { status: 404 });
     }
-
-    return Response.json({
-      channel: channelName,
-      data,
-      timestamp: Date.now(),
-    });
   };
 }

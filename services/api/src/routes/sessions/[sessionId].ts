@@ -17,46 +17,58 @@ function buildContainerUrls(sessionId: string, ports: Record<string, number>): s
 }
 
 const GET: RouteHandler = async (_request, params) => {
-  const session = await findSessionById(params.sessionId);
-  if (!session) return notFoundResponse();
+  try {
+    const session = await findSessionById(params.sessionId);
+    if (!session) return notFoundResponse();
 
-  const containers = await findSessionContainersBySessionId(params.sessionId);
+    const containers = await findSessionContainersBySessionId(params.sessionId);
 
-  const containersWithStatus = await Promise.all(
-    containers.map(async (container) => {
-      if (!container.dockerId) return { ...container, info: null, urls: [] };
-      const info = await docker.inspectContainer(container.dockerId);
-      const urls = info?.ports ? buildContainerUrls(params.sessionId, info.ports) : [];
-      return { ...container, info, urls };
-    }),
-  );
+    const containersWithStatus = await Promise.all(
+      containers.map(async (container) => {
+        if (!container.dockerId) return { ...container, info: null, urls: [] };
+        const info = await docker.inspectContainer(container.dockerId);
+        const urls = info?.ports ? buildContainerUrls(params.sessionId, info.ports) : [];
+        return { ...container, info, urls };
+      }),
+    );
 
-  return Response.json({ ...session, containers: containersWithStatus });
+    return Response.json({ ...session, containers: containersWithStatus });
+  } catch {
+    return notFoundResponse();
+  }
 };
 
 const PATCH: RouteHandler = async (request, params) => {
-  let session = await findSessionById(params.sessionId);
-  if (!session) return notFoundResponse();
+  try {
+    let session = await findSessionById(params.sessionId);
+    if (!session) return notFoundResponse();
 
-  const body = await request.json();
+    const body = await request.json();
 
-  if (typeof body.opencodeSessionId === "string") {
-    session = await updateSessionOpencodeId(params.sessionId, body.opencodeSessionId);
+    if (typeof body.opencodeSessionId === "string") {
+      session = await updateSessionOpencodeId(params.sessionId, body.opencodeSessionId);
+    }
+
+    if (typeof body.title === "string") {
+      session = await updateSessionTitle(params.sessionId, body.title);
+    }
+
+    return Response.json(session);
+  } catch {
+    return notFoundResponse();
   }
-
-  if (typeof body.title === "string") {
-    session = await updateSessionTitle(params.sessionId, body.title);
-  }
-
-  return Response.json(session);
 };
 
 const DELETE: RouteHandler = async (_request, params, context) => {
-  const session = await findSessionById(params.sessionId);
-  if (!session) return notFoundResponse();
+  try {
+    const session = await findSessionById(params.sessionId);
+    if (!session) return notFoundResponse();
 
-  await cleanupSession(params.sessionId, context.browserService);
-  return noContentResponse();
+    await cleanupSession(params.sessionId, context.browserService);
+    return noContentResponse();
+  } catch {
+    return notFoundResponse();
+  }
 };
 
 export { DELETE, GET, PATCH };
