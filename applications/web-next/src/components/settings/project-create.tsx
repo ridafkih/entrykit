@@ -6,26 +6,17 @@ import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
 import { ArrowLeft, Plus } from "lucide-react";
 import { tv } from "tailwind-variants";
+import { Button, button } from "@/components/button";
 import { FormInput } from "@/components/form-input";
 import { ContainerEditor, type ContainerDraft } from "@/components/settings/container-editor";
 import { api } from "@/lib/api";
 
 const styles = {
-  backButton: tv({
-    base: "flex items-center gap-1.5 text-xs text-text-muted hover:text-text",
-  }),
-  primaryButton: tv({
-    base: "self-start px-2 py-1 text-xs bg-bg-muted border border-border text-text hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed",
-  }),
-  addLinkButton: tv({
-    base: "flex items-center gap-1 text-xs text-text-muted hover:text-text self-start",
-  }),
   section: tv({
     slots: {
       root: "flex flex-col gap-2",
       header: "flex items-center justify-between",
       label: "text-xs text-text-secondary",
-      addButton: "flex items-center gap-1 text-xs text-text-muted hover:text-text",
       empty: "text-xs text-text-muted",
       content: "flex flex-col gap-2",
     },
@@ -100,10 +91,10 @@ function ContainersSection({
     <div className={sectionStyles.root()}>
       <div className={sectionStyles.header()}>
         <span className={sectionStyles.label()}>Containers</span>
-        <button type="button" onClick={onAdd} className={sectionStyles.addButton()}>
+        <Button variant="ghost" onClick={onAdd}>
           <Plus size={12} />
           Add Container
-        </button>
+        </Button>
       </div>
       {containers.length === 0 ? (
         <span className={sectionStyles.empty()}>(No containers yet)</span>
@@ -219,7 +210,7 @@ export function ProjectCreate() {
   return (
     <div className="flex-1 overflow-y-auto p-3">
       <div className="flex flex-col gap-1 max-w-sm">
-        <Link href="/settings/projects" className={styles.backButton()}>
+        <Link href="/settings/projects" className={button({ variant: "ghost" })}>
           <ArrowLeft size={12} />
           Back to projects
         </Link>
@@ -255,14 +246,10 @@ export function ProjectCreate() {
             <FormInput.Helper>Context for the AI agent</FormInput.Helper>
           </FormField>
         ) : (
-          <button
-            type="button"
-            onClick={() => setShowSystemPrompt(true)}
-            className={styles.addLinkButton()}
-          >
+          <Button variant="ghost" onClick={() => setShowSystemPrompt(true)} className="self-start">
             <Plus size={12} />
             Add system prompt
-          </button>
+          </Button>
         )}
 
         <ContainersSection
@@ -272,14 +259,9 @@ export function ProjectCreate() {
           onRemove={handleContainerRemove}
         />
 
-        <button
-          type="button"
-          onClick={handleCreate}
-          disabled={!canSubmit}
-          className={styles.primaryButton()}
-        >
+        <Button onClick={handleCreate} disabled={!canSubmit} className="self-start">
           {isCreating ? "Creating..." : "Create Project"}
-        </button>
+        </Button>
       </div>
     </div>
   );

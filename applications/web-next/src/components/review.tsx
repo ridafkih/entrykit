@@ -16,6 +16,7 @@ import { tv } from "tailwind-variants";
 import { MultiFileDiff, File as FileViewer } from "@pierre/diffs/react";
 import type { FileContents, SelectedLineRange } from "@pierre/diffs";
 import { File, FilePlus, FileX, Folder, X, Check, ChevronRight, Loader2 } from "lucide-react";
+import { Button, button } from "@/components/button";
 import { TextAreaGroup } from "./textarea-group";
 import { cn } from "@/lib/cn";
 
@@ -274,7 +275,9 @@ function ReviewDiffHeader({ children }: { children?: ReactNode }) {
   return (
     <div className="col-start-1 row-start-1 flex items-center gap-1.5 px-2 py-1.5 border-b border-border">
       <span className="flex-1 text-xs text-text-muted">{children ?? "Changes"}</span>
-      <span className={dismissButton({ className: "invisible" })}>Close</span>
+      <span className={button({ variant: "ghost", size: "sm", className: "invisible" })}>
+        Close
+      </span>
     </div>
   );
 }
@@ -419,18 +422,14 @@ function ReviewFileHeaderLabel() {
   return <span className="flex-1 truncate text-xs text-text-muted ">{path}</span>;
 }
 
-const dismissButton = tv({
-  base: "px-1.5 py-0.5 text-xs text-text-muted hover:text-text hover:bg-bg-muted cursor-pointer",
-});
-
 function ReviewFileHeaderDismiss() {
   const { actions } = useReview();
   const { path } = useFileHeader();
 
   return (
-    <button type="button" onClick={() => actions.dismissFile(path)} className={dismissButton()}>
+    <Button variant="ghost" size="sm" onClick={() => actions.dismissFile(path)}>
       Dismiss
-    </button>
+    </Button>
   );
 }
 
@@ -533,13 +532,9 @@ function ReviewPreviewHeader({ children }: { children?: ReactNode }) {
         {state.browser.selectedPath ?? "\u00A0"}
       </span>
       {children}
-      <button
-        type="button"
-        onClick={actions.browser.clearFileSelection}
-        className={dismissButton()}
-      >
+      <Button variant="ghost" size="sm" onClick={actions.browser.clearFileSelection}>
         Close
-      </button>
+      </Button>
     </div>
   );
 }

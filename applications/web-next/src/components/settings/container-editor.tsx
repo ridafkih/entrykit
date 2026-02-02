@@ -3,6 +3,8 @@
 import { createContext, use, type ReactNode } from "react";
 import { Plus, X, Folder } from "lucide-react";
 import { tv } from "tailwind-variants";
+import { Button } from "@/components/button";
+import { IconButton } from "@/components/icon-button";
 import { FormInput, InputGroup } from "@/components/form-input";
 
 const styles = {
@@ -13,7 +15,6 @@ const styles = {
     slots: {
       root: "flex items-center justify-between",
       title: "text-xs text-text-secondary",
-      removeButton: "text-text-muted hover:text-text",
     },
   }),
   section: tv({
@@ -21,22 +22,12 @@ const styles = {
       root: "flex flex-col gap-1.5",
       header: "flex items-center justify-between",
       label: "text-xs text-text-secondary",
-      addButton: "flex items-center gap-1 text-xs text-text-muted hover:text-text",
       empty: "text-xs text-text-muted",
       content: "flex flex-col gap-2",
     },
   }),
   field: tv({
     base: "flex flex-col gap-1",
-  }),
-  workspaceToggle: tv({
-    base: "flex items-center gap-2 px-2 py-1.5 border border-border text-xs cursor-pointer hover:bg-bg",
-    variants: {
-      active: {
-        true: "border-blue-500/50 text-blue-500 bg-blue-500/10",
-        false: "text-text-muted",
-      },
-    },
   }),
 };
 
@@ -151,9 +142,9 @@ function ContainerEditorHeader() {
       <span className={headerStyles.title()}>
         {getContainerLabel(state.container, state.containerIndex)}
       </span>
-      <button type="button" onClick={actions.remove} className={headerStyles.removeButton()}>
+      <IconButton onClick={actions.remove}>
         <X size={12} />
-      </button>
+      </IconButton>
     </div>
   );
 }
@@ -251,10 +242,10 @@ function ContainerEditorEnvVarsSection() {
     <div className={sectionStyles.root()}>
       <div className={sectionStyles.header()}>
         <span className={sectionStyles.label()}>Environment Variables</span>
-        <button type="button" onClick={handleAdd} className={sectionStyles.addButton()}>
+        <Button variant="ghost" onClick={handleAdd}>
           <Plus size={10} />
           Add
-        </button>
+        </Button>
       </div>
       {state.container.envVars.length === 0 ? (
         <span className={sectionStyles.empty()}>(None)</span>
@@ -345,10 +336,10 @@ function ContainerEditorDependenciesSection() {
     <div className={sectionStyles.root()}>
       <div className={sectionStyles.header()}>
         <span className={sectionStyles.label()}>Depends On</span>
-        <button type="button" onClick={handleAdd} className={sectionStyles.addButton()}>
+        <Button variant="ghost" onClick={handleAdd}>
           <Plus size={10} />
           Add
-        </button>
+        </Button>
       </div>
       {state.container.dependencies.length === 0 ? (
         <span className={sectionStyles.empty()}>(None)</span>
@@ -378,14 +369,10 @@ function ContainerEditorWorkspaceToggle() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleToggle}
-      className={styles.workspaceToggle({ active: isWorkspace })}
-    >
+    <Button variant={isWorkspace ? "active" : "primary"} onClick={handleToggle}>
       <Folder size={12} fill={isWorkspace ? "currentColor" : "none"} />
       {isWorkspace ? "Workspace container" : "Set as workspace"}
-    </button>
+    </Button>
   );
 }
 

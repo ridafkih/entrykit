@@ -141,6 +141,43 @@ function FormInputError({ children }: { children: ReactNode }) {
   return <p className="text-xs text-red-500">{children}</p>;
 }
 
+function FormInputSuccess({ children }: { children: ReactNode }) {
+  return <p className="text-xs text-green-500">{children}</p>;
+}
+
+const submitButton = tv({
+  base: "px-2 py-1 text-xs border border-border text-text hover:bg-bg-muted disabled:opacity-50 disabled:cursor-not-allowed",
+});
+
+type FormInputSubmitProps = {
+  children: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  loadingText?: string;
+  className?: string;
+};
+
+function FormInputSubmit({
+  children,
+  onClick,
+  disabled,
+  loading,
+  loadingText,
+  className,
+}: FormInputSubmitProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={submitButton({ className })}
+    >
+      {loading ? (loadingText ?? "Loading...") : children}
+    </button>
+  );
+}
+
 const inputGroup = tv({
   slots: {
     root: "flex items-center border border-border bg-bg focus-within:border-text-muted",
@@ -203,6 +240,8 @@ const FormInput = {
   Checkbox: FormInputCheckbox,
   Helper: FormInputHelper,
   Error: FormInputError,
+  Success: FormInputSuccess,
+  Submit: FormInputSubmit,
 };
 
 export { FormInput, InputGroup };

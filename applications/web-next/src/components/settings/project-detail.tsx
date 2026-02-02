@@ -6,26 +6,11 @@ import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
 import { ArrowLeft } from "lucide-react";
 import { tv } from "tailwind-variants";
+import { Button, button } from "@/components/button";
 import { FormInput } from "@/components/form-input";
 import { ContainerCard } from "@/components/settings/container-card";
 import { useProjects } from "@/lib/hooks";
 import { api } from "@/lib/api";
-
-const backButton = tv({
-  base: "flex items-center gap-1.5 text-xs text-text-muted hover:text-text",
-});
-
-const destructiveButton = tv({
-  base: "px-2 py-1 text-xs border border-red-500/30 text-red-500 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed",
-});
-
-const primaryButton = tv({
-  base: "px-2 py-1 text-xs border border-border text-text hover:bg-bg-muted disabled:opacity-50 disabled:cursor-not-allowed",
-});
-
-const buttonRow = tv({
-  base: "flex items-center gap-1",
-});
 
 const containersSection = tv({
   base: "flex flex-col gap-2",
@@ -106,7 +91,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
   return (
     <div className="flex-1 overflow-y-auto p-3">
       <div className="flex flex-col gap-1 max-w-sm">
-        <Link href="/settings/projects" className={backButton()}>
+        <Link href="/settings/projects" className={button({ variant: "ghost" })}>
           <ArrowLeft size={12} />
           Back to projects
         </Link>
@@ -167,23 +152,13 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
           )}
         </div>
 
-        <div className={buttonRow()}>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || !hasChanges}
-            className={primaryButton()}
-          >
+        <div className="flex items-center gap-1">
+          <Button onClick={handleSave} disabled={isSaving || !hasChanges}>
             {isSaving ? "Saving..." : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={handleArchive}
-            disabled={isArchiving}
-            className={destructiveButton()}
-          >
+          </Button>
+          <Button variant="danger" onClick={handleArchive} disabled={isArchiving}>
             {isArchiving ? "Archiving..." : "Archive"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

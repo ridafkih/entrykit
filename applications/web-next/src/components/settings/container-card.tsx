@@ -3,6 +3,7 @@
 import { createContext, use, useState, type ReactNode } from "react";
 import { Folder } from "lucide-react";
 import { tv } from "tailwind-variants";
+import { Button } from "@/components/button";
 import { api } from "@/lib/api";
 import type { ProjectContainer } from "@lab/client";
 
@@ -14,9 +15,6 @@ const styles = tv({
     image: "text-xs text-text font-mono",
     meta: "text-xs text-text-muted",
     actions: "flex items-center justify-end gap-2 pt-1.5 border-t border-border mt-1",
-    workspaceButton:
-      "flex items-center gap-1.5 px-2 py-1 text-xs border border-border text-text disabled:opacity-50",
-    workspaceActive: "border-blue-500/50 text-blue-500 bg-blue-500/10",
   },
 });
 
@@ -145,19 +143,17 @@ function ContainerCardActions({ children }: { children: ReactNode }) {
 function ContainerCardWorkspaceToggle() {
   const { state, actions } = useContainerCard();
   const isWorkspace = state.container.isWorkspace;
-  const s = styles();
 
   return (
-    <button
-      type="button"
+    <Button
+      variant={isWorkspace ? "active" : "primary"}
       onClick={() => actions.setWorkspace(!isWorkspace)}
       disabled={state.isUpdating}
-      className={s.workspaceButton({ class: isWorkspace && s.workspaceActive() })}
       title={isWorkspace ? "This is the workspace container" : "Set as workspace container"}
     >
       <Folder size={12} fill={isWorkspace ? "currentColor" : "none"} />
       {isWorkspace ? "Workspace" : "Set as workspace"}
-    </button>
+    </Button>
   );
 }
 

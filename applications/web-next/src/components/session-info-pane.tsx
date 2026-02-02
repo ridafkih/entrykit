@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ExternalLink, Box, GitBranch, FileText, CheckSquare, type LucideIcon } from "lucide-react";
 import { tv } from "tailwind-variants";
+import { Button } from "@/components/button";
 import { cn } from "@/lib/cn";
 
 const text = tv({
@@ -218,35 +219,22 @@ function SessionInfoPaneLogItem({
   return <div className={text({ color: levelColor[level], font: "mono" })}>{message}</div>;
 }
 
-const actionButton = tv({
-  base: "flex items-center justify-center gap-1.5 px-2 py-1 text-xs border w-full",
-  variants: {
-    variant: {
-      default: "border-border bg-bg-muted text-text hover:bg-bg-hover",
-      danger: "border-red-500/30 text-red-500 hover:bg-red-500/10",
-    },
-  },
-  defaultVariants: {
-    variant: "default",
-  },
-});
-
 function SessionInfoPaneActionButton({
   icon: Icon,
   children,
   onClick,
-  variant = "default",
+  variant = "primary",
 }: {
   icon: LucideIcon;
   children: ReactNode;
   onClick?: () => void;
-  variant?: "default" | "danger";
+  variant?: "primary" | "danger";
 }) {
   return (
-    <button type="button" onClick={onClick} className={actionButton({ variant })}>
+    <Button variant={variant} onClick={onClick} className="w-full justify-center">
       <Icon size={12} />
       {children}
-    </button>
+    </Button>
   );
 }
 
