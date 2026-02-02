@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Chat, useChat } from "@/components/chat";
 import { TextAreaGroup } from "@/components/textarea-group";
 import { MessagePart } from "@/components/message-part";
@@ -8,6 +8,7 @@ import { QuestionProvider } from "@/lib/question-context";
 import { useModelSelection } from "@/lib/hooks";
 import { useSessionStatus } from "@/lib/use-session-status";
 import { useSessionContext } from "@/app/editor/[sessionId]/layout";
+import { isToolPart } from "@/lib/opencode";
 import type { MessageState, SessionStatus } from "@/lib/use-agent";
 
 type ChatTabContentProps = {
@@ -29,7 +30,6 @@ export function ChatTabContent({
 }: ChatTabContentProps) {
   const { session } = useSessionContext();
   const status = useSessionStatus(session);
-  const isGenerating = status === "generating" || sessionStatus.type === "busy";
   const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
   const { state, actions } = useChat();
   const { modelGroups, modelId, setModelId } = useModelSelection({
@@ -40,6 +40,16 @@ export function ChatTabContent({
 
   const lastMessage = messages[messages.length - 1];
   const isStreaming = lastMessage?.role === "assistant";
+
+  const hasRunningTool = useMemo(() => {
+    if (lastMessage?.role !== "assistant") return false;
+    return lastMessage.parts.some(
+      (part) =>
+        isToolPart(part) && (part.state.status === "running" || part.state.status === "pending"),
+    );
+  }, [lastMessage]);
+
+  const isActive = status === "generating" || sessionStatus.type === "busy" || hasRunningTool;
 
   useEffect(() => {
     if (isStreaming) {
@@ -82,7 +92,7 @@ export function ChatTabContent({
             )),
           )}
         </Chat.Messages>
-        <Chat.Input isSending={isGenerating} statusMessage={rateLimitMessage}>
+        <Chat.Input isSending={isActive} statusMessage={rateLimitMessage}>
           {modelGroups && modelId && (
             <TextAreaGroup.ModelSelector
               value={modelId}
