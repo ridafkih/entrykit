@@ -3,12 +3,17 @@ import { spawnSession } from "../../../utils/orchestration/session-spawner";
 import type { RouteHandler } from "../../../utils/handlers/route-handler";
 
 const GET: RouteHandler = async (_request, params) => {
-  const sessions = await findSessionsByProjectId(params.projectId);
+  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
+
+  const sessions = await findSessionsByProjectId(projectId);
   return Response.json(sessions);
 };
 
 const POST: RouteHandler = async (request, params, context) => {
-  const { projectId } = params;
+  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
+
   const body = await request.json();
 
   try {

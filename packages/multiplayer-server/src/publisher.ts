@@ -70,6 +70,7 @@ export function createPublisher<S extends Schema>(
   return {
     publishSnapshot(channelName, ...args) {
       const channel = schema.channels[channelName];
+      if (!channel) throw new Error(`Unknown channel: ${String(channelName)}`);
       const { params, data } = extractArgs(channel.path, args);
       const path = params ? resolvePath(channel.path, params) : channel.path;
       publish(path, { type: "snapshot", channel: path, data });
@@ -77,6 +78,7 @@ export function createPublisher<S extends Schema>(
 
     publishDelta(channelName, ...args) {
       const channel = schema.channels[channelName];
+      if (!channel) throw new Error(`Unknown channel: ${String(channelName)}`);
       const { params, data } = extractArgs(channel.path, args);
       const path = params ? resolvePath(channel.path, params) : channel.path;
       publish(path, { type: "delta", channel: path, data });
@@ -84,6 +86,7 @@ export function createPublisher<S extends Schema>(
 
     publishEvent(channelName, ...args) {
       const channel = schema.channels[channelName];
+      if (!channel) throw new Error(`Unknown channel: ${String(channelName)}`);
       const { params, data } = extractArgs(channel.path, args);
       const path = params ? resolvePath(channel.path, params) : channel.path;
       publish(path, { type: "event", channel: path, data });

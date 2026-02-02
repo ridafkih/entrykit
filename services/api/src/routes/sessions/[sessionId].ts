@@ -1,5 +1,5 @@
 import { docker } from "../../clients/docker";
-import { notFoundResponse, noContentResponse } from "../../shared/http";
+import { notFoundResponse, noContentResponse, badRequestResponse } from "../../shared/http";
 import {
   findSessionById,
   updateSessionOpencodeId,
@@ -17,17 +17,20 @@ function buildContainerUrls(sessionId: string, ports: Record<string, number>): s
 }
 
 const GET: RouteHandler = async (_request, params) => {
+  const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
+  if (!sessionId) return badRequestResponse("Missing sessionId");
+
   try {
-    const session = await findSessionById(params.sessionId);
+    const session = await findSessionById(sessionId);
     if (!session) return notFoundResponse();
 
-    const containers = await findSessionContainersBySessionId(params.sessionId);
+    const containers = await findSessionContainersBySessionId(sessionId);
 
     const containersWithStatus = await Promise.all(
       containers.map(async (container) => {
         if (!container.dockerId) return { ...container, info: null, urls: [] };
         const info = await docker.inspectContainer(container.dockerId);
-        const urls = info?.ports ? buildContainerUrls(params.sessionId, info.ports) : [];
+        const urls = info?.ports ? buildContainerUrls(sessionId, info.ports) : [];
         return { ...container, info, urls };
       }),
     );
@@ -39,18 +42,27 @@ const GET: RouteHandler = async (_request, params) => {
 };
 
 const PATCH: RouteHandler = async (request, params) => {
+  const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
+  if (!sessionId) return badRequestResponse("Missing sessionId");
+
   try {
-    let session = await findSessionById(params.sessionId);
+    let session = await findSessionById(sessionId);
     if (!session) return notFoundResponse();
 
     const body = await request.json();
 
     if (typeof body.opencodeSessionId === "string") {
-      session = await updateSessionOpencodeId(params.sessionId, body.opencodeSessionId);
+      const workspaceDirectory =
+        typeof body.workspaceDirectory === "string" ? body.workspaceDirectory : undefined;
+      session = await updateSessionOpencodeId(
+        sessionId,
+        body.opencodeSessionId,
+        workspaceDirectory,
+      );
     }
 
     if (typeof body.title === "string") {
-      session = await updateSessionTitle(params.sessionId, body.title);
+      session = await updateSessionTitle(sessionId, body.title);
     }
 
     return Response.json(session);
@@ -60,11 +72,14 @@ const PATCH: RouteHandler = async (request, params) => {
 };
 
 const DELETE: RouteHandler = async (_request, params, context) => {
+  const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
+  if (!sessionId) return badRequestResponse("Missing sessionId");
+
   try {
-    const session = await findSessionById(params.sessionId);
+    const session = await findSessionById(sessionId);
     if (!session) return notFoundResponse();
 
-    await cleanupSession(params.sessionId, context.browserService);
+    await cleanupSession(sessionId, context.browserService);
     return noContentResponse();
   } catch {
     return notFoundResponse();

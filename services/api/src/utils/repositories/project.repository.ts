@@ -118,6 +118,7 @@ export async function createProject(data: {
       systemPrompt: data.systemPrompt,
     })
     .returning();
+  if (!project) throw new Error("Failed to create project");
   return project;
 }
 

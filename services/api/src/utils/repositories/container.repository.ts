@@ -20,6 +20,7 @@ export async function createContainer(data: {
   hostname?: string;
 }): Promise<Container> {
   const [container] = await db.insert(containers).values(data).returning();
+  if (!container) throw new Error("Failed to create container");
   return container;
 }
 
@@ -35,6 +36,7 @@ export async function createSessionContainer(data: {
   status: string;
 }): Promise<SessionContainer> {
   const [sessionContainer] = await db.insert(sessionContainers).values(data).returning();
+  if (!sessionContainer) throw new Error("Failed to create session container");
   return sessionContainer;
 }
 

@@ -47,6 +47,7 @@ async function createOrchestrationRecord(input: {
     })
     .returning({ id: orchestrationRequests.id });
 
+  if (!record) throw new Error("Failed to create orchestration record");
   return record.id;
 }
 

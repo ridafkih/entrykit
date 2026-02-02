@@ -4,8 +4,8 @@ import {
   createContainerPorts,
   createContainerDependencies,
   validateDependencies,
-} from "../../../utils/repositories/container.repository";
-import type { RouteHandler } from "../../../utils/handlers/route-handler";
+} from "../../../../utils/repositories/container.repository";
+import type { RouteHandler } from "../../../../utils/handlers/route-handler";
 
 interface DependencyInput {
   containerId: string;
@@ -39,14 +39,20 @@ function extractDependsOnIds(
 }
 
 const GET: RouteHandler = async (_request, params) => {
-  const containers = await findContainersWithDependencies(params.projectId);
+  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
+
+  const containers = await findContainersWithDependencies(projectId);
   return Response.json(containers);
 };
 
 const POST: RouteHandler = async (request, params) => {
+  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
+
   const body = await request.json();
   const container = await createContainer({
-    projectId: params.projectId,
+    projectId,
     image: body.image,
     hostname: body.hostname,
   });
@@ -59,7 +65,7 @@ const POST: RouteHandler = async (request, params) => {
 
   if (normalizedDependencies.length > 0) {
     const dependsOnIds = extractDependsOnIds(normalizedDependencies);
-    const validation = await validateDependencies(params.projectId, container.id, dependsOnIds);
+    const validation = await validateDependencies(projectId, container.id, dependsOnIds);
 
     if (!validation.valid) {
       return Response.json({ error: validation.errors.join(", ") }, { status: 400 });

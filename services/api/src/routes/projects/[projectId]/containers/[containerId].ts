@@ -7,7 +7,11 @@ import type { RouteHandler } from "../../../../utils/handlers/route-handler";
 
 const PATCH: RouteHandler = async (request, params) => {
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  const containerId = params.containerId;
+  const containerId = Array.isArray(params.containerId)
+    ? params.containerId[0]
+    : params.containerId;
+  if (!projectId || !containerId) return badRequestResponse("Missing required parameters");
+
   const body = await request.json();
 
   if (typeof body.isWorkspace === "boolean") {

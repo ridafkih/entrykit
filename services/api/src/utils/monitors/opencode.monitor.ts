@@ -63,9 +63,17 @@ function parseMessagePartUpdatedEvent(event: unknown): MessagePartUpdatedEvent |
   if (!hasProperty(event, "type") || event.type !== "message.part.updated") return null;
   if (!hasProperty(event, "properties")) return null;
   if (!hasProperty(event.properties, "part")) return null;
+  const part = event.properties.part;
+  if (typeof part !== "object" || part === null) return null;
+  if (!hasProperty(part, "type") || typeof part.type !== "string") return null;
   return {
     type: "message.part.updated",
-    properties: { part: event.properties.part as MessagePart },
+    properties: {
+      part: {
+        type: part.type,
+        text: hasProperty(part, "text") && typeof part.text === "string" ? part.text : undefined,
+      },
+    },
   };
 }
 

@@ -28,10 +28,16 @@ export function createWebSocketHandlers(browserService: BrowserService) {
       getSnapshot: loadSessions,
     },
     sessionMetadata: {
-      getSnapshot: async ({ params }) => loadSessionMetadata(params.uuid),
+      getSnapshot: async ({ params }) => {
+        if (!params.uuid) throw new Error("Missing uuid parameter");
+        return loadSessionMetadata(params.uuid);
+      },
     },
     sessionContainers: {
-      getSnapshot: async ({ params }) => loadSessionContainers(params.uuid),
+      getSnapshot: async ({ params }) => {
+        if (!params.uuid) throw new Error("Missing uuid parameter");
+        return loadSessionContainers(params.uuid);
+      },
     },
     sessionTyping: {
       getSnapshot: async () => [],
@@ -40,7 +46,10 @@ export function createWebSocketHandlers(browserService: BrowserService) {
       getSnapshot: async () => [],
     },
     sessionChangedFiles: {
-      getSnapshot: async ({ params }) => loadSessionChangedFiles(params.uuid),
+      getSnapshot: async ({ params }) => {
+        if (!params.uuid) throw new Error("Missing uuid parameter");
+        return loadSessionChangedFiles(params.uuid);
+      },
     },
     sessionBranches: {
       getSnapshot: async () => [],
@@ -55,14 +64,19 @@ export function createWebSocketHandlers(browserService: BrowserService) {
       getSnapshot: async () => [],
     },
     sessionBrowserState: {
-      getSnapshot: async ({ params }) => browserService.getBrowserSnapshot(params.uuid),
+      getSnapshot: async ({ params }) => {
+        if (!params.uuid) throw new Error("Missing uuid parameter");
+        return browserService.getBrowserSnapshot(params.uuid);
+      },
       onSubscribe: ({ params, ws }) => {
         const sessionId = params.uuid;
+        if (!sessionId) return;
 
         if (!sessionSubscribers.has(sessionId)) {
           sessionSubscribers.set(sessionId, new Set());
         }
-        const subscribers = sessionSubscribers.get(sessionId)!;
+        const subscribers = sessionSubscribers.get(sessionId);
+        if (!subscribers) return;
 
         if (subscribers.has(ws)) return;
 
@@ -73,6 +87,8 @@ export function createWebSocketHandlers(browserService: BrowserService) {
       },
       onUnsubscribe: ({ params, ws }) => {
         const sessionId = params.uuid;
+        if (!sessionId) return;
+
         const subscribers = sessionSubscribers.get(sessionId);
 
         if (!subscribers || !subscribers.has(ws)) return;
@@ -90,6 +106,7 @@ export function createWebSocketHandlers(browserService: BrowserService) {
     },
     sessionBrowserFrames: {
       getSnapshot: async ({ params }) => {
+        if (!params.uuid) return { lastFrame: null, timestamp: null };
         const frame = browserService.getCachedFrame(params.uuid);
         if (!frame) return { lastFrame: null, timestamp: null };
         return { lastFrame: frame, timestamp: Date.now() };

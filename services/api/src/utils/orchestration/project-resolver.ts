@@ -91,12 +91,13 @@ export async function resolveProject(
   task: string,
   projects: Project[],
 ): Promise<ProjectResolutionResult> {
-  if (projects.length === 0) {
+  const firstProject = projects[0];
+  if (!firstProject) {
     throw new Error("No projects available for resolution");
   }
 
   if (projects.length === 1) {
-    return resolveSingleProject(projects[0]);
+    return resolveSingleProject(firstProject);
   }
 
   const projectInfos: ProjectInfo[] = projects.map((project) => ({
