@@ -4,14 +4,23 @@ import { useEffect, useRef } from "react";
 import { Chat, useChat } from "@/components/chat";
 import { TextAreaGroup } from "@/components/textarea-group";
 import { MessagePart } from "@/components/message-part";
+import { QuestionProvider } from "@/lib/question-context";
 import { useModelSelection } from "@/lib/hooks";
 import type { MessageState } from "@/lib/use-agent";
 
 type ChatTabContentProps = {
   messages: MessageState[];
+  onQuestionReply: (callId: string, answers: string[][]) => Promise<void>;
+  onQuestionReject: (callId: string) => Promise<void>;
+  isQuestionSubmitting: boolean;
 };
 
-export function ChatTabContent({ messages }: ChatTabContentProps) {
+export function ChatTabContent({
+  messages,
+  onQuestionReply,
+  onQuestionReject,
+  isQuestionSubmitting,
+}: ChatTabContentProps) {
   const { state, actions } = useChat();
   const { modelGroups, modelId, setModelId } = useModelSelection({
     syncTo: actions.setModelId,
@@ -32,26 +41,36 @@ export function ChatTabContent({ messages }: ChatTabContentProps) {
   }, [isStreaming, lastMessage?.parts.length, actions]);
 
   return (
-    <Chat.MessageList>
-      <Chat.Messages>
-        {messages.flatMap((message) =>
-          message.parts.map((part) => (
-            <Chat.Block key={part.id} role={message.role}>
-              <MessagePart.Root
-                part={part}
-                isStreaming={
-                  message.role === "assistant" && message === messages[messages.length - 1]
-                }
-              />
-            </Chat.Block>
-          )),
-        )}
-      </Chat.Messages>
-      <Chat.Input>
-        {modelGroups && modelId && (
-          <TextAreaGroup.ModelSelector value={modelId} groups={modelGroups} onChange={setModelId} />
-        )}
-      </Chat.Input>
-    </Chat.MessageList>
+    <QuestionProvider
+      onReply={onQuestionReply}
+      onReject={onQuestionReject}
+      isSubmitting={isQuestionSubmitting}
+    >
+      <Chat.MessageList>
+        <Chat.Messages>
+          {messages.flatMap((message) =>
+            message.parts.map((part) => (
+              <Chat.Block key={part.id} role={message.role}>
+                <MessagePart.Root
+                  part={part}
+                  isStreaming={
+                    message.role === "assistant" && message === messages[messages.length - 1]
+                  }
+                />
+              </Chat.Block>
+            )),
+          )}
+        </Chat.Messages>
+        <Chat.Input>
+          {modelGroups && modelId && (
+            <TextAreaGroup.ModelSelector
+              value={modelId}
+              groups={modelGroups}
+              onChange={setModelId}
+            />
+          )}
+        </Chat.Input>
+      </Chat.MessageList>
+    </QuestionProvider>
   );
 }

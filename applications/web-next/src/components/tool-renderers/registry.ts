@@ -9,6 +9,7 @@ import { GlobRenderer } from "./renderers/glob";
 import { WebFetchRenderer } from "./renderers/web-fetch";
 import { TaskRenderer } from "./renderers/task";
 import { TodoRenderer } from "./renderers/todo";
+import { QuestionRenderer } from "./renderers/question";
 import { FallbackRenderer } from "./renderers/fallback";
 
 const toolRenderers: Record<string, ComponentType<ToolRendererProps>> = {
@@ -23,10 +24,13 @@ const toolRenderers: Record<string, ComponentType<ToolRendererProps>> = {
   todowrite: TodoRenderer,
   taskcreate: TodoRenderer,
   taskupdate: TodoRenderer,
+  askuserquestion: QuestionRenderer,
+  question: QuestionRenderer,
 };
 
 export function getToolRenderer(tool: string): ComponentType<ToolRendererProps> {
-  return toolRenderers[tool] ?? FallbackRenderer;
+  const normalizedTool = tool.toLowerCase();
+  return toolRenderers[normalizedTool] ?? FallbackRenderer;
 }
 
 export { toolRenderers };

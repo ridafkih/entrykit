@@ -10,6 +10,7 @@ export { GlobRenderer } from "./renderers/glob";
 export { WebFetchRenderer } from "./renderers/web-fetch";
 export { TaskRenderer } from "./renderers/task";
 export { TodoRenderer } from "./renderers/todo";
+export { QuestionRenderer } from "./renderers/question";
 export { FallbackRenderer } from "./renderers/fallback";
 
 export {

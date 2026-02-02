@@ -13,6 +13,7 @@ import { StreamTabContent } from "@/components/stream-tab-content";
 import { SessionInfoView } from "@/components/session-info-view";
 import { PageFrame, Header, PageContent } from "@/components/layout-primitives";
 import { useAgent, invalidateSessionCache } from "@/lib/use-agent";
+import { useQuestions } from "@/lib/use-questions";
 import { useDeleteSession } from "@/lib/hooks";
 import { useSessionStatus } from "@/lib/use-session-status";
 import { useSessionTitle } from "@/lib/use-session-title";
@@ -62,12 +63,22 @@ function TabContent({ tab }: { tab: TabValue }) {
   }, [sessionId]);
 
   const { messages, sendMessage } = useAgent(sessionId);
+  const {
+    reply: replyToQuestion,
+    reject: rejectQuestion,
+    isSubmitting: isQuestionSubmitting,
+  } = useQuestions(sessionId);
 
   switch (tab) {
     case "chat":
       return (
         <Chat.Provider key={sessionId} onSubmit={sendMessage}>
-          <ChatTabContent messages={messages} />
+          <ChatTabContent
+            messages={messages}
+            onQuestionReply={replyToQuestion}
+            onQuestionReject={rejectQuestion}
+            isQuestionSubmitting={isQuestionSubmitting}
+          />
         </Chat.Provider>
       );
     case "review":
