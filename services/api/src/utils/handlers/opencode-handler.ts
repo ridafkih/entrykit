@@ -14,6 +14,10 @@ function shouldInjectSystemPrompt(path: string, method: string): boolean {
   return method === "POST" && PROMPT_ENDPOINTS.some((endpoint) => path.includes(endpoint));
 }
 
+function isSessionCreateRequest(path: string, method: string): boolean {
+  return method === "POST" && path === "/session";
+}
+
 function extractUserMessageText(body: Record<string, unknown>): string | null {
   const parts = body.parts;
   if (!Array.isArray(parts)) return null;
@@ -55,6 +59,13 @@ async function buildProxyBody(
   const hasBody = ["POST", "PUT", "PATCH"].includes(request.method);
   if (!hasBody) return null;
 
+  const isSessionCreate = isSessionCreateRequest(path, request.method);
+  if (labSessionId && isSessionCreate) {
+    const originalBody = await request.json();
+    const directory = formatWorkspacePath(labSessionId);
+    return JSON.stringify({ ...originalBody, directory });
+  }
+
   const isPromptEndpoint = shouldInjectSystemPrompt(path, request.method);
   if (!labSessionId || !isPromptEndpoint) {
     return request.body;
@@ -71,8 +82,10 @@ async function buildProxyBody(
     );
   }
 
+  const directory = formatWorkspacePath(labSessionId);
+
   const sessionData = await getSessionData(labSessionId);
-  if (!sessionData) return JSON.stringify(originalBody);
+  if (!sessionData) return JSON.stringify({ ...originalBody, directory });
 
   const containers = await getContainerInfos(labSessionId);
   const promptContext = createPromptContext({
@@ -83,12 +96,12 @@ async function buildProxyBody(
   });
 
   const { text: composedPrompt } = promptService.compose(promptContext);
-  if (!composedPrompt) return JSON.stringify(originalBody);
+  if (!composedPrompt) return JSON.stringify({ ...originalBody, directory });
 
   const existingSystem = originalBody.system ?? "";
   const combinedSystem = composedPrompt + (existingSystem ? "\n\n" + existingSystem : "");
 
-  return JSON.stringify({ ...originalBody, system: combinedSystem });
+  return JSON.stringify({ ...originalBody, system: combinedSystem, directory });
 }
 
 function buildForwardHeaders(request: Request): Headers {

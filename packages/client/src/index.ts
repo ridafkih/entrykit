@@ -3,6 +3,7 @@ export type {
   Project,
   ProjectContainer,
   CreateProjectInput,
+  UpdateProjectInput,
   Container,
   CreateContainerInput,
   Session,

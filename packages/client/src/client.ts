@@ -1,6 +1,7 @@
 import type {
   Project,
   CreateProjectInput,
+  UpdateProjectInput,
   Container,
   CreateContainerInput,
   Session,
@@ -46,6 +47,12 @@ export function createClient(config: ClientConfig) {
       create: (input: CreateProjectInput) =>
         request<Project>("/projects", {
           method: "POST",
+          body: JSON.stringify(input),
+        }),
+
+      update: (projectId: string, input: UpdateProjectInput) =>
+        request<Project>(`/projects/${projectId}`, {
+          method: "PATCH",
           body: JSON.stringify(input),
         }),
 

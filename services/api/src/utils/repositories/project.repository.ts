@@ -84,6 +84,21 @@ export async function deleteProject(projectId: string) {
   await db.delete(projects).where(eq(projects.id, projectId));
 }
 
+export async function updateProject(
+  projectId: string,
+  data: { description?: string; systemPrompt?: string },
+) {
+  const [project] = await db
+    .update(projects)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(projects.id, projectId))
+    .returning();
+  return project ?? null;
+}
+
 export async function getProjectSystemPrompt(projectId: string) {
   const [project] = await db
     .select({ systemPrompt: projects.systemPrompt })

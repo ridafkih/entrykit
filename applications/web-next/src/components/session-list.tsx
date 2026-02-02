@@ -49,7 +49,7 @@ function SessionListProject({ project, children }: { project: Project; children?
       <div className={row({ type: "project" })}>
         <Box size={14} className="shrink-0" />
         <span className="font-medium text-nowrap">{project.name}</span>
-        <span className="text-text-muted text-sm">{sessionCount}</span>
+        <span className="text-text-muted text-xs">{sessionCount}</span>
         <IconButton
           onClick={handleAddSession}
           className="ml-auto opacity-0 group-hover:opacity-100"

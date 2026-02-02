@@ -21,6 +21,11 @@ export interface CreateProjectInput {
   systemPrompt?: string;
 }
 
+export interface UpdateProjectInput {
+  description?: string;
+  systemPrompt?: string;
+}
+
 export interface Container {
   id: string;
   projectId: string;

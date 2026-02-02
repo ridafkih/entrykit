@@ -24,6 +24,7 @@ export async function initiateConversation(options: InitiateConversationOptions)
 
   const promptResponse = await opencode.session.promptAsync({
     sessionID: opencodeSessionId,
+    directory: workspacePath,
     model: providerID && modelID ? { providerID, modelID } : undefined,
     parts: [{ type: "text", text: task }],
   });
