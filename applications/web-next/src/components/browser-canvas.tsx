@@ -138,7 +138,11 @@ function BrowserCanvasView({ className }: { className?: string }) {
       canvas.width = bitmap.width;
       canvas.height = bitmap.height;
     }
-    context.drawImage(bitmap, 0, 0);
+    try {
+      context.drawImage(bitmap, 0, 0);
+    } catch (error) {
+      console.error(error);
+    }
   }, [bitmap]);
 
   return (
