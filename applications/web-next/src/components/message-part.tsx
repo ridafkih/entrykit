@@ -19,6 +19,7 @@ import { Check, ChevronRight, Loader2 } from "lucide-react";
 import { tv } from "tailwind-variants";
 import { Markdown } from "./markdown";
 import { cn } from "@/lib/cn";
+import { getToolRenderer } from "@/components/tool-renderers";
 import {
   isTextPart,
   isReasoningPart,
@@ -100,7 +101,20 @@ function MessagePartReasoningHeader({ children }: { children: ReactNode }) {
 function MessagePartReasoningChevron() {
   const { state } = useReasoning();
   return (
-    <ChevronRight size={12} className={cn("text-text-muted", state.expanded && "rotate-90")} />
+    <ChevronRight
+      size={12}
+      className={cn("shrink-0 text-text-muted", state.expanded && "rotate-90")}
+    />
+  );
+}
+
+function MessagePartReasoningPreview() {
+  const { state, meta } = useReasoning();
+  if (state.expanded) return null;
+  return (
+    <span className="flex-1 truncate text-text-muted whitespace-nowrap italic text-right">
+      {meta.part.text}
+    </span>
   );
 }
 
@@ -177,13 +191,13 @@ function MessagePartToolStatus() {
   const status = meta.part.state.status;
 
   if (status === "running" || status === "pending") {
-    return <Loader2 size={12} className={toolStatus({ status: "running" })} />;
+    return <Loader2 size={12} className={cn("shrink-0", toolStatus({ status: "running" }))} />;
   }
   if (status === "completed") {
-    return <Check size={12} className={toolStatus({ status })} />;
+    return <Check size={12} className={cn("shrink-0", toolStatus({ status }))} />;
   }
   if (status === "error") {
-    return <span className={toolStatus({ status })}>✕</span>;
+    return <span className={cn("shrink-0", toolStatus({ status }))}>✕</span>;
   }
   return null;
 }
@@ -193,12 +207,33 @@ function MessagePartToolName() {
   return <span className="text-text-secondary">{meta.part.tool}</span>;
 }
 
+function getString(obj: unknown, key: string): string | null {
+  if (typeof obj !== "object" || obj === null) return null;
+  const value = (obj as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : null;
+}
+
 function MessagePartToolPath() {
   const { meta } = useTool();
-  const input = meta.part.state.input as Record<string, unknown>;
-  const path = (input?.file_path as string) ?? (input?.path as string) ?? null;
-  if (!path) return <span className="flex-1" />;
-  return <span className="flex-1 text-left">{path}</span>;
+  const input = meta.part.state.input;
+  const path = getString(input, "filePath") ?? getString(input, "path");
+  if (!path) return null;
+  return <span className="truncate text-left">{path}</span>;
+}
+
+function MessagePartToolSummary() {
+  const { meta } = useTool();
+  const input = meta.part.state.input;
+
+  const description =
+    getString(input, "description") ??
+    getString(input, "prompt") ??
+    getString(input, "pattern") ??
+    getString(input, "subject");
+
+  if (!description) return <span className="flex-1" />;
+
+  return <span className="flex-1 truncate text-left text-text-muted">{description}</span>;
 }
 
 function MessagePartToolDuration() {
@@ -250,6 +285,27 @@ function MessagePartToolOutput({ output }: { output: string }) {
 
 function MessagePartToolError({ error }: { error: string }) {
   return <div className={cn(detailBlock(), "text-red-500")}>{error}</div>;
+}
+
+type ToolRendererProps = {
+  tool: string;
+  input?: Record<string, unknown>;
+  output?: string | null;
+  error?: string | null;
+  status: string;
+};
+
+function MessagePartToolRenderer({ tool, input, output, error, status }: ToolRendererProps) {
+  const Renderer = getToolRenderer(tool);
+  return (
+    <Renderer
+      tool={tool}
+      input={input}
+      output={output}
+      error={error}
+      status={status as "pending" | "running" | "completed" | "error"}
+    />
+  );
 }
 
 function MessagePartFile({ part }: { part: FilePart }) {
@@ -354,7 +410,8 @@ function MessagePartRoot({
       <MessagePartReasoning part={part}>
         <MessagePartReasoningHeader>
           <MessagePartReasoningChevron />
-          <span className="text-text-muted">Thinking</span>
+          <span className="text-text-muted shrink-0">Thinking</span>
+          <MessagePartReasoningPreview />
         </MessagePartReasoningHeader>
         <MessagePartReasoningContent />
       </MessagePartReasoning>
@@ -373,13 +430,18 @@ function MessagePartRoot({
           <MessagePartToolStatus />
           <MessagePartToolName />
           <MessagePartToolPath />
+          <MessagePartToolSummary />
           <MessagePartToolDuration />
           <MessagePartToolChevron />
         </MessagePartToolHeader>
         <MessagePartToolDetails>
-          {input && <MessagePartToolInput input={input} />}
-          {output && <MessagePartToolOutput output={output} />}
-          {error && <MessagePartToolError error={error} />}
+          <MessagePartToolRenderer
+            tool={part.tool}
+            input={input}
+            output={output}
+            error={error}
+            status={status}
+          />
         </MessagePartToolDetails>
       </MessagePartTool>
     );
@@ -430,12 +492,14 @@ const MessagePart = {
   Reasoning: MessagePartReasoning,
   ReasoningHeader: MessagePartReasoningHeader,
   ReasoningChevron: MessagePartReasoningChevron,
+  ReasoningPreview: MessagePartReasoningPreview,
   ReasoningContent: MessagePartReasoningContent,
   Tool: MessagePartTool,
   ToolHeader: MessagePartToolHeader,
   ToolStatus: MessagePartToolStatus,
   ToolName: MessagePartToolName,
   ToolPath: MessagePartToolPath,
+  ToolSummary: MessagePartToolSummary,
   ToolDuration: MessagePartToolDuration,
   ToolChevron: MessagePartToolChevron,
   ToolDetails: MessagePartToolDetails,
