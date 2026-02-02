@@ -1,6 +1,6 @@
 import { db } from "@lab/database/client";
 import { sessions, type Session } from "@lab/database/schema/sessions";
-import { eq, ne, and, count } from "drizzle-orm";
+import { eq, ne, and, count, isNull } from "drizzle-orm";
 
 export async function findSessionById(sessionId: string): Promise<Session | null> {
   const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
@@ -22,19 +22,34 @@ export async function findSessionsByProjectId(projectId: string): Promise<Sessio
 
 export async function createSession(projectId: string, title?: string): Promise<Session> {
   const [session] = await db.insert(sessions).values({ projectId, title }).returning();
+  if (!session) throw new Error("Failed to create session");
   return session;
 }
 
 export async function updateSessionOpencodeId(
   sessionId: string,
   opencodeSessionId: string,
+  workspaceDirectory?: string,
 ): Promise<Session | null> {
   await db
     .update(sessions)
-    .set({ opencodeSessionId: opencodeSessionId, updatedAt: new Date() })
-    .where(eq(sessions.id, sessionId));
+    .set({
+      opencodeSessionId: opencodeSessionId,
+      ...(workspaceDirectory && { workspaceDirectory }),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(sessions.id, sessionId), isNull(sessions.opencodeSessionId)));
 
   return findSessionById(sessionId);
+}
+
+export async function getSessionWorkspaceDirectory(sessionId: string): Promise<string | null> {
+  const [session] = await db
+    .select({ workspaceDirectory: sessions.workspaceDirectory })
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+  return session?.workspaceDirectory ?? null;
 }
 
 export async function updateSessionTitle(
@@ -133,5 +148,6 @@ export async function findPooledSessions(projectId: string, limit?: number): Pro
 
 export async function createPooledSession(projectId: string): Promise<Session> {
   const [session] = await db.insert(sessions).values({ projectId, status: "pooled" }).returning();
+  if (!session) throw new Error("Failed to create pooled session");
   return session;
 }

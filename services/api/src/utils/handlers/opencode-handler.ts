@@ -2,7 +2,7 @@ import { config } from "../../config/environment";
 import { CORS_HEADERS, buildSseResponse } from "../../shared/http";
 import { createPromptContext, type ContainerInfo } from "../prompts/context";
 import type { PromptService } from "../../types/prompt";
-import { findSessionById } from "../repositories/session.repository";
+import { findSessionById, updateSessionOpencodeId } from "../repositories/session.repository";
 import { getProjectSystemPrompt } from "../repositories/project.repository";
 import { getSessionContainersWithPorts } from "../repositories/container.repository";
 import { resolveWorkspacePathBySession } from "../workspace/resolve-path";
@@ -10,9 +10,14 @@ import { publisher } from "../../clients/publisher";
 import { setLastMessage } from "../monitors/last-message-store";
 
 const PROMPT_ENDPOINTS = ["/session/", "/prompt", "/message"];
+const QUESTION_ENDPOINTS = ["/question/"];
 
 function shouldInjectSystemPrompt(path: string, method: string): boolean {
   return method === "POST" && PROMPT_ENDPOINTS.some((endpoint) => path.includes(endpoint));
+}
+
+function isQuestionRequest(path: string, method: string): boolean {
+  return method === "POST" && QUESTION_ENDPOINTS.some((endpoint) => path.includes(endpoint));
 }
 
 function isSessionCreateRequest(path: string, method: string): boolean {
@@ -63,6 +68,13 @@ async function buildProxyBody(
 
   const isSessionCreate = isSessionCreateRequest(path, request.method);
   if (labSessionId && isSessionCreate && workspacePath) {
+    const originalBody = await request.json().catch(() => ({}));
+    return JSON.stringify({ ...originalBody, directory: workspacePath });
+  }
+
+  // Handle question reply/reject - inject directory
+  const isQuestion = isQuestionRequest(path, request.method);
+  if (labSessionId && isQuestion && workspacePath) {
     const originalBody = await request.json().catch(() => ({}));
     return JSON.stringify({ ...originalBody, directory: workspacePath });
   }
@@ -133,6 +145,32 @@ function isSseResponse(path: string, proxyResponse: Response): boolean {
   );
 }
 
+async function handleSessionCreateResponse(
+  proxyResponse: Response,
+  labSessionId: string,
+  workspacePath: string,
+): Promise<Response> {
+  if (!proxyResponse.ok) {
+    return buildStandardResponse(proxyResponse);
+  }
+
+  const responseBody = await proxyResponse.json();
+  const opencodeSessionId = responseBody?.id;
+
+  if (opencodeSessionId) {
+    await updateSessionOpencodeId(labSessionId, opencodeSessionId, workspacePath);
+  }
+
+  const responseHeaders = new Headers(proxyResponse.headers);
+  for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    responseHeaders.set(key, value);
+  }
+  return new Response(JSON.stringify(responseBody), {
+    status: proxyResponse.status,
+    headers: responseHeaders,
+  });
+}
+
 function buildTargetUrl(path: string, url: URL, workspacePath: string | null): string {
   const targetParams = new URLSearchParams(url.search);
   if (workspacePath) {
@@ -180,6 +218,13 @@ export function createOpenCodeProxyHandler(promptService: PromptService): OpenCo
     const workspacePath = labSessionId ? await resolveWorkspacePathBySession(labSessionId) : null;
     const targetUrl = buildTargetUrl(path, url, workspacePath);
 
+    console.log("[opencode-proxy]", {
+      path,
+      labSessionId,
+      workspacePath,
+      targetUrl,
+    });
+
     const forwardHeaders = buildForwardHeaders(request);
     const body = await buildProxyBody(request, path, labSessionId, workspacePath, promptService);
 
@@ -194,11 +239,25 @@ export function createOpenCodeProxyHandler(promptService: PromptService): OpenCo
       ...(body ? { duplex: "half" } : {}),
     });
 
+    // Log non-SSE responses for debugging
+    if (path.includes("/message")) {
+      const responseClone = proxyResponse.clone();
+      const responseBody = await responseClone.text();
+      console.log("[opencode-proxy] /message response:", {
+        status: proxyResponse.status,
+        body: responseBody.slice(0, 500),
+      });
+    }
+
     if (isSseResponse(path, proxyResponse)) {
       return buildSseResponse(
         createAbortableStream(proxyResponse.body, upstreamAbort),
         proxyResponse.status,
       );
+    }
+
+    if (isSessionCreateRequest(path, request.method) && labSessionId && workspacePath) {
+      return handleSessionCreateResponse(proxyResponse, labSessionId, workspacePath);
     }
 
     return buildStandardResponse(proxyResponse);

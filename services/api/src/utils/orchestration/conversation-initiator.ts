@@ -1,6 +1,6 @@
 import { opencode } from "../../clients/opencode";
 import { updateSessionOpencodeId } from "../repositories/session.repository";
-import { resolveWorkspacePath } from "../workspace/resolve-path";
+import { resolveWorkspacePathBySession } from "../workspace/resolve-path";
 import { publisher } from "../../clients/publisher";
 import { setLastMessage } from "../monitors/last-message-store";
 
@@ -12,7 +12,7 @@ export interface InitiateConversationOptions {
 
 export async function initiateConversation(options: InitiateConversationOptions): Promise<void> {
   const { sessionId, task, modelId } = options;
-  const workspacePath = await resolveWorkspacePath(sessionId);
+  const workspacePath = await resolveWorkspacePathBySession(sessionId);
 
   const createResponse = await opencode.session.create({ directory: workspacePath });
   if (createResponse.error || !createResponse.data) {
@@ -20,7 +20,7 @@ export async function initiateConversation(options: InitiateConversationOptions)
   }
 
   const opencodeSessionId = createResponse.data.id;
-  await updateSessionOpencodeId(sessionId, opencodeSessionId);
+  await updateSessionOpencodeId(sessionId, opencodeSessionId, workspacePath);
 
   const [providerID, modelID] = modelId?.split("/") ?? [];
 

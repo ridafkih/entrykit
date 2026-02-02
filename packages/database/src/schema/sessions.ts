@@ -8,6 +8,7 @@ export const sessions = pgTable("sessions", {
     .references(() => projects.id, { onDelete: "cascade" }),
   title: text("title"),
   opencodeSessionId: text("opencode_session_id"),
+  workspaceDirectory: text("workspace_directory"),
   status: text("status").notNull().default("running"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
