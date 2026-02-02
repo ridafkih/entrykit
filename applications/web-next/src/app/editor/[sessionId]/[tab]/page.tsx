@@ -117,8 +117,8 @@ export default function TabPage({ params }: TabPageProps) {
   const currentTab = validTabs.includes(tab as TabValue) ? (tab as TabValue) : "chat";
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1 min-w-80 border-r border-border">
+    <div className="h-full flex">
+      <div className="border-r border-border grow min-w-0">
         <PageFrame position="relative">
           <SessionHeader />
           <SessionTabs />

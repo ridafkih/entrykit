@@ -15,7 +15,7 @@ const navItems = [
 
 function Sidebar({ selectedSessionId }: { selectedSessionId: string | null }) {
   return (
-    <aside className="relative flex grow flex-col max-w-lg border-r border-border bg-bg">
+    <aside className="relative flex grow flex-col max-w-md border-r border-border bg-bg">
       <ProjectNavigatorView selectedSessionId={selectedSessionId} />
     </aside>
   );
@@ -27,9 +27,9 @@ export default function EditorLayout({ children }: { children: ReactNode }) {
 
   return (
     <OpenCodeSessionProvider sessionId={sessionId}>
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen max-w-full">
         <Nav items={navItems} />
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-1 min-h-0 max-w-full">
           <Sidebar selectedSessionId={sessionId} />
           <main className="flex-1 bg-bg overflow-x-hidden">{children}</main>
         </div>

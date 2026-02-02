@@ -112,7 +112,7 @@ function MessagePartReasoningPreview() {
   const { state, meta } = useReasoning();
   if (state.expanded) return null;
   return (
-    <span className="flex-1 truncate text-text-muted whitespace-nowrap italic text-right">
+    <span className="flex-1 truncate text-text-muted whitespace-nowrap italic text-right overflow-hidden">
       {meta.part.text}
     </span>
   );

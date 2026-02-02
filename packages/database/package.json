@@ -46,6 +46,10 @@
     "./schema/orchestration-requests": {
       "types": "./src/schema/orchestration-requests.ts",
       "default": "./src/schema/orchestration-requests.ts"
+    },
+    "./schema/platform-chat-mappings": {
+      "types": "./src/schema/platform-chat-mappings.ts",
+      "default": "./src/schema/platform-chat-mappings.ts"
     }
   },
   "scripts": {
