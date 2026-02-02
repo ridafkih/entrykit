@@ -37,6 +37,7 @@ export const config = {
   browserSocketVolume:
     getOptionalEnv("BROWSER_SOCKET_VOLUME", "lab_browser_sockets") ?? "lab_browser_sockets",
   browserContainerName: getOptionalEnv("BROWSER_CONTAINER_NAME"),
+  opencodeContainerName: getOptionalEnv("OPENCODE_CONTAINER_NAME"),
   caddyAdminUrl: getRequiredEnv("CADDY_ADMIN_URL"),
   caddyContainerName: getRequiredEnv("CADDY_CONTAINER_NAME"),
   proxyBaseDomain: getRequiredEnv("PROXY_BASE_DOMAIN"),

@@ -90,6 +90,7 @@ async function buildProxyBody(
 
   const isPromptEndpoint = shouldInjectSystemPrompt(path, request.method);
   if (!labSessionId || !isPromptEndpoint) {
+    console.log("[opencode-proxy] Skipping prompt injection:", { labSessionId, isPromptEndpoint });
     return request.body;
   }
 
@@ -107,10 +108,13 @@ async function buildProxyBody(
 
   const sessionData = await getSessionData(labSessionId);
   if (!sessionData) {
+    console.log("[opencode-proxy] No session data found for:", labSessionId);
     return JSON.stringify({ ...originalBody, directory: workspacePath });
   }
 
   const containers = await getContainerInfos(labSessionId);
+  console.log("[opencode-proxy] Containers for prompt:", { labSessionId, containers });
+
   const promptContext = createPromptContext({
     sessionId: sessionData.sessionId,
     projectId: sessionData.projectId,
@@ -118,7 +122,14 @@ async function buildProxyBody(
     projectSystemPrompt: sessionData.projectSystemPrompt,
   });
 
-  const { text: composedPrompt } = promptService.compose(promptContext);
+  const { text: composedPrompt, includedFragments } = promptService.compose(promptContext);
+  console.log("[opencode-proxy] Composed prompt:", {
+    labSessionId,
+    includedFragments,
+    promptLength: composedPrompt?.length ?? 0,
+    fullPrompt: composedPrompt,
+  });
+
   if (!composedPrompt) {
     return JSON.stringify({ ...originalBody, directory: workspacePath });
   }

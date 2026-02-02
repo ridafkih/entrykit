@@ -15,6 +15,14 @@ export async function createSessionNetwork(sessionId: string): Promise<string> {
     }
   }
 
+  if (config.opencodeContainerName) {
+    try {
+      await docker.connectToNetwork(config.opencodeContainerName, networkName);
+    } catch (error) {
+      console.warn(`Failed to connect opencode container to network ${networkName}:`, error);
+    }
+  }
+
   return networkName;
 }
 
@@ -34,6 +42,14 @@ export async function cleanupSessionNetwork(sessionId: string): Promise<void> {
       await docker.disconnectFromNetwork(config.browserContainerName, networkName);
     } catch (error) {
       console.warn(`Failed to disconnect browser from network ${networkName}:`, error);
+    }
+  }
+
+  if (config.opencodeContainerName) {
+    try {
+      await docker.disconnectFromNetwork(config.opencodeContainerName, networkName);
+    } catch (error) {
+      console.warn(`Failed to disconnect opencode from network ${networkName}:`, error);
     }
   }
 

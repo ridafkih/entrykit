@@ -15,7 +15,7 @@ export interface CreatePromptContextParams {
 export function createPromptContext(params: CreatePromptContextParams): PromptContext {
   const serviceRoutes: ServiceRoute[] = params.containers.map((container) => ({
     port: container.port,
-    url: `http://${container.hostname}.internal/`,
+    url: `http://${container.hostname}:${container.port}/`,
   }));
 
   return {

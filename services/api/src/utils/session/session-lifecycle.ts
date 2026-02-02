@@ -52,6 +52,14 @@ export async function cleanupSession(
     }
   }
 
+  if (config.opencodeContainerName) {
+    try {
+      await docker.disconnectFromNetwork(config.opencodeContainerName, networkName);
+    } catch (error) {
+      console.warn(`Failed to disconnect opencode from network ${networkName}:`, error);
+    }
+  }
+
   await docker.removeNetwork(networkName);
   await deleteSession(sessionId);
 
