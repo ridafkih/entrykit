@@ -4,6 +4,7 @@ import { getChangeType } from "../../types/file";
 import { formatWorkspacePath } from "../../types/session";
 import { findRunningSessions } from "../repositories/session.repository";
 import { publisher } from "../../clients/publisher";
+import { setInferenceStatus, clearInferenceStatus } from "./inference-status-store";
 
 interface FileDiff {
   file: string;
@@ -100,6 +101,7 @@ function processSessionDiff(labSessionId: string, event: SessionDiffEvent): void
 function processMessageUpdated(labSessionId: string, event: MessageUpdatedEvent): void {
   const text = extractTextFromParts(event.properties.parts);
   if (text) {
+    setInferenceStatus(labSessionId, "generating");
     publisher.publishDelta(
       "sessionMetadata",
       { uuid: labSessionId },
@@ -114,6 +116,7 @@ function processMessageUpdated(labSessionId: string, event: MessageUpdatedEvent)
 function processMessagePartUpdated(labSessionId: string, event: MessagePartUpdatedEvent): void {
   const part = event.properties.part;
   if (part.type === "text" && part.text) {
+    setInferenceStatus(labSessionId, "generating");
     publisher.publishDelta(
       "sessionMetadata",
       { uuid: labSessionId },
@@ -126,6 +129,7 @@ function processMessagePartUpdated(labSessionId: string, event: MessagePartUpdat
 }
 
 function processSessionIdle(labSessionId: string): void {
+  setInferenceStatus(labSessionId, "idle");
   publisher.publishDelta("sessionMetadata", { uuid: labSessionId }, { inferenceStatus: "idle" });
 }
 
@@ -163,6 +167,7 @@ class SessionTracker {
 
   stop(): void {
     this.abortController.abort();
+    clearInferenceStatus(this.labSessionId);
   }
 
   get isActive(): boolean {

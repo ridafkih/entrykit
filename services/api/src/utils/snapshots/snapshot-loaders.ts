@@ -13,6 +13,7 @@ import {
   findPortsByContainerId,
 } from "../repositories/container.repository";
 import { opencode } from "../../clients/opencode";
+import { getInferenceStatus } from "../monitors/inference-status-store";
 import type { BrowserService } from "../browser/browser-service";
 import type { AppSchema } from "@lab/multiplayer-sdk";
 
@@ -73,9 +74,10 @@ export async function loadSessionChangedFiles(sessionId: string) {
 export async function loadSessionMetadata(sessionId: string) {
   const session = await findSessionById(sessionId);
   const title = session?.title ?? "";
+  const inferenceStatus = getInferenceStatus(sessionId);
 
   if (!session?.opencodeSessionId) {
-    return { title, inferenceStatus: "idle" as const, participantCount: 0 };
+    return { title, inferenceStatus, participantCount: 0 };
   }
 
   try {
@@ -88,9 +90,9 @@ export async function loadSessionMetadata(sessionId: string) {
 
     const text = textPart && "text" in textPart && textPart.text;
 
-    return { title, lastMessage: text, inferenceStatus: "idle" as const, participantCount: 0 };
+    return { title, lastMessage: text, inferenceStatus, participantCount: 0 };
   } catch {
-    return { title, inferenceStatus: "idle" as const, participantCount: 0 };
+    return { title, inferenceStatus, participantCount: 0 };
   }
 }
 

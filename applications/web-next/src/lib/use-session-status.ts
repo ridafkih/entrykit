@@ -12,10 +12,16 @@ type SessionContainer = {
   urls: { port: number; url: string }[];
 };
 
-export function useSessionStatus(session: Session): SessionStatus {
+export function useSessionStatus(session: Session | null): SessionStatus {
   const { useChannel } = useMultiplayer();
-  const containers: SessionContainer[] = useChannel("sessionContainers", { uuid: session.id });
-  const metadata = useChannel("sessionMetadata", { uuid: session.id });
+  const containers: SessionContainer[] = useChannel("sessionContainers", {
+    uuid: session?.id ?? "",
+  });
+  const metadata = useChannel("sessionMetadata", { uuid: session?.id ?? "" });
+
+  if (!session) {
+    return "starting";
+  }
 
   if ((session.status as string) === "deleting") {
     return "deleting";

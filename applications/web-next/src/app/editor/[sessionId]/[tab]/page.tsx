@@ -14,16 +14,18 @@ import { SessionInfoView } from "@/components/session-info-view";
 import { PageFrame, Header, PageContent } from "@/components/layout-primitives";
 import { useAgent, invalidateSessionCache } from "@/lib/use-agent";
 import { useDeleteSession } from "@/lib/hooks";
+import { useSessionStatus } from "@/lib/use-session-status";
 import { useSessionContext } from "../layout";
 
 type TabValue = "chat" | "review" | "frame" | "stream";
 
 function SessionHeader() {
   const { session, project } = useSessionContext();
+  const status = useSessionStatus(session);
 
   return (
     <Header>
-      <StatusIcon status={session?.status ?? "idle"} />
+      <StatusIcon status={status} />
       <Breadcrumb.Root>
         <Breadcrumb.MutedItem>{project?.name}</Breadcrumb.MutedItem>
         <Breadcrumb.Separator />
