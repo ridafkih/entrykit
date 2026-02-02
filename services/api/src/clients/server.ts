@@ -6,6 +6,7 @@ import { createChannelRestHandler } from "../utils/handlers/channel-rest-handler
 import { bootstrapBrowserService, shutdownBrowserService } from "../utils/browser/bootstrap";
 import { initializeSessionContainers } from "../utils/docker/containers";
 import { setPoolBrowserService, initializePool } from "../utils/pool";
+import { ensureProxyInitialized } from "../utils/proxy";
 import { isHttpMethod, isRouteModule, type RouteContext } from "../utils/handlers/route-handler";
 import { publisher } from "./publisher";
 import { join } from "node:path";
@@ -121,6 +122,10 @@ const bootstrap = async () => {
 
   setPoolBrowserService(browserService);
   initializePool();
+
+  ensureProxyInitialized().catch((error) =>
+    console.error("[Startup] Failed to initialize proxy:", error),
+  );
 
   return { server, browserService };
 };
