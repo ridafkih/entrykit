@@ -8,12 +8,10 @@ import { cn } from "@/lib/cn";
 import type { Attachment } from "@/lib/use-attachments";
 
 type TextAreaGroupState = {
-  value: string;
   attachments?: Attachment[];
 };
 
 type TextAreaGroupActions = {
-  onChange: (value: string) => void;
   onSubmit: () => void;
   onAbort?: () => void;
   onAddFiles?: (files: FileList | File[]) => void;
@@ -108,7 +106,7 @@ function TextAreaGroupInput({
   placeholder = "Describe a task to provide context to the orchestrator...",
   rows = 3,
 }: InputProps) {
-  const { state, actions, meta } = useTextAreaGroup();
+  const { actions, meta } = useTextAreaGroup();
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     if (!actions.onAddFiles || !event.clipboardData) return;
@@ -130,8 +128,6 @@ function TextAreaGroupInput({
   return (
     <textarea
       ref={meta.textareaRef}
-      value={state.value}
-      onChange={(event) => actions.onChange(event.target.value)}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
       placeholder={placeholder}

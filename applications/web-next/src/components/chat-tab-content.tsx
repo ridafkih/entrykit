@@ -33,10 +33,10 @@ export function ChatTabContent({
   const { session } = useSessionContext();
   const status = useSessionStatus(session);
   const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
-  const { state, actions } = useChat();
+  const { scrollToBottom, getModelId, setModelId: setChatModelId } = useChat();
   const { modelGroups, modelId, setModelId } = useModelSelection({
-    syncTo: actions.setModelId,
-    currentSyncedValue: state.modelId,
+    syncTo: setChatModelId,
+    currentSyncedValue: getModelId(),
   });
   const isStreamingRef = useRef(false);
 
@@ -56,11 +56,11 @@ export function ChatTabContent({
   useEffect(() => {
     if (isStreaming) {
       isStreamingRef.current = true;
-      actions.scrollToBottom();
+      scrollToBottom();
     } else if (isStreamingRef.current) {
       isStreamingRef.current = false;
     }
-  }, [isStreaming, lastMessage?.parts.length, actions]);
+  }, [isStreaming, lastMessage?.parts.length, scrollToBottom]);
 
   useEffect(() => {
     if (sessionStatus.type === "retry") {

@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, use, useState, useRef, type ReactNode, type RefObject } from "react";
+import {
+  createContext,
+  use,
+  useState,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { tv } from "tailwind-variants";
 import { TextAreaGroup } from "./textarea-group";
 import { Tabs, useTabs } from "./tabs";
@@ -15,32 +22,43 @@ type SubmitOptions = {
   attachments?: Attachment[];
 };
 
-type ChatState = {
-  input: string;
-  modelId: string | null;
+type ChatInputState = {
   attachments: Attachment[];
 };
 
-type ChatActions = {
-  setInput: (value: string) => void;
-  setModelId: (value: string) => void;
+type ChatInputActions = {
   addFiles: (files: FileList | File[]) => void;
   removeAttachment: (id: string) => void;
   onSubmit: () => void;
   onAbort: () => void;
-  scrollToBottom: (force?: boolean) => void;
 };
 
-type ChatContextValue = {
-  state: ChatState;
-  actions: ChatActions;
-  scrollRef: RefObject<HTMLDivElement | null>;
-  isNearBottomRef: RefObject<boolean>;
+type ChatInputContextValue = {
+  state: ChatInputState;
+  actions: ChatInputActions;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
   isDragging: boolean;
   dragHandlers: ReturnType<typeof useAttachments>["dragHandlers"];
 };
 
+type ChatContextValue = {
+  getScrollRef: () => RefObject<HTMLDivElement | null>;
+  getIsNearBottomRef: () => RefObject<boolean>;
+  scrollToBottom: (force?: boolean) => void;
+  getModelId: () => string | null;
+  setModelId: (value: string) => void;
+};
+
+const ChatInputContext = createContext<ChatInputContextValue | null>(null);
 const ChatContext = createContext<ChatContextValue | null>(null);
+
+function useChatInput() {
+  const context = use(ChatInputContext);
+  if (!context) {
+    throw new Error("Chat input components must be used within Chat.Provider");
+  }
+  return context;
+}
 
 function useChat() {
   const context = use(ChatContext);
@@ -52,75 +70,94 @@ function useChat() {
 
 const SCROLL_THRESHOLD = 100;
 
+type ChatProviderProps = {
+  children: ReactNode;
+  defaultModelId?: string;
+  onSubmit?: (options: SubmitOptions) => void;
+  onAbort?: () => void;
+};
+
 function ChatProvider({
   children,
   defaultModelId,
   onSubmit,
   onAbort,
-}: {
-  children: ReactNode;
-  defaultModelId?: string;
-  onSubmit?: (options: SubmitOptions) => void;
-  onAbort?: () => void;
-}) {
-  const [input, setInput] = useState("");
+}: ChatProviderProps) {
   const [modelId, setModelId] = useState(defaultModelId ?? null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const { attachments, addFiles, removeAttachment, clearAttachments, isDragging, dragHandlers } =
     useAttachments();
 
-  const scrollToBottom = (force = false) => {
-    if (!force && !isNearBottomRef.current) return;
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-    });
-  };
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
+
+  const modelIdRef = useRef(modelId);
+  modelIdRef.current = modelId;
 
   const handleSubmit = () => {
-    const hasContent = input.trim().length > 0;
-    const hasAttachments = attachments.length > 0;
-    const readyAttachments = attachments.filter((attachment) => attachment.status === "ready");
+    const currentInput = inputRef.current?.value ?? "";
+    const currentAttachments = attachmentsRef.current;
+    const currentModelId = modelIdRef.current;
+
+    const hasContent = currentInput.trim().length > 0;
+    const hasAttachments = currentAttachments.length > 0;
+    const readyAttachments = currentAttachments.filter((attachment) => attachment.status === "ready");
 
     if (!hasContent && !hasAttachments) return;
 
     onSubmit?.({
-      content: input,
-      modelId: modelId ?? undefined,
+      content: currentInput,
+      modelId: currentModelId ?? undefined,
       attachments: readyAttachments.length > 0 ? readyAttachments : undefined,
     });
 
-    setInput("");
+    if (inputRef.current) inputRef.current.value = "";
     clearAttachments();
     isNearBottomRef.current = true;
-    setTimeout(() => scrollToBottom(true), 0);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   };
 
   const handleAbort = () => {
     onAbort?.();
   };
 
+  const chatContextValue = useRef<ChatContextValue | null>(null);
+  if (!chatContextValue.current) {
+    chatContextValue.current = {
+      getScrollRef: () => scrollRef,
+      getIsNearBottomRef: () => isNearBottomRef,
+      scrollToBottom: (force = false) => {
+        if (!force && !isNearBottomRef.current) return;
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      },
+      getModelId: () => modelIdRef.current,
+      setModelId: (value: string) => setModelId(value),
+    };
+  }
+
+  const chatInputContextValue = useRef<ChatInputContextValue | null>(null);
+  if (!chatInputContextValue.current) {
+    chatInputContextValue.current = {
+      state: { attachments: [] },
+      actions: { addFiles, removeAttachment, onSubmit: handleSubmit, onAbort: handleAbort },
+      inputRef,
+      isDragging: false,
+      dragHandlers,
+    };
+  }
+  chatInputContextValue.current.state.attachments = attachments;
+  chatInputContextValue.current.actions.onSubmit = handleSubmit;
+  chatInputContextValue.current.actions.onAbort = handleAbort;
+  chatInputContextValue.current.isDragging = isDragging;
+
   return (
-    <ChatContext
-      value={{
-        state: { input, modelId, attachments },
-        actions: {
-          setInput,
-          setModelId,
-          addFiles,
-          removeAttachment,
-          onSubmit: handleSubmit,
-          onAbort: handleAbort,
-          scrollToBottom,
-        },
-        scrollRef,
-        isNearBottomRef,
-        isDragging,
-        dragHandlers,
-      }}
-    >
-      {children}
+    <ChatContext value={chatContextValue.current}>
+      <ChatInputContext value={chatInputContextValue.current}>
+        {children}
+      </ChatInputContext>
     </ChatContext>
   );
 }
@@ -188,7 +225,9 @@ const messageList = tv({
 });
 
 function ChatMessageList({ children, compact }: { children: ReactNode; compact?: boolean }) {
-  const { scrollRef, isNearBottomRef } = useChat();
+  const { getScrollRef, getIsNearBottomRef } = useChat();
+  const scrollRef = getScrollRef();
+  const isNearBottomRef = getIsNearBottomRef();
 
   const handleScroll = () => {
     const { current: element } = scrollRef;
@@ -233,7 +272,7 @@ function ChatInput({
   isSending?: boolean;
   statusMessage?: string | null;
 }) {
-  const { state, actions, isDragging, dragHandlers } = useChat();
+  const { state, actions, inputRef, isDragging, dragHandlers } = useChatInput();
 
   return (
     <div className="sticky bottom-0 p-4 bg-linear-to-t from-bg to-transparent pointer-events-none z-10">
@@ -243,15 +282,14 @@ function ChatInput({
         </div>
       )}
       <TextAreaGroup.Provider
-        state={{ value: state.input, attachments: state.attachments }}
+        state={{ attachments: state.attachments }}
         actions={{
-          onChange: actions.setInput,
           onSubmit: actions.onSubmit,
           onAbort: actions.onAbort,
           onAddFiles: actions.addFiles,
           onRemoveAttachment: actions.removeAttachment,
         }}
-        meta={{ isSending, isDragging, dragHandlers }}
+        meta={{ textareaRef: inputRef, isSending, isDragging, dragHandlers }}
       >
         <TextAreaGroup.Frame>
           <TextAreaGroup.Attachments />
@@ -285,4 +323,13 @@ const Chat = {
   Input: ChatInput,
 };
 
-export { Chat, useChat, useTabs, type ChatRole, type ChatTab, type SubmitOptions, type Attachment };
+export {
+  Chat,
+  useChat,
+  useChatInput,
+  useTabs,
+  type ChatRole,
+  type ChatTab,
+  type SubmitOptions,
+  type Attachment,
+};
