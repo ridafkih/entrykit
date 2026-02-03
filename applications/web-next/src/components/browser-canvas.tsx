@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef, createContext, use, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  createContext,
+  use,
+  type ReactNode,
+} from "react";
 import { useMultiplayer } from "@/lib/multiplayer";
 import { useMultiplayerEnabled } from "@/app/providers";
 import { cn } from "@/lib/cn";
@@ -8,9 +16,11 @@ import { cn } from "@/lib/cn";
 type BrowserCurrentState = "pending" | "stopped" | "starting" | "running" | "stopping" | "error";
 
 interface BrowserStreamState {
-  bitmap: ImageBitmap | null;
   currentState: BrowserCurrentState;
   errorMessage?: string;
+  subscribe: () => () => void;
+  subscribeToFrames: (callback: (bitmap: ImageBitmap) => void) => () => void;
+  getBitmap: () => ImageBitmap | null;
 }
 
 const BrowserStreamContext = createContext<BrowserStreamState | null>(null);
@@ -30,19 +40,19 @@ interface RootProps {
 
 function BrowserCanvasRoot({ sessionId, children }: RootProps) {
   const isEnabled = useMultiplayerEnabled();
-  const [bitmap, setBitmap] = useState<ImageBitmap | null>(null);
+  const [subscriberCount, setSubscriberCount] = useState(0);
   const bitmapRef = useRef<ImageBitmap | null>(null);
+  const frameListenersRef = useRef(new Set<(bitmap: ImageBitmap) => void>());
   const { useChannel, useChannelEvent } = useMultiplayer();
 
-  const browserState = useChannel("sessionBrowserState", { uuid: sessionId });
-  const frameSnapshot = useChannel("sessionBrowserFrames", { uuid: sessionId });
+  const isActive = subscriberCount > 0;
+
+  const browserState = useChannel("sessionBrowserState", { uuid: sessionId }, { enabled: isActive });
+  const frameSnapshot = useChannel("sessionBrowserFrames", { uuid: sessionId }, { enabled: isActive });
 
   useEffect(() => {
-    setBitmap((prev) => {
-      prev?.close();
-      bitmapRef.current = null;
-      return null;
-    });
+    bitmapRef.current?.close();
+    bitmapRef.current = null;
   }, [sessionId]);
 
   const processFrame = async (base64: string) => {
@@ -54,27 +64,30 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
       }
       const blob = new Blob([bytes], { type: "image/jpeg" });
       const newBitmap = await createImageBitmap(blob);
-      setBitmap((prev) => {
-        prev?.close();
-        bitmapRef.current = newBitmap;
-        return newBitmap;
-      });
+
+      bitmapRef.current?.close();
+      bitmapRef.current = newBitmap;
+
+      // Notify listeners imperatively - no React state update
+      for (const listener of frameListenersRef.current) {
+        listener(newBitmap);
+      }
     } catch (error) {
       console.warn(error);
     }
   };
 
   useEffect(() => {
-    if (isEnabled && frameSnapshot.lastFrame && !bitmapRef.current) {
+    if (isEnabled && isActive && frameSnapshot.lastFrame && !bitmapRef.current) {
       processFrame(frameSnapshot.lastFrame);
     }
-  }, [isEnabled, frameSnapshot.lastFrame]);
+  }, [isEnabled, isActive, frameSnapshot.lastFrame]);
 
   const handleFrameEvent = (event: { type: "frame"; data: string; timestamp: number }) => {
     processFrame(event.data);
   };
 
-  useChannelEvent("sessionBrowserFrames", handleFrameEvent, { uuid: sessionId });
+  useChannelEvent("sessionBrowserFrames", handleFrameEvent, { uuid: sessionId }, { enabled: isActive });
 
   useEffect(() => {
     return () => {
@@ -82,12 +95,32 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
     };
   }, []);
 
+  const subscribe = useCallback(() => {
+    setSubscriberCount((count) => count + 1);
+    return () => setSubscriberCount((count) => count - 1);
+  }, []);
+
+  const subscribeToFrames = useCallback((callback: (bitmap: ImageBitmap) => void) => {
+    frameListenersRef.current.add(callback);
+    // Send current frame immediately if available
+    if (bitmapRef.current) {
+      callback(bitmapRef.current);
+    }
+    return () => {
+      frameListenersRef.current.delete(callback);
+    };
+  }, []);
+
+  const getBitmap = useCallback(() => bitmapRef.current, []);
+
   return (
     <BrowserStreamContext
       value={{
-        bitmap: isEnabled ? bitmap : null,
         currentState: browserState.currentState,
         errorMessage: browserState.errorMessage ?? undefined,
+        subscribe,
+        subscribeToFrames,
+        getBitmap,
       }}
     >
       {children}
@@ -96,9 +129,26 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
 }
 
 function BrowserCanvasPlaceholder({ children }: { children?: ReactNode }) {
-  const { bitmap } = useBrowserStream();
+  const { getBitmap, subscribeToFrames, subscribe } = useBrowserStream();
+  const [hasFrame, setHasFrame] = useState(() => getBitmap() !== null);
 
-  if (bitmap) return null;
+  useEffect(() => {
+    const unsubscribe = subscribe();
+    return unsubscribe;
+  }, [subscribe]);
+
+  useEffect(() => {
+    if (hasFrame) return;
+
+    const onFrame = () => {
+      setHasFrame(true);
+    };
+
+    const unsubscribe = subscribeToFrames(onFrame);
+    return unsubscribe;
+  }, [subscribeToFrames, hasFrame]);
+
+  if (hasFrame) return null;
 
   if (children) return children;
 
@@ -116,31 +166,41 @@ function BrowserCanvasPlaceholder({ children }: { children?: ReactNode }) {
 }
 
 function BrowserCanvasView({ className }: { className?: string }) {
-  const { bitmap } = useBrowserStream();
+  const { subscribe, subscribeToFrames } = useBrowserStream();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [hasFrame, setHasFrame] = useState(false);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !bitmap) return;
+    const unsubscribe = subscribe();
+    return unsubscribe;
+  }, [subscribe]);
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
+  useEffect(() => {
+    const drawFrame = (bitmap: ImageBitmap) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) {
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-    }
-    try {
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) {
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+      }
+
       context.drawImage(bitmap, 0, 0);
-    } catch (error) {
-      console.warn(error);
-    }
-  }, [bitmap]);
+
+      if (!hasFrame) setHasFrame(true);
+    };
+
+    const unsubscribe = subscribeToFrames(drawFrame);
+    return unsubscribe;
+  }, [subscribeToFrames, hasFrame]);
 
   return (
     <div
       className={cn("relative overflow-hidden", className ?? "aspect-video bg-black")}
-      style={{ display: bitmap ? undefined : "none" }}
+      style={{ display: hasFrame ? undefined : "none" }}
     >
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-contain" />
     </div>

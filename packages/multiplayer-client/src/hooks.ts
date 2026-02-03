@@ -29,6 +29,10 @@ function parseEvent<C extends ChannelConfig>(channel: C, data: unknown): EventOf
 type ChannelParams<S extends Schema, K extends ChannelName<S>> =
   HasParams<PathOf<S["channels"][K]>> extends true ? { uuid: string } : undefined;
 
+interface ChannelOptions {
+  enabled?: boolean;
+}
+
 function toStringRecord(obj: Record<string, unknown>): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(obj)) {
@@ -64,14 +68,18 @@ export function createHooks<S extends Schema>(schema: S) {
 
     function useChannel<K extends ChannelName<S>>(
       channelName: K,
-      ...args: ChannelParams<S, K> extends undefined ? [] : [params: ChannelParams<S, K>]
+      ...args: ChannelParams<S, K> extends undefined
+        ? [params?: undefined, options?: ChannelOptions]
+        : [params: ChannelParams<S, K>, options?: ChannelOptions]
     ): SnapshotOf<S["channels"][K]> {
       const channel = schema.channels[channelName];
       if (!channel) throw new Error(`Unknown channel: ${channelName}`);
 
       const params = args[0] ?? {};
+      const options = args[1] ?? {};
       const isInvalidParam = (value: unknown) => value === "" || value == null;
-      const shouldSkip = hasParams(channel.path) && Object.values(params).some(isInvalidParam);
+      const hasInvalidParams = hasParams(channel.path) && Object.values(params).some(isInvalidParam);
+      const shouldSkip = hasInvalidParams || options.enabled === false;
 
       const resolvedPath = useMemo(
         () =>
@@ -126,13 +134,16 @@ export function createHooks<S extends Schema>(schema: S) {
     function useChannelEvent<K extends ChannelName<S>>(
       channelName: K,
       callback: (event: EventOf<S["channels"][K]>) => void,
-      ...args: ChannelParams<S, K> extends undefined ? [] : [params: ChannelParams<S, K>]
+      ...args: ChannelParams<S, K> extends undefined
+        ? [params?: undefined, options?: ChannelOptions]
+        : [params: ChannelParams<S, K>, options?: ChannelOptions]
     ): void {
       const channel = schema.channels[channelName];
       if (!channel) {
         throw new Error(`Unknown channel: ${channelName}`);
       }
       const params = args[0] ?? {};
+      const options = args[1] ?? {};
 
       if (!channel.event) {
         throw new Error(`Channel "${channelName}" does not have events`);
@@ -148,7 +159,11 @@ export function createHooks<S extends Schema>(schema: S) {
         return channel.path;
       }, [channel.path, params]);
 
+      const enabled = options.enabled !== false;
+
       useEffect(() => {
+        if (!enabled) return;
+
         const unsubscribe = connection.subscribe(resolvedPath, (message) => {
           if (message.type === "event") {
             const parsed = parseEvent(channel, message.data);
@@ -156,10 +171,8 @@ export function createHooks<S extends Schema>(schema: S) {
           }
         });
 
-        return () => {
-          unsubscribe();
-        };
-      }, [resolvedPath]);
+        return unsubscribe;
+      }, [resolvedPath, enabled]);
     }
 
     return {
