@@ -45,18 +45,23 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
     });
   }, [sessionId]);
 
-  const processFrame = (base64: string) => {
-    fetch(`data:image/jpeg;base64,${base64}`)
-      .then((res) => res.blob())
-      .then((blob) => createImageBitmap(blob))
-      .then((newBitmap) => {
-        setBitmap((prev) => {
-          prev?.close();
-          bitmapRef.current = newBitmap;
-          return newBitmap;
-        });
-      })
-      .catch((error) => console.error(error));
+  const processFrame = async (base64: string) => {
+    try {
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: "image/jpeg" });
+      const newBitmap = await createImageBitmap(blob);
+      setBitmap((prev) => {
+        prev?.close();
+        bitmapRef.current = newBitmap;
+        return newBitmap;
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   useEffect(() => {
