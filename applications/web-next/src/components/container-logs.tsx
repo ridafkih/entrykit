@@ -111,7 +111,7 @@ function ContainerLogsRoot({ children }: { children: ReactNode }) {
       active={state.activeTab ?? state.sources[0]?.id ?? ""}
       onActiveChange={(tab) => actions.setActiveTab(tab)}
     >
-      <div className="flex flex-col gap-1">{children}</div>
+      <div className="flex flex-col gap-1 overflow-x-hidden">{children}</div>
     </Tabs.Root>
   );
 }
@@ -125,7 +125,7 @@ function ContainerLogsTabs() {
     <Tabs.List grow>
       {state.sources.map((source) => (
         <Tabs.Tab key={source.id} value={source.id}>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 w-full overflow-x-hidden">
             <ContainerLogsStatusIndicator status={source.status} />
             <span className="truncate">{source.hostname}</span>
           </div>
