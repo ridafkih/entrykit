@@ -124,26 +124,20 @@ interface CreateSessionOptions {
 }
 
 export function useCreateSession() {
-  const { mutate } = useSWRConfig();
   const [, setCreationState] = useAtom(creationStateAtom);
 
-  return async (projectId: string, options: CreateSessionOptions) => {
+  return async (projectId: string, options: CreateSessionOptions): Promise<Session | null> => {
     const { title, initialMessage, currentSessionCount } = options;
 
     setCreationState({ isCreating: true, projectId, sessionCountAtCreation: currentSessionCount });
 
     try {
       const session = await api.sessions.create(projectId, { title, initialMessage });
-      mutate(
-        `sessions-${projectId}`,
-        (current: Session[] = []) => {
-          if (current.some((existing) => existing.id === session.id)) return current;
-          return [...current, session];
-        },
-        false,
-      );
+      setCreationState({ isCreating: false, projectId: null, sessionCountAtCreation: 0 });
+      return session;
     } catch {
       setCreationState({ isCreating: false, projectId: null, sessionCountAtCreation: 0 });
+      return null;
     }
   };
 }

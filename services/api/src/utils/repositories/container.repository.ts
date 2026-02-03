@@ -54,6 +54,33 @@ export async function findSessionContainersBySessionId(
   return db.select().from(sessionContainers).where(eq(sessionContainers.sessionId, sessionId));
 }
 
+export async function findAllRunningSessionContainers(): Promise<
+  {
+    id: string;
+    sessionId: string;
+    dockerId: string;
+    hostname: string;
+  }[]
+> {
+  const rows = await db
+    .select({
+      id: sessionContainers.id,
+      sessionId: sessionContainers.sessionId,
+      dockerId: sessionContainers.dockerId,
+      hostname: containers.hostname,
+    })
+    .from(sessionContainers)
+    .innerJoin(containers, eq(sessionContainers.containerId, containers.id))
+    .where(eq(sessionContainers.status, "running"));
+
+  return rows.map((row) => ({
+    id: row.id,
+    sessionId: row.sessionId,
+    dockerId: row.dockerId,
+    hostname: row.hostname ?? row.id,
+  }));
+}
+
 export async function findSessionContainerByDockerId(
   dockerId: string,
 ): Promise<{ id: string } | null> {
@@ -62,6 +89,33 @@ export async function findSessionContainerByDockerId(
     .from(sessionContainers)
     .where(eq(sessionContainers.dockerId, dockerId));
   return row ?? null;
+}
+
+export async function findSessionContainerDetailsByDockerId(dockerId: string): Promise<{
+  id: string;
+  sessionId: string;
+  containerId: string;
+  hostname: string;
+} | null> {
+  const [row] = await db
+    .select({
+      id: sessionContainers.id,
+      sessionId: sessionContainers.sessionId,
+      containerId: sessionContainers.containerId,
+      hostname: containers.hostname,
+    })
+    .from(sessionContainers)
+    .innerJoin(containers, eq(sessionContainers.containerId, containers.id))
+    .where(eq(sessionContainers.dockerId, dockerId));
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    sessionId: row.sessionId,
+    containerId: row.containerId,
+    hostname: row.hostname ?? row.containerId,
+  };
 }
 
 export async function updateSessionContainerDockerId(

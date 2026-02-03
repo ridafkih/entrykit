@@ -2,12 +2,16 @@ import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Global GitHub settings table (single row, no project association).
- * Stores encrypted PAT and git author configuration.
+ * Stores encrypted PAT/OAuth token and git author configuration.
  */
 export const githubSettings = pgTable("github_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
   patEncrypted: text("pat_encrypted"),
   patNonce: text("pat_nonce"),
+  accessTokenEncrypted: text("access_token_encrypted"),
+  accessTokenNonce: text("access_token_nonce"),
+  oauthScopes: text("oauth_scopes"),
+  oauthConnectedAt: timestamp("oauth_connected_at", { withTimezone: true }),
   username: text("username"),
   authorName: text("author_name"),
   authorEmail: text("author_email"),

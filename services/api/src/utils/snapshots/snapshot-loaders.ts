@@ -14,6 +14,7 @@ import { getLastMessage, setLastMessage } from "../monitors/last-message-store";
 import { resolveWorkspacePathBySession } from "../workspace/resolve-path";
 import type { BrowserService } from "../browser/browser-service";
 import type { AppSchema } from "@lab/multiplayer-sdk";
+import { logMonitor } from "../monitors/log.monitor";
 
 export async function loadProjects() {
   return findProjectSummaries();
@@ -73,6 +74,10 @@ export async function loadSessionChangedFiles(sessionId: string) {
   }
 }
 
+export function loadSessionLogs(sessionId: string) {
+  return logMonitor.getSessionSnapshot(sessionId);
+}
+
 export async function loadSessionMetadata(sessionId: string) {
   const session = await findSessionById(sessionId);
   const title = session?.title ?? "";
@@ -124,7 +129,8 @@ export function createSnapshotLoaders(
     sessionChangedFiles: async (session) => (session ? loadSessionChangedFiles(session) : null),
     sessionBranches: async () => [],
     sessionLinks: async () => [],
-    sessionLogs: async () => [],
+    sessionLogs: async (session) =>
+      session ? loadSessionLogs(session) : { sources: [], recentLogs: {} },
     sessionMessages: async () => [],
     sessionBrowserState: async (session) =>
       session ? browserService.getBrowserSnapshot(session) : null,

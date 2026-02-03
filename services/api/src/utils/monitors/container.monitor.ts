@@ -4,9 +4,11 @@ import { LABELS } from "../../config/constants";
 import type { ContainerStatus } from "../../types/container";
 import {
   findSessionContainerByDockerId,
+  findSessionContainerDetailsByDockerId,
   updateSessionContainerStatus,
 } from "../repositories/container.repository";
 import { publisher } from "../../clients/publisher";
+import { logMonitor } from "./log.monitor";
 
 const INITIAL_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 60000;
@@ -97,6 +99,33 @@ class ContainerMonitor {
         container: { id: sessionContainer.id, status },
       },
     );
+
+    await this.notifyLogMonitor(event, status);
+  }
+
+  private async notifyLogMonitor(
+    event: DockerContainerEvent,
+    status: ContainerStatus,
+  ): Promise<void> {
+    if (status === "running") {
+      const details = await findSessionContainerDetailsByDockerId(event.containerId);
+      if (details) {
+        logMonitor.onContainerStarted({
+          sessionId: details.sessionId,
+          containerId: details.id,
+          dockerId: event.containerId,
+          hostname: details.hostname,
+        });
+      }
+    } else if (status === "stopped" || status === "error") {
+      const details = await findSessionContainerDetailsByDockerId(event.containerId);
+      if (details) {
+        logMonitor.onContainerStopped({
+          sessionId: details.sessionId,
+          containerId: details.id,
+        });
+      }
+    }
   }
 }
 

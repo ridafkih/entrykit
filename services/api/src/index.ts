@@ -1,6 +1,7 @@
 import { server, browserService, shutdownBrowserService } from "./clients/server";
 import { createContainerMonitor } from "./utils/monitors/container.monitor";
 import { createOpenCodeMonitor } from "./utils/monitors/opencode.monitor";
+import { createLogMonitor } from "./utils/monitors/log.monitor";
 import { cleanupOrphanedSessions } from "./utils/browser/state-store";
 import { cleanupOrphanedNetworks } from "./utils/docker/network";
 
@@ -22,13 +23,16 @@ cleanupOrphanedNetworks()
 
 const containerMonitor = createContainerMonitor();
 const openCodeMonitor = createOpenCodeMonitor();
+const logMonitorInstance = createLogMonitor();
 
 containerMonitor.start();
 openCodeMonitor.start();
+logMonitorInstance.start();
 
 function gracefulShutdown() {
   containerMonitor.stop();
   openCodeMonitor.stop();
+  logMonitorInstance.stop();
   shutdownBrowserService(browserService);
   process.exit(0);
 }

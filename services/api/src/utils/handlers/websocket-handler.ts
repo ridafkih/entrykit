@@ -13,6 +13,7 @@ import {
   loadSessionContainers,
   loadSessionChangedFiles,
   loadSessionMetadata,
+  loadSessionLogs,
 } from "../snapshots/snapshot-loaders";
 
 export { type Auth } from "../../types/websocket";
@@ -58,7 +59,10 @@ export function createWebSocketHandlers(browserService: BrowserService) {
       getSnapshot: async () => [],
     },
     sessionLogs: {
-      getSnapshot: async () => [],
+      getSnapshot: async ({ params }) => {
+        if (!params.uuid) return { sources: [], recentLogs: {} };
+        return loadSessionLogs(params.uuid);
+      },
     },
     sessionMessages: {
       getSnapshot: async () => [],

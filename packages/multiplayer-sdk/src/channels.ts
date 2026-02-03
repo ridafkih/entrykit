@@ -11,15 +11,16 @@ const ReviewableFileSchema = z.object({
 
 const LogSourceSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  type: z.enum(["container", "process", "file"]),
+  hostname: z.string(),
+  dockerId: z.string(),
+  status: z.enum(["streaming", "stopped", "error"]),
 });
 
 const LogEntrySchema = z.object({
-  sourceId: z.string(),
+  containerId: z.string(),
+  stream: z.enum(["stdout", "stderr"]),
+  text: z.string(),
   timestamp: z.number(),
-  level: z.enum(["debug", "info", "warn", "error"]),
-  message: z.string(),
 });
 
 const SessionSchema = z.object({
@@ -153,8 +154,20 @@ export const schema = defineSchema({
 
     sessionLogs: defineChannel({
       path: "session/:uuid/logs",
-      snapshot: z.array(LogSourceSchema),
-      default: [],
+      snapshot: z.object({
+        sources: z.array(LogSourceSchema),
+        recentLogs: z.record(z.string(), z.array(LogEntrySchema)),
+      }),
+      default: { sources: [], recentLogs: {} },
+      delta: z.discriminatedUnion("type", [
+        z.object({ type: z.literal("source_add"), source: LogSourceSchema }),
+        z.object({ type: z.literal("source_remove"), containerId: z.string() }),
+        z.object({
+          type: z.literal("source_update"),
+          containerId: z.string(),
+          status: z.enum(["streaming", "stopped", "error"]),
+        }),
+      ]),
       event: LogEntrySchema,
     }),
 

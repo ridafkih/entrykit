@@ -66,7 +66,7 @@ async function prepareContainerData(
 }
 
 interface GitHubEnvConfig {
-  pat: string | null;
+  token: string | null;
   authorName: string | null;
   authorEmail: string | null;
   attributeAgent: boolean;
@@ -85,8 +85,8 @@ function buildEnvironmentVariables(
   env.AGENT_BROWSER_SESSION = sessionId;
 
   if (github) {
-    if (github.pat) {
-      env.GH_TOKEN = github.pat;
+    if (github.token) {
+      env.GH_TOKEN = github.token;
     }
     if (github.authorName) {
       env.GIT_AUTHOR_NAME = github.authorName;

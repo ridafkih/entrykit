@@ -44,6 +44,8 @@ export interface GitHubSettingsResponse {
   authorEmail?: string | null;
   attributeAgent?: boolean;
   hasPatConfigured?: boolean;
+  isOAuthConnected?: boolean;
+  oauthConnectedAt?: string | null;
 }
 
 export async function getGitHubSettings(): Promise<GitHubSettingsResponse> {
@@ -67,4 +69,13 @@ export async function saveGitHubSettings(
 export async function deleteGitHubSettings(): Promise<void> {
   const response = await fetch(`${API_BASE}/github/settings`, { method: "DELETE" });
   if (!response.ok) throw new Error("Failed to delete GitHub settings");
+}
+
+export async function disconnectGitHub(): Promise<void> {
+  const response = await fetch(`${API_BASE}/github/disconnect`, { method: "POST" });
+  if (!response.ok) throw new Error("Failed to disconnect GitHub");
+}
+
+export function getGitHubAuthUrl(): string {
+  return `${API_BASE}/github/auth`;
 }

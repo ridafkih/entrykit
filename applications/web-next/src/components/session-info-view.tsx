@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { SessionInfoPane } from "@/components/session-info-pane";
 import { BrowserStreamView } from "@/components/browser-stream";
+import { DefaultContainerLogs } from "@/components/container-logs";
 import { useFileStatuses } from "@/lib/use-file-statuses";
 import type { Project, Session } from "@lab/client";
 
@@ -101,7 +102,7 @@ export function SessionInfoView({ session, project, containers, onDelete }: Sess
 
       <SessionInfoPane.Section>
         <SessionInfoPane.SectionHeader>Logs</SessionInfoPane.SectionHeader>
-        <SessionInfoPane.Empty>No logs</SessionInfoPane.Empty>
+        <DefaultContainerLogs sessionId={session.id} />
       </SessionInfoPane.Section>
 
       <SessionInfoPane.Section>

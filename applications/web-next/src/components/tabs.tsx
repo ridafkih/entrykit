@@ -2,6 +2,7 @@
 
 import { createContext, use, useState, type ReactNode } from "react";
 import { tv } from "tailwind-variants";
+import { cn } from "@/lib/cn";
 
 type TabsContextValue<T extends string = string> = {
   state: { active: T };
@@ -18,14 +19,22 @@ function useTabs<T extends string = string>() {
   return context;
 }
 
-function TabsRoot<T extends string>({
-  children,
-  defaultTab,
-}: {
-  children: ReactNode;
-  defaultTab: T;
-}) {
-  const [active, setActive] = useState<T>(defaultTab);
+type TabsRootProps<T extends string> =
+  | { children: ReactNode; defaultTab: T; active?: never; onActiveChange?: never }
+  | { children: ReactNode; active: T; onActiveChange: (tab: T) => void; defaultTab?: never };
+
+function TabsRoot<T extends string>(props: TabsRootProps<T>) {
+  const { children } = props;
+  const isControlled = "active" in props && props.active !== undefined;
+
+  const [internalActive, setInternalActive] = useState<T>(
+    isControlled ? props.active : props.defaultTab!,
+  );
+
+  const active = isControlled ? props.active : internalActive;
+  const setActive = isControlled
+    ? (props.onActiveChange as (tab: T) => void)
+    : setInternalActive;
 
   return (
     <TabsContext
@@ -36,12 +45,21 @@ function TabsRoot<T extends string>({
   );
 }
 
-function TabsList({ children }: { children: ReactNode }) {
-  return <div className="flex items-center gap-px px-0 border-b border-border">{children}</div>;
+function TabsList({ children, grow }: { children: ReactNode; grow?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-px px-0 border-b border-border",
+        grow && "*:flex-1",
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 const tab = tv({
-  base: "px-2 py-1 text-xs cursor-pointer border-b",
+  base: "px-2 py-1 text-xs cursor-pointer border-b max-w-full",
   variants: {
     active: {
       true: "text-text border-text",
@@ -55,7 +73,7 @@ function TabsTab<T extends string>({ value, children }: { value: T; children: Re
   const isActive = state.active === value;
 
   return (
-    <div className="px-1">
+    <div className="px-1 min-w-0">
       <button
         type="button"
         onClick={() => actions.setActive(value)}

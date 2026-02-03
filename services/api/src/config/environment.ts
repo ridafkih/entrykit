@@ -42,6 +42,10 @@ export const config = {
   caddyContainerName: getRequiredEnv("CADDY_CONTAINER_NAME"),
   proxyBaseDomain: getRequiredEnv("PROXY_BASE_DOMAIN"),
   poolSize: getOptionalEnvInt("POOL_SIZE", 0),
+  githubClientId: getOptionalEnv("GITHUB_CLIENT_ID"),
+  githubClientSecret: getOptionalEnv("GITHUB_CLIENT_SECRET"),
+  githubCallbackUrl: getOptionalEnv("GITHUB_CALLBACK_URL"),
+  frontendUrl: getOptionalEnv("FRONTEND_URL"),
 };
 
 export type Config = typeof config;

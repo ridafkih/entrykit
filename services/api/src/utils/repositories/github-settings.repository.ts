@@ -18,16 +18,24 @@ export interface GitHubSettingsOutput {
   authorEmail: string | null;
   attributeAgent: boolean;
   hasPatConfigured: boolean;
+  isOAuthConnected: boolean;
+  oauthConnectedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface GitHubCredentials {
-  pat: string | null;
+  token: string | null;
   username: string | null;
   authorName: string | null;
   authorEmail: string | null;
   attributeAgent: boolean;
+}
+
+export interface GitHubOAuthInput {
+  accessToken: string;
+  scopes: string;
+  username: string;
 }
 
 export async function getGitHubSettings(): Promise<GitHubSettingsOutput | null> {
@@ -41,6 +49,8 @@ export async function getGitHubSettings(): Promise<GitHubSettingsOutput | null> 
     authorEmail: settings.authorEmail,
     attributeAgent: settings.attributeAgent,
     hasPatConfigured: !!settings.patEncrypted,
+    isOAuthConnected: !!settings.accessTokenEncrypted,
+    oauthConnectedAt: settings.oauthConnectedAt,
     createdAt: settings.createdAt,
     updatedAt: settings.updatedAt,
   };
@@ -50,17 +60,26 @@ export async function getGitHubCredentials(): Promise<GitHubCredentials | null> 
   const [settings] = await db.select().from(githubSettings).limit(1);
   if (!settings) return null;
 
-  let pat: string | null = null;
-  if (settings.patEncrypted && settings.patNonce) {
+  let token: string | null = null;
+
+  if (settings.accessTokenEncrypted && settings.accessTokenNonce) {
     try {
-      pat = decrypt(settings.patEncrypted, settings.patNonce);
+      token = decrypt(settings.accessTokenEncrypted, settings.accessTokenNonce);
+    } catch {
+      console.error("Failed to decrypt GitHub OAuth token");
+    }
+  }
+
+  if (!token && settings.patEncrypted && settings.patNonce) {
+    try {
+      token = decrypt(settings.patEncrypted, settings.patNonce);
     } catch {
       console.error("Failed to decrypt GitHub PAT");
     }
   }
 
   return {
-    pat,
+    token,
     username: settings.username,
     authorName: settings.authorName,
     authorEmail: settings.authorEmail,
@@ -111,6 +130,8 @@ export async function saveGitHubSettings(
     authorEmail: settings.authorEmail,
     attributeAgent: settings.attributeAgent,
     hasPatConfigured: !!settings.patEncrypted,
+    isOAuthConnected: !!settings.accessTokenEncrypted,
+    oauthConnectedAt: settings.oauthConnectedAt,
     createdAt: settings.createdAt,
     updatedAt: settings.updatedAt,
   };
@@ -118,4 +139,61 @@ export async function saveGitHubSettings(
 
 export async function deleteGitHubSettings(): Promise<void> {
   await db.delete(githubSettings);
+}
+
+export async function saveGitHubOAuthToken(input: GitHubOAuthInput): Promise<GitHubSettingsOutput> {
+  const [existing] = await db.select({ id: githubSettings.id }).from(githubSettings).limit(1);
+
+  const encrypted = encrypt(input.accessToken);
+
+  const values = {
+    accessTokenEncrypted: encrypted.encrypted,
+    accessTokenNonce: encrypted.nonce,
+    oauthScopes: input.scopes,
+    oauthConnectedAt: new Date(),
+    username: input.username,
+    updatedAt: new Date(),
+  };
+
+  let settings;
+  if (existing) {
+    [settings] = await db
+      .update(githubSettings)
+      .set(values)
+      .where(eq(githubSettings.id, existing.id))
+      .returning();
+  } else {
+    [settings] = await db.insert(githubSettings).values(values).returning();
+  }
+
+  if (!settings) throw new Error("Failed to save GitHub OAuth token");
+
+  return {
+    id: settings.id,
+    username: settings.username,
+    authorName: settings.authorName,
+    authorEmail: settings.authorEmail,
+    attributeAgent: settings.attributeAgent,
+    hasPatConfigured: !!settings.patEncrypted,
+    isOAuthConnected: !!settings.accessTokenEncrypted,
+    oauthConnectedAt: settings.oauthConnectedAt,
+    createdAt: settings.createdAt,
+    updatedAt: settings.updatedAt,
+  };
+}
+
+export async function clearGitHubOAuthToken(): Promise<void> {
+  const [existing] = await db.select({ id: githubSettings.id }).from(githubSettings).limit(1);
+  if (!existing) return;
+
+  await db
+    .update(githubSettings)
+    .set({
+      accessTokenEncrypted: null,
+      accessTokenNonce: null,
+      oauthScopes: null,
+      oauthConnectedAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(githubSettings.id, existing.id));
 }
