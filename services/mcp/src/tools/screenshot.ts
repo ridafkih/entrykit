@@ -50,7 +50,7 @@ export function screenshot(server: McpServer, _context: ToolContext) {
     "screenshot",
     {
       description:
-        "Capture a screenshot of the browser session. Returns a public URL to the screenshot image.",
+        "Capture a screenshot of the browser session. Returns the image and a public URL.",
       inputSchema: {
         sessionId: z.string().describe("The Lab session ID (provided in the system prompt)"),
       },
@@ -77,8 +77,13 @@ export function screenshot(server: McpServer, _context: ToolContext) {
         return {
           content: [
             {
+              type: "image",
+              data: screenshotData.data,
+              mimeType: "image/png",
+            },
+            {
               type: "text",
-              text: `Screenshot captured successfully.\n\nURL: ${url}`,
+              text: `Screenshot captured successfully and available at ${url}`,
             },
           ],
         };
