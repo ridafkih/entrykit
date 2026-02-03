@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
-
-type OpencodeClient = ReturnType<typeof createOpencodeClient>;
+import { useState } from "react";
+import { useSessionClient } from "./use-session-client";
 
 interface UseQuestionsResult {
   isSubmitting: boolean;
@@ -11,33 +9,9 @@ interface UseQuestionsResult {
   reject: (callId: string) => Promise<void>;
 }
 
-function getApiUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL must be set");
-  return apiUrl;
-}
-
-function createSessionClient(labSessionId: string) {
-  return createOpencodeClient({
-    baseUrl: `${getApiUrl()}/opencode`,
-    headers: { "X-Lab-Session-Id": labSessionId },
-  });
-}
-
 export function useQuestions(labSessionId: string): UseQuestionsResult {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const opencodeClientRef = useRef<{ client: OpencodeClient; sessionId: string } | null>(null);
-
-  if (labSessionId && opencodeClientRef.current?.sessionId !== labSessionId) {
-    opencodeClientRef.current = {
-      client: createSessionClient(labSessionId),
-      sessionId: labSessionId,
-    };
-  } else if (!labSessionId) {
-    opencodeClientRef.current = null;
-  }
-
-  const opencodeClient = opencodeClientRef.current?.client ?? null;
+  const opencodeClient = useSessionClient(labSessionId);
 
   const reply = async (requestId: string, answers: string[][]) => {
     if (!opencodeClient) {

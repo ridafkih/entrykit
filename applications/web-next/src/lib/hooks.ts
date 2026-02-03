@@ -34,7 +34,7 @@ export function useModelSelection(options?: UseModelSelectionOptions) {
     if (modelId && options?.syncTo && options.currentSyncedValue === null) {
       options.syncTo(modelId);
     }
-  }, [modelId, options?.syncTo, options?.currentSyncedValue]);
+  }, [modelId, options]);
 
   const setModelId = (value: string) => {
     setPreferredModel(value);
@@ -100,10 +100,14 @@ export function useContainers(projectId: string | null) {
 }
 
 export function useSessions(projectId: string | null) {
-  return useSWR(projectId ? `sessions-${projectId}` : null, () => {
-    if (!projectId) return [];
-    return api.sessions.list(projectId);
-  });
+  return useSWR(
+    projectId ? `sessions-${projectId}` : null,
+    () => {
+      if (!projectId) return [];
+      return api.sessions.list(projectId);
+    },
+    { keepPreviousData: true },
+  );
 }
 
 export function useSession(sessionId: string | null) {

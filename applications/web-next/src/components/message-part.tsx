@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, use, useState, type ReactNode } from "react";
+import { createContext, use, useState, memo, type ReactNode } from "react";
 import type {
   Part,
   TextPart,
@@ -340,7 +340,7 @@ function MessagePartToolRenderer({
   );
 }
 
-function MessagePartFile({ part }: { part: FilePart }) {
+const MessagePartFile = memo(function MessagePartFile({ part }: { part: FilePart }) {
   return (
     <div className={actionRow()} data-opencode-component="File">
       <span>{part.filename || part.url}</span>
@@ -350,7 +350,7 @@ function MessagePartFile({ part }: { part: FilePart }) {
       <ChevronRight size={14} className="text-text-muted ml-auto" />
     </div>
   );
-}
+});
 
 const metaRow = tv({
   base: "flex items-center gap-3 px-4 py-1.5 text-xs text-text-muted",
@@ -364,14 +364,14 @@ function MessagePartStepFinish({}: { part: StepFinishPart }) {
   return null;
 }
 
-function MessagePartSnapshot({ part }: { part: SnapshotPart }) {
+const MessagePartSnapshot = memo(function MessagePartSnapshot({ part }: { part: SnapshotPart }) {
   return (
     <div className={metaRow()} data-opencode-component="Snapshot">
       <span>Snapshot</span>
       <span className="font-mono">{part.id.slice(0, 8)}</span>
     </div>
   );
-}
+});
 
 function MessagePartPatch({}: { part: PatchPart }) {
   return (

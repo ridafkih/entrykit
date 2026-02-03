@@ -16,8 +16,8 @@ const themeScript = `
   })();
 `;
 
-export default function RootLayout({ children }: { children: ReactNode }) {
-  const projectsPromise = prefetchProjects();
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const projects = await prefetchProjects();
 
   return (
     <html lang="en" className={cn(geist.variable, geistMono.variable)} suppressHydrationWarning>
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans text-[0.75rem] text-text bg-bg antialiased">
-        <Providers fallback={{ projects: projectsPromise }}>{children}</Providers>
+        <Providers fallback={{ projects }}>{children}</Providers>
       </body>
     </html>
   );

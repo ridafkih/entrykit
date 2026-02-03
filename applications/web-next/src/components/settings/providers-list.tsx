@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { Circle } from "lucide-react";
 import useSWR from "swr";
 import { tv } from "tailwind-variants";
-import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import { cn } from "@/lib/cn";
+import { createClient } from "@/lib/use-session-client";
 
 type Provider = {
   id: string;
@@ -39,16 +39,6 @@ function useProvidersList() {
     throw new Error("ProvidersList components must be used within ProvidersList.Provider");
   }
   return context;
-}
-
-function getApiUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL must be set");
-  return apiUrl;
-}
-
-function createClient() {
-  return createOpencodeClient({ baseUrl: `${getApiUrl()}/opencode` });
 }
 
 async function fetchProvidersList(): Promise<ProvidersListData> {

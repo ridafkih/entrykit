@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Check, ExternalLink } from "lucide-react";
-import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import { FormInput } from "@/components/form-input";
 import { Button } from "@/components/button";
+import { createClient } from "@/lib/use-session-client";
 
 type AuthMethod = {
   type: "oauth" | "api";
@@ -19,16 +19,6 @@ type ProviderData = {
   isConnected: boolean;
   authMethods: AuthMethod[];
 };
-
-function getApiUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL must be set");
-  return apiUrl;
-}
-
-function createClient() {
-  return createOpencodeClient({ baseUrl: `${getApiUrl()}/opencode` });
-}
 
 async function fetchProviderData(providerId: string): Promise<ProviderData> {
   const client = createClient();

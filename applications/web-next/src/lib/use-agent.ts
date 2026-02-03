@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { createOpencodeClient, type Message, type Part } from "@opencode-ai/sdk/v2/client";
+import type { Message, Part } from "@opencode-ai/sdk/v2/client";
 import { api } from "./api";
 import { useOpenCodeSession, type Event } from "./opencode-session";
-
-type OpencodeClient = ReturnType<typeof createOpencodeClient>;
+import { useSessionClient, createSessionClient } from "./use-session-client";
 
 interface LoadedMessage {
   info: Message;
@@ -44,19 +43,6 @@ interface UseAgentResult {
 interface SessionData {
   opencodeSessionId: string;
   messages: MessageState[];
-}
-
-function getApiUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL must be set");
-  return apiUrl;
-}
-
-function createSessionClient(labSessionId: string) {
-  return createOpencodeClient({
-    baseUrl: `${getApiUrl()}/opencode`,
-    headers: { "X-Lab-Session-Id": labSessionId },
-  });
 }
 
 function parseLoadedMessages(data: LoadedMessage[]): MessageState[] {
@@ -208,18 +194,7 @@ export function useAgent(labSessionId: string): UseAgentResult {
   const sendingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamedMessagesRef = useRef<MessageState[] | null>(null);
   const sessionDataRef = useRef<SessionData | null>(null);
-  const opencodeClientRef = useRef<{ client: OpencodeClient; sessionId: string } | null>(null);
-
-  if (labSessionId && opencodeClientRef.current?.sessionId !== labSessionId) {
-    opencodeClientRef.current = {
-      client: createSessionClient(labSessionId),
-      sessionId: labSessionId,
-    };
-  } else if (!labSessionId) {
-    opencodeClientRef.current = null;
-  }
-
-  const opencodeClient = opencodeClientRef.current?.client ?? null;
+  const opencodeClient = useSessionClient(labSessionId);
 
   const {
     data: sessionData,
