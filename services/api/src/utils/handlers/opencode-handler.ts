@@ -1,10 +1,9 @@
 import { config } from "../../config/environment";
 import { CORS_HEADERS, buildSseResponse } from "../../shared/http";
-import { createPromptContext, type ContainerInfo } from "../prompts/context";
+import { createPromptContext } from "../prompts/context";
 import type { PromptService } from "../../types/prompt";
 import { findSessionById, updateSessionOpencodeId } from "../repositories/session.repository";
 import { getProjectSystemPrompt } from "../repositories/project.repository";
-import { getSessionContainersWithPorts } from "../repositories/container.repository";
 import { resolveWorkspacePathBySession } from "../workspace/resolve-path";
 import { publisher } from "../../clients/publisher";
 import { setLastMessage } from "../monitors/last-message-store";
@@ -61,10 +60,6 @@ async function getSessionData(labSessionId: string) {
   };
 }
 
-async function getContainerInfos(sessionId: string): Promise<ContainerInfo[]> {
-  return getSessionContainersWithPorts(sessionId);
-}
-
 async function buildProxyBody(
   request: Request,
   path: string,
@@ -112,13 +107,9 @@ async function buildProxyBody(
     return JSON.stringify({ ...originalBody, directory: workspacePath });
   }
 
-  const containers = await getContainerInfos(labSessionId);
-  console.log("[opencode-proxy] Containers for prompt:", { labSessionId, containers });
-
   const promptContext = createPromptContext({
     sessionId: sessionData.sessionId,
     projectId: sessionData.projectId,
-    containers,
     projectSystemPrompt: sessionData.projectSystemPrompt,
   });
 
@@ -130,14 +121,27 @@ async function buildProxyBody(
     fullPrompt: composedPrompt,
   });
 
+  const existingTools =
+    originalBody.tools && typeof originalBody.tools === "object" ? originalBody.tools : {};
+  const tools = { ...existingTools, bash: false };
+
   if (!composedPrompt) {
-    return JSON.stringify({ ...originalBody, directory: workspacePath });
+    return JSON.stringify({
+      ...originalBody,
+      directory: workspacePath,
+      tools,
+    });
   }
 
   const existingSystem = originalBody.system ?? "";
   const combinedSystem = composedPrompt + (existingSystem ? "\n\n" + existingSystem : "");
 
-  return JSON.stringify({ ...originalBody, system: combinedSystem, directory: workspacePath });
+  return JSON.stringify({
+    ...originalBody,
+    system: combinedSystem,
+    directory: workspacePath,
+    tools,
+  });
 }
 
 function buildForwardHeaders(request: Request): Headers {

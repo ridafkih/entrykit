@@ -81,6 +81,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       MCP_PORT: "3000"
+      API_BASE_URL: "http://api:4000"
 
   api:
     build:

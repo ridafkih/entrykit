@@ -1,7 +1,6 @@
 import type { PromptFragment, PromptService } from "../../types/prompt";
 import { PromptComposer } from "./composer";
 import { agentBrowserFragment } from "./fragments/agent-browser";
-import { containerServicesFragment } from "./fragments/container-services";
 import { projectPromptFragment } from "./fragments/project-prompt";
 
 export class PromptBuilder {
@@ -17,11 +16,7 @@ export class PromptBuilder {
   }
 
   static defaults(): PromptBuilder {
-    return new PromptBuilder([
-      agentBrowserFragment,
-      containerServicesFragment,
-      projectPromptFragment,
-    ]);
+    return new PromptBuilder([agentBrowserFragment, projectPromptFragment]);
   }
 
   withFragment(fragment: PromptFragment): PromptBuilder {
@@ -31,10 +26,6 @@ export class PromptBuilder {
 
   withAgentBrowser(): PromptBuilder {
     return this.withFragment(agentBrowserFragment);
-  }
-
-  withContainerServices(): PromptBuilder {
-    return this.withFragment(containerServicesFragment);
   }
 
   withProjectPrompt(): PromptBuilder {

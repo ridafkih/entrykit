@@ -25,6 +25,20 @@ import {
   VOLUME_CLONE_COMMAND,
 } from "../constants";
 
+interface Writable {
+  write(chunk: Buffer): void;
+}
+
+interface DockerModem {
+  demuxStream(stream: NodeJS.ReadableStream, stdout: Writable, stderr: Writable): void;
+}
+
+declare module "dockerode" {
+  interface Dockerode {
+    modem: DockerModem;
+  }
+}
+
 export class DockerClient implements SandboxProvider {
   private docker: Dockerode;
 
@@ -40,6 +54,10 @@ export class DockerClient implements SandboxProvider {
         socketPath: options.socketPath ?? DEFAULT_SOCKET_PATH,
       });
     }
+  }
+
+  private get modem(): DockerModem {
+    return this.docker.modem;
   }
 
   get raw(): Dockerode {
@@ -391,36 +409,20 @@ export class DockerClient implements SandboxProvider {
       AttachStderr: true,
     });
 
-    const stream = await exec.start({ hijack: true, stdin: false });
-
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
 
+    // Use Dockerode's built-in demuxer instead of hijack mode to avoid
+    // docker-modem's 101 status code handling issues
+    const stream = await exec.start({});
+
     await new Promise<void>((resolve, reject) => {
-      let buffer = Buffer.alloc(0);
-
-      stream.on("data", (chunk: Buffer) => {
-        buffer = Buffer.concat([buffer, chunk]);
-
-        // Docker stream demuxing: 8-byte header per frame
-        // Byte 0: stream type (1=stdout, 2=stderr)
-        // Bytes 4-7: frame size (big-endian uint32)
-        while (buffer.length >= 8) {
-          const streamType = buffer[0];
-          const size = buffer.readUInt32BE(4);
-
-          if (buffer.length < 8 + size) break;
-
-          const data = buffer.subarray(8, 8 + size);
-          buffer = buffer.subarray(8 + size);
-
-          if (streamType === 1) {
-            stdout.push(data);
-          } else if (streamType === 2) {
-            stderr.push(data);
-          }
-        }
-      });
+      // Use docker-modem's demuxStream to separate stdout/stderr
+      this.modem.demuxStream(
+        stream,
+        { write: (chunk: Buffer) => stdout.push(chunk) },
+        { write: (chunk: Buffer) => stderr.push(chunk) },
+      );
 
       stream.on("end", resolve);
       stream.on("error", reject);

@@ -1,7 +1,6 @@
 import { opencode } from "../../clients/opencode";
 import { findSessionById, updateSessionOpencodeId } from "../repositories/session.repository";
 import { getProjectSystemPrompt } from "../repositories/project.repository";
-import { getSessionContainersWithPorts } from "../repositories/container.repository";
 import { resolveWorkspacePathBySession } from "../workspace/resolve-path";
 import { publisher } from "../../clients/publisher";
 import { setLastMessage } from "../monitors/last-message-store";
@@ -19,12 +18,10 @@ async function composeSystemPrompt(sessionId: string): Promise<string | undefine
   if (!session) return undefined;
 
   const projectSystemPrompt = await getProjectSystemPrompt(session.projectId);
-  const containers = await getSessionContainersWithPorts(sessionId);
 
   const promptContext = createPromptContext({
     sessionId,
     projectId: session.projectId,
-    containers,
     projectSystemPrompt,
   });
 
@@ -55,7 +52,7 @@ export async function initiateConversation(options: InitiateConversationOptions)
     model: providerID && modelID ? { providerID, modelID } : undefined,
     parts: [{ type: "text", text: task }],
     system,
-    tools: { question: false },
+    tools: { question: false, bash: false },
   });
 
   if (promptResponse.error) {

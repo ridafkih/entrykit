@@ -3,10 +3,11 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { DockerClient } from "@lab/sandbox-docker";
 import { config } from "./config/environment";
 import { makeRegisterTool } from "./tools/register";
-import { listContainers } from "./tools/list-containers";
-import { execContainer } from "./tools/exec-container";
+import { bash } from "./tools/bash";
+import { listProcesses } from "./tools/list-processes";
 import { getContainerLogs } from "./tools/get-container-logs";
-import { inspectContainer } from "./tools/inspect-container";
+import { getInternalUrl } from "./tools/get-internal-url";
+import { getExternalUrl } from "./tools/get-external-url";
 
 const docker = new DockerClient();
 
@@ -17,10 +18,11 @@ const server = new McpServer({
 
 const { registerTool } = makeRegisterTool(server, docker);
 
-registerTool(listContainers);
-registerTool(execContainer);
+registerTool(bash);
+registerTool(listProcesses);
 registerTool(getContainerLogs);
-registerTool(inspectContainer);
+registerTool(getInternalUrl);
+registerTool(getExternalUrl);
 
 const transport = new WebStandardStreamableHTTPServerTransport();
 

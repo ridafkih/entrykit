@@ -155,6 +155,57 @@ export async function getSessionContainersWithDetails(sessionId: string): Promis
     .where(eq(sessionContainers.sessionId, sessionId));
 }
 
+export interface SessionService {
+  containerId: string;
+  dockerId: string;
+  hostname: string | null;
+  image: string;
+  status: string;
+  ports: number[];
+}
+
+export async function getSessionServices(sessionId: string): Promise<SessionService[]> {
+  const containerRows = await db
+    .select({
+      containerId: sessionContainers.containerId,
+      dockerId: sessionContainers.dockerId,
+      status: sessionContainers.status,
+      hostname: containers.hostname,
+      image: containers.image,
+    })
+    .from(sessionContainers)
+    .innerJoin(containers, eq(sessionContainers.containerId, containers.id))
+    .where(eq(sessionContainers.sessionId, sessionId));
+
+  const containerIds = containerRows.map((row) => row.containerId);
+  if (containerIds.length === 0) return [];
+
+  const portRows = await db
+    .select({
+      containerId: containerPorts.containerId,
+      port: containerPorts.port,
+    })
+    .from(containerPorts)
+    .where(inArray(containerPorts.containerId, containerIds))
+    .orderBy(asc(containerPorts.port));
+
+  const portsByContainerId = new Map<string, number[]>();
+  for (const row of portRows) {
+    const ports = portsByContainerId.get(row.containerId) ?? [];
+    ports.push(row.port);
+    portsByContainerId.set(row.containerId, ports);
+  }
+
+  return containerRows.map((row) => ({
+    containerId: row.containerId,
+    dockerId: row.dockerId,
+    hostname: row.hostname,
+    image: row.image,
+    status: row.status,
+    ports: portsByContainerId.get(row.containerId) ?? [],
+  }));
+}
+
 export async function getSessionContainersWithPorts(sessionId: string): Promise<
   {
     hostname: string;
@@ -338,6 +389,23 @@ export async function getWorkspaceContainerId(sessionId: string): Promise<string
     .limit(1);
 
   return result[0]?.containerId ?? null;
+}
+
+export async function getWorkspaceContainerDockerId(sessionId: string): Promise<{
+  dockerId: string;
+  containerId: string;
+} | null> {
+  const result = await db
+    .select({
+      dockerId: sessionContainers.dockerId,
+      containerId: sessionContainers.containerId,
+    })
+    .from(sessionContainers)
+    .innerJoin(containers, eq(sessionContainers.containerId, containers.id))
+    .where(and(eq(sessionContainers.sessionId, sessionId), eq(containers.isWorkspace, true)))
+    .limit(1);
+
+  return result[0] ?? null;
 }
 
 export async function getWorkspaceContainerIdByProjectId(

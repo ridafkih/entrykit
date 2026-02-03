@@ -1,13 +1,6 @@
-export interface ServiceRoute {
-  port: number;
-  url: string;
-  name?: string;
-}
-
 export interface PromptContext {
   sessionId: string;
   projectId: string;
-  serviceRoutes: ServiceRoute[];
   projectSystemPrompt: string | null;
 }
 

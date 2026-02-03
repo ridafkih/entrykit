@@ -22,16 +22,15 @@ async function getSessionServices(sessionId: string): Promise<SessionServicesRes
   return response.json();
 }
 
-export function getContainerLogs(server: McpServer, { docker }: ToolContext) {
+export function getInternalUrl(server: McpServer, _context: ToolContext) {
   server.registerTool(
-    "get_logs",
+    "get_internal_url",
     {
       description:
-        "View recent logs from a service in the session. Use list_processes first to see available services and their hostnames.",
+        "Get the internal URL for a service running in the session. This URL can be used with agent-browser to navigate to the service, or with curl/fetch to make HTTP requests from within the workspace container. Use list_processes first to see available services.",
       inputSchema: {
         sessionId: z.string().describe("The Lab session ID (provided in the system prompt)"),
-        hostname: z.string().describe("The hostname of the service (from list_processes)"),
-        tail: z.number().optional().describe("Number of lines to retrieve (default: 100)"),
+        port: z.number().describe("The port number of the service (from list_processes)"),
       },
     },
     async (args) => {
@@ -48,42 +47,30 @@ export function getContainerLogs(server: McpServer, { docker }: ToolContext) {
         };
       }
 
-      const service = data.services.find(({ hostname }) => hostname === args.hostname);
+      const service = data.services.find(({ ports }) => ports.includes(args.port));
       if (!service) {
-        const available = data.services.map(({ hostname }) => hostname).join(", ");
+        const availablePorts = data.services.flatMap(({ ports }) => ports);
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Error: Service "${args.hostname}" not found. Available services: ${available || "(none)"}`,
+              text: `Error: No service found on port ${args.port}. Available ports: ${availablePorts.join(", ") || "(none)"}`,
             },
           ],
         };
       }
 
-      const exists = await docker.containerExists(service.dockerId);
-      if (!exists) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Error: Container for service "${args.hostname}" is not running`,
-            },
-          ],
-        };
-      }
-
-      const lines = args.tail ?? 100;
-      const logs: string[] = [];
-      for await (const chunk of docker.streamLogs(service.dockerId, { tail: lines })) {
-        const text = new TextDecoder().decode(chunk.data);
-        logs.push(`[${chunk.stream}] ${text}`);
-      }
+      // Internal URL uses the network alias format: {sessionId}--{port}
+      const internalUrl = `http://${args.sessionId}--${args.port}:${args.port}`;
 
       return {
-        content: [{ type: "text", text: logs.join("") || "(no logs)" }],
+        content: [
+          {
+            type: "text",
+            text: `Internal URL: ${internalUrl}\n\nYou can use this URL with:\n- agent-browser: Navigate to this URL to interact with the service\n- curl/fetch: Make HTTP requests from within the workspace container\n\n This URL is not relevant to the user.`,
+          },
+        ],
       };
     },
   );
