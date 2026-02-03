@@ -20,7 +20,8 @@ const GET: RouteHandler = async () => {
         modelId: model.id,
         name: model.name,
       })),
-    );
+    )
+    .sort((left, right) => left.name.localeCompare(right.name));
 
   return Response.json({ models });
 };
