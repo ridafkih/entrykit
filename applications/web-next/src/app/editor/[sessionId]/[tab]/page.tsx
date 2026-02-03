@@ -86,7 +86,11 @@ function TabContent({ tab }: { tab: TabValue }) {
     case "frame":
       return <FrameTabContent frameUrl={containerUrls[0]} />;
     case "stream":
-      return <StreamTabContent />;
+      return (
+        <Chat.Provider key={`stream-${sessionId}`} onSubmit={sendMessage} onAbort={abortSession}>
+          <StreamTabContent messages={messages} sessionStatus={sessionStatus} />
+        </Chat.Provider>
+      );
     default:
       return null;
   }

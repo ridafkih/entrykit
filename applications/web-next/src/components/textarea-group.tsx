@@ -1,22 +1,35 @@
 "use client";
 
-import { createContext, use, type ReactNode, type RefObject } from "react";
-import { Send, Square, ChevronDown } from "lucide-react";
+import { createContext, use, useRef, type ReactNode, type RefObject, type DragEvent } from "react";
+import { Send, Square, ChevronDown, Paperclip } from "lucide-react";
 import { IconButton } from "./icon-button";
+import { AttachmentPreview } from "./attachment-preview";
+import { cn } from "@/lib/cn";
+import type { Attachment } from "@/lib/use-attachments";
 
 type TextAreaGroupState = {
   value: string;
+  attachments?: Attachment[];
 };
 
 type TextAreaGroupActions = {
   onChange: (value: string) => void;
   onSubmit: () => void;
   onAbort?: () => void;
+  onAddFiles?: (files: FileList | File[]) => void;
+  onRemoveAttachment?: (id: string) => void;
 };
 
 type TextAreaGroupMeta = {
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
   isSending?: boolean;
+  isDragging?: boolean;
+  dragHandlers?: {
+    onDragEnter: (event: DragEvent) => void;
+    onDragLeave: (event: DragEvent) => void;
+    onDragOver: (event: DragEvent) => void;
+    onDrop: (event: DragEvent) => void;
+  };
 };
 
 type TextAreaGroupContextValue = {
@@ -51,8 +64,21 @@ type FrameProps = {
 };
 
 function TextAreaGroupFrame({ children }: FrameProps) {
+  const { meta } = useTextAreaGroup();
+
   return (
-    <div className="flex flex-col bg-bg-muted border border-border overflow-hidden pointer-events-auto">
+    <div
+      className={cn(
+        "flex flex-col bg-bg-muted border border-border overflow-hidden pointer-events-auto relative",
+        meta.isDragging && "border-blue-500 border-dashed",
+      )}
+      {...meta.dragHandlers}
+    >
+      {meta.isDragging && (
+        <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center z-10 pointer-events-none">
+          <span className="text-blue-500 text-sm font-medium">Drop images here</span>
+        </div>
+      )}
       {children}
     </div>
   );
@@ -63,27 +89,110 @@ type InputProps = {
   rows?: number;
 };
 
+function extractImagesFromClipboard(clipboardData: DataTransfer): File[] {
+  const images: File[] = [];
+
+  for (const item of clipboardData.items) {
+    if (item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      if (file) {
+        images.push(file);
+      }
+    }
+  }
+
+  return images;
+}
+
 function TextAreaGroupInput({
   placeholder = "Describe a task to provide context to the orchestrator...",
   rows = 3,
 }: InputProps) {
   const { state, actions, meta } = useTextAreaGroup();
 
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!actions.onAddFiles || !event.clipboardData) return;
+
+    const images = extractImagesFromClipboard(event.clipboardData);
+    if (images.length > 0) {
+      event.preventDefault();
+      actions.onAddFiles(images);
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      actions.onSubmit();
+    }
+  };
+
   return (
     <textarea
       ref={meta.textareaRef}
       value={state.value}
       onChange={(event) => actions.onChange(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          actions.onSubmit();
-        }
-      }}
+      onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
       placeholder={placeholder}
       rows={rows}
       className="w-full resize-none bg-transparent p-3 text-sm placeholder:text-text-muted focus:outline-none"
     />
+  );
+}
+
+function TextAreaGroupAttachments() {
+  const { state, actions } = useTextAreaGroup();
+
+  if (!state.attachments || state.attachments.length === 0) {
+    return null;
+  }
+
+  return (
+    <AttachmentPreview.List>
+      {state.attachments.map((attachment) => (
+        <AttachmentPreview.Item
+          key={attachment.id}
+          attachment={attachment}
+          onRemove={actions.onRemoveAttachment ?? (() => {})}
+        />
+      ))}
+    </AttachmentPreview.List>
+  );
+}
+
+const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/png,image/gif,image/webp";
+
+function TextAreaGroupAttachButton() {
+  const { actions } = useTextAreaGroup();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleClick = () => {
+    inputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { files } = event.target;
+    if (files && files.length > 0 && actions.onAddFiles) {
+      actions.onAddFiles(files);
+    }
+    event.target.value = "";
+  };
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES}
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      <IconButton onClick={handleClick} title="Attach images">
+        <Paperclip size={14} />
+      </IconButton>
+    </>
   );
 }
 
@@ -154,6 +263,8 @@ const TextAreaGroup = {
   Provider: TextAreaGroupProvider,
   Frame: TextAreaGroupFrame,
   Input: TextAreaGroupInput,
+  Attachments: TextAreaGroupAttachments,
+  AttachButton: TextAreaGroupAttachButton,
   Toolbar: TextAreaGroupToolbar,
   ModelSelector: TextAreaGroupModelSelector,
   Submit: TextAreaGroupSubmit,

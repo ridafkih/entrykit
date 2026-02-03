@@ -5,22 +5,27 @@ import { tv } from "tailwind-variants";
 import { TextAreaGroup } from "./textarea-group";
 import { Tabs, useTabs } from "./tabs";
 import { PageFrame, Header } from "./layout-primitives";
+import { useAttachments, type Attachment } from "@/lib/use-attachments";
 
 type ChatRole = "user" | "assistant";
 
 type SubmitOptions = {
   content: string;
   modelId?: string;
+  attachments?: Attachment[];
 };
 
 type ChatState = {
   input: string;
   modelId: string | null;
+  attachments: Attachment[];
 };
 
 type ChatActions = {
   setInput: (value: string) => void;
   setModelId: (value: string) => void;
+  addFiles: (files: FileList | File[]) => void;
+  removeAttachment: (id: string) => void;
   onSubmit: () => void;
   onAbort: () => void;
   scrollToBottom: (force?: boolean) => void;
@@ -31,6 +36,8 @@ type ChatContextValue = {
   actions: ChatActions;
   scrollRef: RefObject<HTMLDivElement | null>;
   isNearBottomRef: RefObject<boolean>;
+  isDragging: boolean;
+  dragHandlers: ReturnType<typeof useAttachments>["dragHandlers"];
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -61,6 +68,9 @@ function ChatProvider({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
 
+  const { attachments, addFiles, removeAttachment, clearAttachments, isDragging, dragHandlers } =
+    useAttachments();
+
   const scrollToBottom = (force = false) => {
     if (!force && !isNearBottomRef.current) return;
     scrollRef.current?.scrollTo({
@@ -69,9 +79,20 @@ function ChatProvider({
   };
 
   const handleSubmit = () => {
-    if (!input.trim()) return;
-    onSubmit?.({ content: input, modelId: modelId ?? undefined });
+    const hasContent = input.trim().length > 0;
+    const hasAttachments = attachments.length > 0;
+    const readyAttachments = attachments.filter((attachment) => attachment.status === "ready");
+
+    if (!hasContent && !hasAttachments) return;
+
+    onSubmit?.({
+      content: input,
+      modelId: modelId ?? undefined,
+      attachments: readyAttachments.length > 0 ? readyAttachments : undefined,
+    });
+
     setInput("");
+    clearAttachments();
     isNearBottomRef.current = true;
     setTimeout(() => scrollToBottom(true), 0);
   };
@@ -83,16 +104,20 @@ function ChatProvider({
   return (
     <ChatContext
       value={{
-        state: { input, modelId },
+        state: { input, modelId, attachments },
         actions: {
           setInput,
           setModelId,
+          addFiles,
+          removeAttachment,
           onSubmit: handleSubmit,
           onAbort: handleAbort,
           scrollToBottom,
         },
         scrollRef,
         isNearBottomRef,
+        isDragging,
+        dragHandlers,
       }}
     >
       {children}
@@ -150,7 +175,19 @@ function ChatTabContent({ value, children }: { value: ChatTab; children: ReactNo
   return <Tabs.Content<ChatTab> value={value}>{children}</Tabs.Content>;
 }
 
-function ChatMessageList({ children }: { children: ReactNode }) {
+const messageList = tv({
+  base: "overflow-y-auto flex flex-col",
+  variants: {
+    compact: {
+      false: "flex-1 justify-between",
+    },
+  },
+  defaultVariants: {
+    compact: false,
+  },
+});
+
+function ChatMessageList({ children, compact }: { children: ReactNode; compact?: boolean }) {
   const { scrollRef, isNearBottomRef } = useChat();
 
   const handleScroll = () => {
@@ -163,11 +200,7 @@ function ChatMessageList({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={handleScroll}
-      className="flex-1 overflow-y-auto flex flex-col justify-between"
-    >
+    <div ref={scrollRef} onScroll={handleScroll} className={messageList({ compact })}>
       {children}
     </div>
   );
@@ -200,7 +233,7 @@ function ChatInput({
   isSending?: boolean;
   statusMessage?: string | null;
 }) {
-  const { state, actions } = useChat();
+  const { state, actions, isDragging, dragHandlers } = useChat();
 
   return (
     <div className="sticky bottom-0 p-4 bg-linear-to-t from-bg to-transparent pointer-events-none z-10">
@@ -210,17 +243,21 @@ function ChatInput({
         </div>
       )}
       <TextAreaGroup.Provider
-        state={{ value: state.input }}
+        state={{ value: state.input, attachments: state.attachments }}
         actions={{
           onChange: actions.setInput,
           onSubmit: actions.onSubmit,
           onAbort: actions.onAbort,
+          onAddFiles: actions.addFiles,
+          onRemoveAttachment: actions.removeAttachment,
         }}
-        meta={{ isSending }}
+        meta={{ isSending, isDragging, dragHandlers }}
       >
         <TextAreaGroup.Frame>
+          <TextAreaGroup.Attachments />
           <TextAreaGroup.Input placeholder="Send a message..." rows={2} />
           <TextAreaGroup.Toolbar>
+            <TextAreaGroup.AttachButton />
             {children}
             <TextAreaGroup.Submit />
           </TextAreaGroup.Toolbar>
@@ -248,4 +285,4 @@ const Chat = {
   Input: ChatInput,
 };
 
-export { Chat, useChat, useTabs, type ChatRole, type ChatTab };
+export { Chat, useChat, useTabs, type ChatRole, type ChatTab, type SubmitOptions, type Attachment };

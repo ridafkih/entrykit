@@ -340,7 +340,28 @@ function MessagePartToolRenderer({
   );
 }
 
+function isImageMimeType(mime: string | undefined): boolean {
+  return mime?.startsWith("image/") ?? false;
+}
+
 const MessagePartFile = memo(function MessagePartFile({ part }: { part: FilePart }) {
+  const isImage = isImageMimeType(part.mime);
+
+  if (isImage && part.url) {
+    return (
+      <div className="px-4 py-3" data-opencode-component="File">
+        <img
+          src={part.url}
+          alt={part.filename ?? "Uploaded image"}
+          className="max-w-xs max-h-48 rounded border border-border"
+        />
+        {part.filename && (
+          <span className="block mt-1 text-xs text-text-muted">{part.filename}</span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={actionRow()} data-opencode-component="File">
       <span>{part.filename || part.url}</span>

@@ -6,6 +6,7 @@ import type { Message, Part } from "@opencode-ai/sdk/v2/client";
 import { api } from "./api";
 import { useOpenCodeSession, type Event } from "./opencode-session";
 import { useSessionClient, createSessionClient } from "./use-session-client";
+import type { Attachment } from "./use-attachments";
 
 interface LoadedMessage {
   info: Message;
@@ -21,6 +22,7 @@ export interface MessageState {
 interface SendMessageOptions {
   content: string;
   modelId?: string;
+  attachments?: Attachment[];
 }
 
 export type SessionStatus =
@@ -182,6 +184,34 @@ function getAgentMessagesKey(labSessionId: string): string {
   return `agent-messages-${labSessionId}`;
 }
 
+type TextPart = { type: "text"; text: string };
+type FilePart = { type: "file"; mime: string; url: string; filename: string };
+type MessagePart = TextPart | FilePart;
+
+function attachmentToFilePart(attachment: Attachment): FilePart {
+  return {
+    type: "file",
+    mime: attachment.file.type,
+    url: attachment.preview,
+    filename: attachment.file.name,
+  };
+}
+
+function buildMessageParts(content: string, attachments?: Attachment[]): MessagePart[] {
+  const parts: MessagePart[] = [];
+
+  if (content.trim().length > 0) {
+    parts.push({ type: "text", text: content });
+  }
+
+  if (attachments && attachments.length > 0) {
+    const fileParts = attachments.map(attachmentToFilePart);
+    parts.push(...fileParts);
+  }
+
+  return parts;
+}
+
 export function useAgent(labSessionId: string): UseAgentResult {
   const { subscribe } = useOpenCodeSession();
   const { mutate } = useSWRConfig();
@@ -339,7 +369,7 @@ export function useAgent(labSessionId: string): UseAgentResult {
     return subscribe(processEvent);
   }, [subscribe, opencodeSessionId, mutate, labSessionId]);
 
-  const sendMessage = async ({ content, modelId }: SendMessageOptions) => {
+  const sendMessage = async ({ content, modelId, attachments }: SendMessageOptions) => {
     if (!opencodeSessionId || !opencodeClient) {
       throw new Error("Session not initialized");
     }
@@ -361,13 +391,15 @@ export function useAgent(labSessionId: string): UseAgentResult {
 
     try {
       const [providerID, modelID] = modelId?.split("/") ?? [];
+      const parts = buildMessageParts(content, attachments);
+
       const response = await opencodeClient.session.promptAsync({
         sessionID: opencodeSessionId,
         model: {
           providerID,
           modelID,
         },
-        parts: [{ type: "text", text: content }],
+        parts,
       });
 
       if (response.error) {
