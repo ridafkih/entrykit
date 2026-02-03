@@ -1,5 +1,6 @@
 import type { PromptFragment, PromptService } from "../../types/prompt";
 import { PromptComposer } from "./composer";
+import { agentContextFragment } from "./fragments/agent-context";
 import { projectPromptFragment } from "./fragments/project-prompt";
 
 export class PromptBuilder {
@@ -15,7 +16,7 @@ export class PromptBuilder {
   }
 
   static defaults(): PromptBuilder {
-    return new PromptBuilder([projectPromptFragment]);
+    return new PromptBuilder([agentContextFragment, projectPromptFragment]);
   }
 
   withFragment(fragment: PromptFragment): PromptBuilder {

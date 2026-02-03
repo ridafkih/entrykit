@@ -153,7 +153,6 @@ async function handleScreenshotResult(
   }
 }
 
-// Helper to create a simple command handler
 function simpleHandler(
   action: string,
   requiredParams: string[] = [],
@@ -171,7 +170,6 @@ function simpleHandler(
       action,
     };
 
-    // Map params to command
     for (const [key, value] of Object.entries(args)) {
       const mappedKey = paramMapping?.[key] ?? key;
       command[mappedKey] = value;
@@ -182,7 +180,6 @@ function simpleHandler(
   };
 }
 
-// Screenshot handler needs special handling for image upload
 function screenshotHandler(): CommandNode["handler"] {
   return async (args, ctx) => {
     const command = {
@@ -196,7 +193,16 @@ function screenshotHandler(): CommandNode["handler"] {
 }
 
 const browserTree: Record<string, CommandNode> = {
-  // Category: Core Interaction
+  snapshot: {
+    description:
+      "Get the accessibility tree of the page. Use this to understand page structure and find elements before interacting.",
+    handler: simpleHandler("snapshot"),
+  },
+  screenshot: {
+    description: "Capture a screenshot of the current page",
+    params: { fullPage: z.boolean().optional() },
+    handler: screenshotHandler(),
+  },
   interact: {
     description: "Click, type, drag, and other interactions",
     children: {
@@ -276,8 +282,6 @@ const browserTree: Record<string, CommandNode> = {
       },
     },
   },
-
-  // Category: Navigation
   nav: {
     description: "Page navigation and scrolling",
     children: {
@@ -337,7 +341,6 @@ const browserTree: Record<string, CommandNode> = {
     },
   },
 
-  // Category: Element Info
   element: {
     description: "Get element properties and state",
     children: {
@@ -395,19 +398,9 @@ const browserTree: Record<string, CommandNode> = {
     },
   },
 
-  // Category: Page Content
   page: {
-    description: "Screenshots, HTML, accessibility tree",
+    description: "HTML, PDF, URL, title, eval, close",
     children: {
-      screenshot: {
-        description: "Capture screenshot",
-        params: { fullPage: z.boolean().optional() },
-        handler: screenshotHandler(),
-      },
-      snapshot: {
-        description: "Get accessibility tree",
-        handler: simpleHandler("snapshot"),
-      },
       html: {
         description: "Get page HTML (optional selector)",
         params: { selector: z.string().optional() },
@@ -455,7 +448,6 @@ const browserTree: Record<string, CommandNode> = {
     },
   },
 
-  // Category: Debug
   debug: {
     description: "Console logs, errors, highlighting",
     children: {
@@ -477,7 +469,6 @@ const browserTree: Record<string, CommandNode> = {
     },
   },
 
-  // Category: Browser State
   state: {
     description: "Viewport, cookies, storage, tabs",
     children: {
@@ -605,7 +596,6 @@ const browserTree: Record<string, CommandNode> = {
     },
   },
 
-  // Category: Low-level Mouse
   mouse: {
     description: "Direct mouse control",
     children: {
