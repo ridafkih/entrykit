@@ -1,4 +1,5 @@
 import { cleanupSocket } from "agent-browser";
+import type { Command, Response } from "agent-browser/dist/types.js";
 import type { DaemonManager, DaemonManagerConfig, DaemonSession, StartResult, StopResult } from "../types/daemon";
 import type { DaemonEvent, DaemonEventHandler } from "../types/events";
 import { spawnDaemon, killByPidFile, type DaemonWorkerHandle } from "./daemon-process";
@@ -165,6 +166,14 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
       if (!handle) return false;
       handle.navigate(url);
       return true;
+    },
+
+    async executeCommand(sessionId: string, command: Command): Promise<Response> {
+      const handle = daemonWorkers.get(sessionId);
+      if (!handle) {
+        return { id: command.id, success: false, error: "Session not found or not ready" };
+      }
+      return handle.executeCommand(command);
     },
 
     getCurrentUrl(sessionId: string): string | null {

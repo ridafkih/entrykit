@@ -1,4 +1,5 @@
 import { cleanupSocket, getSocketDir, getPidFile } from "agent-browser";
+import type { Command, Response } from "agent-browser/dist/types.js";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -22,6 +23,7 @@ export interface DaemonWorkerHandle {
   worker: Worker;
   sessionId: string;
   navigate: (url: string) => void;
+  executeCommand: (command: Command) => Promise<Response>;
   terminate: () => void;
   onMessage: (handler: WorkerMessageHandler) => void;
   onClose: (handler: WorkerCloseHandler) => void;
@@ -68,10 +70,23 @@ export function spawnDaemon(options: SpawnOptions): DaemonWorkerHandle {
 
   const messageHandlers = new Set<WorkerMessageHandler>();
   const closeHandlers = new Set<WorkerCloseHandler>();
+  const pendingCommands = new Map<string, { resolve: (response: Response) => void; reject: (error: Error) => void }>();
 
   worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
     if (event.data.type === "ready") {
       worker.postMessage({ type: "init", data: config });
+      return;
+    }
+
+    if (event.data.type === "commandResponse") {
+      const data = event.data.data as { requestId: string; response: Response } | undefined;
+      if (data?.requestId) {
+        const pending = pendingCommands.get(data.requestId);
+        if (pending) {
+          pendingCommands.delete(data.requestId);
+          pending.resolve(data.response);
+        }
+      }
       return;
     }
 
@@ -105,7 +120,25 @@ export function spawnDaemon(options: SpawnOptions): DaemonWorkerHandle {
     navigate: (url) => {
       worker.postMessage({ type: "navigate", data: { url } });
     },
+    executeCommand: (command: Command): Promise<Response> => {
+      return new Promise((resolve, reject) => {
+        const requestId = `${command.id}-${Date.now()}`;
+        pendingCommands.set(requestId, { resolve, reject });
+        worker.postMessage({ type: "executeCommand", data: { requestId, command } });
+
+        setTimeout(() => {
+          if (pendingCommands.has(requestId)) {
+            pendingCommands.delete(requestId);
+            reject(new Error(`Command timeout: ${command.action}`));
+          }
+        }, 30000);
+      });
+    },
     terminate: () => {
+      for (const pending of pendingCommands.values()) {
+        pending.reject(new Error("Worker terminated"));
+      }
+      pendingCommands.clear();
       worker.terminate();
     },
     onMessage: (handler) => {

@@ -25,11 +25,6 @@ const BLOCKED_COMMANDS = [
     subcommand: undefined,
     message: `Error: Direct use of the 'gh' CLI is not allowed. Use the GitHub tools instead:\n\n- github_create_pull_request: Create a PR\n- github_list_pull_requests: List PRs\n- github_get_pull_request_comments: Get PR reviews and comments\n- github_get_commit_status: Get CI/status checks\n- github_create_issue: Create an issue\n- github_get_repository: Get repo info`,
   },
-  {
-    name: "agent-browser",
-    subcommand: "screenshot",
-    message: `Error: Direct use of 'agent-browser screenshot' is not allowed. Use the screenshot tool instead:\n\n- screenshot: Capture a screenshot of the browser session and return a public URL`,
-  },
 ] as const;
 
 type BlockedCommand = (typeof BLOCKED_COMMANDS)[number];

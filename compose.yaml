@@ -82,12 +82,15 @@ services:
     environment:
       MCP_PORT: "3000"
       API_BASE_URL: "http://api:4000"
+      BROWSER_DAEMON_URL: "http://browser:80"
       RUSTFS_ENDPOINT: $RUSTFS_ENDPOINT
       RUSTFS_ACCESS_KEY: $RUSTFS_ACCESS_KEY
       RUSTFS_SECRET_KEY: $RUSTFS_SECRET_KEY
       RUSTFS_BUCKET: $RUSTFS_BUCKET
       RUSTFS_PUBLIC_URL: $RUSTFS_PUBLIC_URL
     depends_on:
+      browser:
+        condition: service_healthy
       rustfs:
         condition: service_healthy
 

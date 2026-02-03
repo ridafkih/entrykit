@@ -78,7 +78,8 @@ export function createHooks<S extends Schema>(schema: S) {
       const params = args[0] ?? {};
       const options = args[1] ?? {};
       const isInvalidParam = (value: unknown) => value === "" || value == null;
-      const hasInvalidParams = hasParams(channel.path) && Object.values(params).some(isInvalidParam);
+      const hasInvalidParams =
+        hasParams(channel.path) && Object.values(params).some(isInvalidParam);
       const shouldSkip = hasInvalidParams || options.enabled === false;
 
       const resolvedPath = useMemo(

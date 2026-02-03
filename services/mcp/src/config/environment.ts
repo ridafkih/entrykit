@@ -33,9 +33,15 @@ if (!rustfsPublicUrl) {
   throw new Error("RUSTFS_PUBLIC_URL environment variable is required");
 }
 
+const browserDaemonUrl = process.env.BROWSER_DAEMON_URL;
+if (!browserDaemonUrl) {
+  throw new Error("BROWSER_DAEMON_URL environment variable is required");
+}
+
 export const config = {
   port: parseInt(port, 10),
   apiBaseUrl,
+  browserDaemonUrl,
   rustfs: {
     endpoint: rustfsEndpoint,
     accessKey: rustfsAccessKey,

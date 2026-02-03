@@ -5,6 +5,7 @@ import {
   use,
   useState,
   useRef,
+  useEffect,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -77,12 +78,7 @@ type ChatProviderProps = {
   onAbort?: () => void;
 };
 
-function ChatProvider({
-  children,
-  defaultModelId,
-  onSubmit,
-  onAbort,
-}: ChatProviderProps) {
+function ChatProvider({ children, defaultModelId, onSubmit, onAbort }: ChatProviderProps) {
   const [modelId, setModelId] = useState(defaultModelId ?? null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
@@ -90,6 +86,10 @@ function ChatProvider({
 
   const { attachments, addFiles, removeAttachment, clearAttachments, isDragging, dragHandlers } =
     useAttachments();
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
@@ -104,7 +104,9 @@ function ChatProvider({
 
     const hasContent = currentInput.trim().length > 0;
     const hasAttachments = currentAttachments.length > 0;
-    const readyAttachments = currentAttachments.filter((attachment) => attachment.status === "ready");
+    const readyAttachments = currentAttachments.filter(
+      (attachment) => attachment.status === "ready",
+    );
 
     if (!hasContent && !hasAttachments) return;
 
@@ -155,9 +157,7 @@ function ChatProvider({
 
   return (
     <ChatContext value={chatContextValue.current}>
-      <ChatInputContext value={chatInputContextValue.current}>
-        {children}
-      </ChatInputContext>
+      <ChatInputContext value={chatInputContextValue.current}>{children}</ChatInputContext>
     </ChatContext>
   );
 }

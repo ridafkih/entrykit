@@ -10,7 +10,7 @@ import { getContainerLogs } from "./tools/get-container-logs";
 import { restartContainer } from "./tools/restart-container";
 import { getInternalUrl } from "./tools/get-internal-url";
 import { getExternalUrl } from "./tools/get-external-url";
-import { screenshot } from "./tools/screenshot";
+import { browser } from "./tools/browser";
 
 const docker = new DockerClient();
 
@@ -28,7 +28,7 @@ registerTool(getContainerLogs);
 registerTool(restartContainer);
 registerTool(getInternalUrl);
 registerTool(getExternalUrl);
-registerTool(screenshot);
+registerTool(browser);
 
 const transport = new WebStandardStreamableHTTPServerTransport();
 

@@ -36,10 +36,10 @@ function OrchestratorPrompt() {
 
     const { value } = textarea;
     if (!value) return;
-    submit(value)
+    submit(value);
 
     textarea.value = "";
-  }
+  };
 
   return (
     <div className="w-full">

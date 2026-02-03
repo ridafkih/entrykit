@@ -164,7 +164,7 @@ const startWorker = async (config: DaemonWorkerConfig) => {
     process.exit(1);
   }
 
-  self.onmessage = (event: MessageEvent) => {
+  self.onmessage = async (event: MessageEvent) => {
     const { type, data } = event.data;
 
     switch (type) {
@@ -178,6 +178,31 @@ const startWorker = async (config: DaemonWorkerConfig) => {
             });
         }
         break;
+
+      case "executeCommand": {
+        const { requestId, command } = data;
+        if (!state.browser) {
+          postMessage({
+            type: "commandResponse",
+            data: {
+              requestId,
+              response: { id: command.id, success: false, error: "Browser not initialized" },
+            },
+          });
+          break;
+        }
+        try {
+          const response = await executeCommand(command, state.browser);
+          postMessage({ type: "commandResponse", data: { requestId, response } });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          postMessage({
+            type: "commandResponse",
+            data: { requestId, response: { id: command.id, success: false, error: message } },
+          });
+        }
+        break;
+      }
 
       case "terminate":
         console.log(`[DaemonWorker:${sessionId}] Terminating`);

@@ -47,8 +47,16 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
 
   const isActive = subscriberCount > 0;
 
-  const browserState = useChannel("sessionBrowserState", { uuid: sessionId }, { enabled: isActive });
-  const frameSnapshot = useChannel("sessionBrowserFrames", { uuid: sessionId }, { enabled: isActive });
+  const browserState = useChannel(
+    "sessionBrowserState",
+    { uuid: sessionId },
+    { enabled: isActive },
+  );
+  const frameSnapshot = useChannel(
+    "sessionBrowserFrames",
+    { uuid: sessionId },
+    { enabled: isActive },
+  );
 
   useEffect(() => {
     bitmapRef.current?.close();
@@ -87,7 +95,12 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
     processFrame(event.data);
   };
 
-  useChannelEvent("sessionBrowserFrames", handleFrameEvent, { uuid: sessionId }, { enabled: isActive });
+  useChannelEvent(
+    "sessionBrowserFrames",
+    handleFrameEvent,
+    { uuid: sessionId },
+    { enabled: isActive },
+  );
 
   useEffect(() => {
     return () => {
