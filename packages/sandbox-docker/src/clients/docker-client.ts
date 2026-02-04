@@ -246,19 +246,20 @@ export class DockerClient implements SandboxProvider {
   }
 
   async *streamLogs(id: string, options: { tail?: number } = {}): AsyncGenerator<LogChunk> {
-    const stream = await this.docker.getContainer(id).logs({
+    const stream = (await this.docker.getContainer(id).logs({
       follow: true,
       stdout: true,
       stderr: true,
       tail: options.tail,
-    });
+    })) as NodeJS.ReadableStream;
 
     let buffer = Buffer.alloc(0);
+    const chunks: LogChunk[] = [];
+    let resolve: (() => void) | null = null;
+    let ended = false;
+    let error: Error | null = null;
 
-    for await (const chunk of stream) {
-      const chunkBuffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-      buffer = Buffer.concat([buffer, chunkBuffer]);
-
+    const parseBuffer = () => {
       while (buffer.length >= 8) {
         const streamType = buffer[0];
         const size = buffer.readUInt32BE(4);
@@ -268,11 +269,52 @@ export class DockerClient implements SandboxProvider {
         const frameData = buffer.subarray(8, 8 + size);
         buffer = buffer.subarray(8 + size);
 
-        yield {
+        chunks.push({
           stream: streamType === 1 ? "stdout" : "stderr",
           data: new Uint8Array(frameData),
-        };
+        });
       }
+    };
+
+    stream.on("data", (chunk: Buffer | string) => {
+      const chunkBuffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+      buffer = Buffer.concat([buffer, chunkBuffer]);
+      parseBuffer();
+      if (resolve) {
+        resolve();
+        resolve = null;
+      }
+    });
+
+    stream.on("end", () => {
+      ended = true;
+      if (resolve) {
+        resolve();
+        resolve = null;
+      }
+    });
+
+    stream.on("error", (err: Error) => {
+      error = err;
+      ended = true;
+      if (resolve) {
+        resolve();
+        resolve = null;
+      }
+    });
+
+    while (!ended || chunks.length > 0) {
+      if (chunks.length > 0) {
+        yield chunks.shift()!;
+      } else if (!ended) {
+        await new Promise<void>((r) => {
+          resolve = r;
+        });
+      }
+    }
+
+    if (error) {
+      throw error;
     }
   }
 

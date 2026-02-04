@@ -71,16 +71,25 @@ class CompletionListener {
 
       const threadId = responseSubscriber.getThreadId(sessionId);
 
-      await adapter.sendMessage({
-        platform,
-        chatId,
-        content: result.message,
-        threadId,
-        attachments: result.attachments,
-      });
+      // If messages array exists, send each as a separate message
+      const messagesToSend = result.messages ?? [result.message];
+
+      for (let i = 0; i < messagesToSend.length; i++) {
+        const content = messagesToSend[i];
+        // Only include attachments on the last message
+        const isLastMessage = i === messagesToSend.length - 1;
+
+        await adapter.sendMessage({
+          platform,
+          chatId,
+          content,
+          threadId,
+          attachments: isLastMessage ? result.attachments : undefined,
+        });
+      }
 
       console.log(
-        `[CompletionListener] Sent completion summary to ${platform}:${chatId}` +
+        `[CompletionListener] Sent ${messagesToSend.length} message(s) to ${platform}:${chatId}` +
           (result.attachments?.length ? ` with ${result.attachments.length} attachment(s)` : ""),
       );
     } catch (error) {

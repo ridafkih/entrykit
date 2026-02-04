@@ -32,73 +32,12 @@ export interface HierarchicalToolConfig {
   contextFactory?: (sessionId: string) => CommandContext;
 }
 
-interface ParsedCommand {
-  path: string[];
-  params: Record<string, string>;
-}
-
 /**
- * Parse a command string into path segments and named parameters.
- * Supports both key=value syntax and positional arguments.
- *
- * Examples:
- *   "element text selector=.title" -> { path: ["element", "text"], params: { selector: ".title" } }
- *   "interact click selector=.btn" -> { path: ["interact", "click"], params: { selector: ".btn" } }
- *   "nav goto url=https://example.com" -> { path: ["nav", "goto"], params: { url: "https://example.com" } }
+ * Parse a command path string into segments.
+ * e.g., "interact click" -> ["interact", "click"]
  */
-function parseCommand(input: string): ParsedCommand {
-  const tokens = tokenize(input.trim());
-  const path: string[] = [];
-  const params: Record<string, string> = {};
-
-  for (const token of tokens) {
-    if (token.includes("=")) {
-      const eqIndex = token.indexOf("=");
-      const key = token.slice(0, eqIndex);
-      const value = token.slice(eqIndex + 1);
-      params[key] = value;
-    } else if (Object.keys(params).length === 0) {
-      // Only add to path if we haven't started collecting params
-      path.push(token);
-    }
-  }
-
-  return { path, params };
-}
-
-/**
- * Tokenize input, respecting quoted strings
- */
-function tokenize(input: string): string[] {
-  const tokens: string[] = [];
-  let current = "";
-  let inQuote = false;
-  let quoteChar = "";
-
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-
-    if ((char === '"' || char === "'") && !inQuote) {
-      inQuote = true;
-      quoteChar = char;
-    } else if (char === quoteChar && inQuote) {
-      inQuote = false;
-      quoteChar = "";
-    } else if (char === " " && !inQuote) {
-      if (current) {
-        tokens.push(current);
-        current = "";
-      }
-    } else {
-      current += char;
-    }
-  }
-
-  if (current) {
-    tokens.push(current);
-  }
-
-  return tokens;
+function parseCommandPath(input: string): string[] {
+  return input.trim().split(/\s+/).filter(Boolean);
 }
 
 /**
@@ -129,8 +68,15 @@ function formatHelp(
     if (hasChildren && !hasHandler) {
       lines.push(`- \`${name}\`: ${child.description} (has subcommands)`);
     } else if (hasHandler && child.params) {
-      const paramNames = Object.keys(child.params).join(" ");
-      lines.push(`- \`${name} ${paramNames}\`: ${child.description}`);
+      lines.push(`- \`${name}\`: ${child.description}`);
+      lines.push(`  Parameters (pass in subcommandArguments):`);
+      for (const [paramName, paramSchema] of Object.entries(child.params)) {
+        // Extract description from zod schema if available
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const desc =
+          (paramSchema as any)?.description || (paramSchema as any)?._zod?.def?.description || "";
+        lines.push(`    - \`${paramName}\`: ${desc}`);
+      }
     } else if (hasHandler) {
       lines.push(`- \`${name}\`: ${child.description}`);
     } else {
@@ -188,79 +134,18 @@ function navigateTree(
  * Validate parameters against a Zod schema
  */
 function validateParams(
-  params: Record<string, string>,
+  params: Record<string, unknown>,
   schema: z.ZodRawShape,
 ): { success: true; data: Record<string, unknown> } | { success: false; error: string } {
   const zodSchema = z.object(schema);
+  const result = zodSchema.safeParse(params);
 
-  // Convert string values to appropriate types based on schema
-  const converted: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(params)) {
-    const fieldSchema = schema[key];
-    if (!fieldSchema) {
-      converted[key] = value;
-      continue;
-    }
-
-    // Try to infer type from schema and convert
-    converted[key] = convertValue(value, fieldSchema);
-  }
-
-  const result = zodSchema.safeParse(converted);
   if (result.success) {
     return { success: true, data: result.data as Record<string, unknown> };
   }
 
   const issues = result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ");
   return { success: false, error: `Invalid parameters: ${issues}` };
-}
-
-/**
- * Convert a string value to the appropriate type based on schema
- */
-function convertValue(value: string, schema: z.ZodRawShape[string]): unknown {
-  // Access the internal Zod type info
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const zodDef = (schema as any)?._zod?.def;
-  const schemaType = zodDef?.type as string | undefined;
-
-  // Handle optional/nullable wrappers
-  if (schemaType === "optional" || schemaType === "nullable") {
-    const innerSchema = zodDef?.innerType;
-    if (innerSchema) {
-      return convertValue(value, innerSchema);
-    }
-  }
-
-  if (schemaType === "number") {
-    const num = Number(value);
-    return isNaN(num) ? value : num;
-  }
-
-  if (schemaType === "boolean") {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    return value;
-  }
-
-  if (schemaType === "array") {
-    // Try to parse as JSON array, otherwise split by comma
-    try {
-      return JSON.parse(value);
-    } catch {
-      return value.split(",").map((v) => v.trim());
-    }
-  }
-
-  if (schemaType === "object") {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return value;
-    }
-  }
-
-  return value;
 }
 
 function generateCommandId(): string {
@@ -282,11 +167,19 @@ export function createHierarchicalTool(server: McpServer, config: HierarchicalTo
         command: z
           .string()
           .optional()
-          .describe("Command path and params, e.g., 'element text selector=.title'"),
+          .describe("Command path, e.g., 'interact click' or 'nav goto'"),
+        subcommandArguments: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe("Arguments for the subcommand as key-value pairs"),
       },
     },
     async (args) => {
-      const { sessionId, command } = args as { sessionId: string; command?: string };
+      const { sessionId, command, subcommandArguments } = args as {
+        sessionId: string;
+        command?: string;
+        subcommandArguments?: Record<string, unknown>;
+      };
 
       // Create context for handlers
       const context: CommandContext = contextFactory
@@ -300,8 +193,8 @@ export function createHierarchicalTool(server: McpServer, config: HierarchicalTo
         };
       }
 
-      const parsed = parseCommand(command);
-      const { node, remainingPath, traversedPath } = navigateTree(tree, parsed.path);
+      const path = parseCommandPath(command);
+      const { node, remainingPath, traversedPath } = navigateTree(tree, path);
 
       // If we have remaining path segments, the command path is invalid
       if (remainingPath.length > 0) {
@@ -322,10 +215,11 @@ export function createHierarchicalTool(server: McpServer, config: HierarchicalTo
         // This is an executable command
         const commandNode = node as CommandNode;
         const handler = commandNode.handler!;
+        const params = subcommandArguments ?? {};
 
         // Validate params if schema exists
         if (commandNode.params) {
-          const validation = validateParams(parsed.params, commandNode.params);
+          const validation = validateParams(params, commandNode.params);
           if (!validation.success) {
             return {
               isError: true,
@@ -335,7 +229,7 @@ export function createHierarchicalTool(server: McpServer, config: HierarchicalTo
           return handler(validation.data, context);
         }
 
-        return handler(parsed.params, context);
+        return handler(params, context);
       }
 
       // Node has children but no handler - show available subcommands
@@ -353,4 +247,4 @@ export function createHierarchicalTool(server: McpServer, config: HierarchicalTo
   );
 }
 
-export { parseCommand, formatHelp, navigateTree, validateParams };
+export { parseCommandPath, formatHelp, navigateTree, validateParams };

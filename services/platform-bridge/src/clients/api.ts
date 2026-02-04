@@ -88,6 +88,93 @@ export class ApiClient {
     return response.json();
   }
 
+  /**
+   * Chat with streaming support. Calls onChunk for each text chunk as it arrives.
+   * Returns the final ChatResult when the stream completes.
+   * Falls back to regular JSON response if server doesn't return SSE.
+   */
+  async chatStream(
+    request: ChatRequest,
+    onChunk: (text: string) => Promise<void>,
+  ): Promise<ChatResult> {
+    const response = await fetch(`${this.baseUrl}/orchestrate/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Chat orchestration failed: ${error || response.statusText}`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+
+    // If SSE response, consume the stream
+    if (contentType.includes("text/event-stream")) {
+      return this.consumeSseStream(response, onChunk);
+    }
+
+    // Fallback to JSON response (non-streaming platforms)
+    return response.json();
+  }
+
+  private async consumeSseStream(
+    response: Response,
+    onChunk: (text: string) => Promise<void>,
+  ): Promise<ChatResult> {
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let finalResult: ChatResult | null = null;
+    let currentEvent: string | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete lines from the buffer
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          try {
+            const parsed = JSON.parse(data);
+
+            if (currentEvent === "chunk" && parsed.text) {
+              await onChunk(parsed.text);
+            } else if (currentEvent === "done") {
+              finalResult = parsed;
+            } else if (currentEvent === "error") {
+              throw new Error(parsed.error || "SSE stream error");
+            }
+          } catch (parseError) {
+            if (parseError instanceof SyntaxError) {
+              console.error("[ApiClient] Failed to parse SSE data:", data);
+            } else {
+              throw parseError;
+            }
+          }
+          currentEvent = null;
+        }
+      }
+    }
+
+    if (!finalResult) {
+      throw new Error("SSE stream ended without final result");
+    }
+
+    return finalResult;
+  }
+
   async notifySessionComplete(request: {
     sessionId: string;
     platformOrigin: string;

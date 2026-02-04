@@ -24,12 +24,28 @@ export class MessageRouter {
     const adapter = getAdapter(platform);
     const messagingMode: MessagingMode = adapter?.messagingMode ?? "passive";
 
-    const result = await apiClient.chat({
-      content,
-      platformOrigin: platform,
-      platformChatId: chatId,
-      timestamp: timestamp.toISOString(),
-    });
+    // Use streaming to send chunks immediately as they arrive
+    const result = await apiClient.chatStream(
+      {
+        content,
+        platformOrigin: platform,
+        platformChatId: chatId,
+        timestamp: timestamp.toISOString(),
+      },
+      async (chunkText) => {
+        // Send each chunk to the platform immediately
+        if (adapter) {
+          console.log(
+            `[MessageRouter] Sending chunk to ${platform}:${chatId}: "${chunkText.slice(0, 50)}..."`,
+          );
+          await adapter.sendMessage({
+            platform,
+            chatId,
+            content: chunkText,
+          });
+        }
+      },
+    );
 
     if (result.action === "created_session" && result.sessionId) {
       await sessionTracker.setMapping(platform, chatId, result.sessionId, userId, messageId);
@@ -52,11 +68,15 @@ export class MessageRouter {
       console.log(`[MessageRouter] Forwarded message to session ${result.sessionId}`);
     }
 
-    if (adapter && result.message) {
+    // Handle attachments from the final result (send separately after all chunks)
+    if (adapter && result.attachments?.length) {
+      console.log(
+        `[MessageRouter] Sending ${result.attachments.length} attachment(s) to ${platform}:${chatId}`,
+      );
       await adapter.sendMessage({
         platform,
         chatId,
-        content: result.message,
+        content: "",
         attachments: result.attachments,
       });
     }

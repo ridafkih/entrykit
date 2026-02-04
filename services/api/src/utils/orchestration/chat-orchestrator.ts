@@ -1,4 +1,4 @@
-import { generateText, stepCountIs, type LanguageModel } from "ai";
+import { generateText, streamText, stepCountIs, type LanguageModel } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import {
@@ -14,6 +14,8 @@ import {
   createRunBrowserTaskTool,
 } from "./tools";
 import { buildChatOrchestratorPrompt } from "./prompts/chat-orchestrator";
+import { getPlatformConfig } from "../../config/platforms";
+import { breakDoubleNewlines } from "../streaming";
 import type { BrowserService } from "../browser/browser-service";
 import type { DaemonController } from "@lab/browser-protocol";
 
@@ -39,10 +41,18 @@ export interface MessageAttachment {
 
 export interface ChatOrchestratorResult {
   action: ChatOrchestratorAction;
+  /** The full message text */
   message: string;
+  /** When breakDoubleNewlines is enabled, contains the message split into paragraphs */
+  messages?: string[];
   sessionId?: string;
   projectName?: string;
   attachments?: MessageAttachment[];
+}
+
+export interface ChatOrchestratorChunk {
+  type: "chunk";
+  text: string;
 }
 
 interface ChatModelConfig {
@@ -222,7 +232,7 @@ export async function chatOrchestrate(
   });
 
   const getSessionScreenshotTool = createGetSessionScreenshotTool({
-    browserService: input.browserService,
+    daemonController: input.daemonController,
   });
 
   const runBrowserTaskTool = createRunBrowserTaskTool({
@@ -249,20 +259,61 @@ export async function chatOrchestrate(
     timestamp: input.timestamp,
   });
 
-  const { text, steps } = await generateText({
-    model,
-    tools,
-    prompt: input.content,
-    system: systemPrompt,
-    stopWhen: stepCountIs(5),
-  });
+  const platformConfig = getPlatformConfig(input.platformOrigin ?? "");
 
-  const { sessionId, projectName, wasForwarded, attachments } = extractSessionInfoFromSteps(steps);
+  console.log(
+    `[ChatOrchestrate] platform=${input.platformOrigin}, breakDoubleNewlines=${platformConfig.breakDoubleNewlines}`,
+  );
+
+  let text: string;
+  let messages: string[] | undefined;
+  let sessionInfo: SessionInfo;
+
+  if (platformConfig.breakDoubleNewlines) {
+    // Stream and break on double newlines for platforms like iMessage
+    const result = streamText({
+      model,
+      tools,
+      prompt: input.content,
+      system: systemPrompt,
+      stopWhen: stepCountIs(5),
+    });
+
+    const collectedMessages: string[] = [];
+    for await (const chunk of breakDoubleNewlines(result.textStream)) {
+      console.log(
+        `[ChatOrchestrate] chunk ${collectedMessages.length}: "${chunk.slice(0, 50)}..."`,
+      );
+      collectedMessages.push(chunk);
+    }
+    console.log(`[ChatOrchestrate] total chunks: ${collectedMessages.length}`);
+
+    // Wait for completion to get steps for session info extraction
+    const finalResult = await result;
+    text = collectedMessages.join("\n\n");
+    messages = collectedMessages.length > 1 ? collectedMessages : undefined;
+    sessionInfo = extractSessionInfoFromSteps(await finalResult.steps);
+  } else {
+    // Standard non-streaming generation
+    const result = await generateText({
+      model,
+      tools,
+      prompt: input.content,
+      system: systemPrompt,
+      stopWhen: stepCountIs(5),
+    });
+
+    text = result.text;
+    sessionInfo = extractSessionInfoFromSteps(result.steps);
+  }
+
+  const { sessionId, projectName, wasForwarded, attachments } = sessionInfo;
 
   if (sessionId && wasForwarded) {
     return {
       action: "forwarded_message",
       message: text || "Message sent to the session.",
+      messages,
       sessionId,
       attachments: attachments.length > 0 ? attachments : undefined,
     };
@@ -272,6 +323,7 @@ export async function chatOrchestrate(
     return {
       action: "created_session",
       message: text || `Started working on your task in ${projectName ?? "the project"}.`,
+      messages,
       sessionId,
       projectName,
       attachments: attachments.length > 0 ? attachments : undefined,
@@ -281,6 +333,112 @@ export async function chatOrchestrate(
   return {
     action: "response",
     message: text,
+    messages,
+    attachments: attachments.length > 0 ? attachments : undefined,
+  };
+}
+
+/**
+ * Streaming version of chatOrchestrate that yields chunks as they're detected.
+ * Used for real-time delivery to platforms like iMessage.
+ */
+export async function* chatOrchestrateStream(
+  input: ChatOrchestratorInput,
+): AsyncGenerator<ChatOrchestratorChunk, ChatOrchestratorResult, unknown> {
+  const config = getChatModelConfig();
+  const model = createModel(config);
+
+  const createSessionTool = createCreateSessionTool({
+    browserService: input.browserService,
+    modelId: input.modelId,
+  });
+
+  const sendMessageToSessionTool = createSendMessageToSessionTool({
+    modelId: input.modelId,
+  });
+
+  const getSessionScreenshotTool = createGetSessionScreenshotTool({
+    daemonController: input.daemonController,
+  });
+
+  const runBrowserTaskTool = createRunBrowserTaskTool({
+    daemonController: input.daemonController,
+    createModel: () => createModel(config),
+  });
+
+  const tools = {
+    listProjects: listProjectsTool,
+    listSessions: listSessionsTool,
+    getSessionMessages: getSessionMessagesTool,
+    getSessionStatus: getSessionStatusTool,
+    searchSessions: searchSessionsTool,
+    getContainers: getContainersTool,
+    createSession: createSessionTool,
+    sendMessageToSession: sendMessageToSessionTool,
+    getSessionScreenshot: getSessionScreenshotTool,
+    runBrowserTask: runBrowserTaskTool,
+  };
+
+  const systemPrompt = buildChatOrchestratorPrompt({
+    conversationHistory: input.conversationHistory,
+    platformOrigin: input.platformOrigin,
+    timestamp: input.timestamp,
+  });
+
+  console.log(`[ChatOrchestrateStream] platform=${input.platformOrigin}, starting stream`);
+
+  const result = streamText({
+    model,
+    tools,
+    prompt: input.content,
+    system: systemPrompt,
+    stopWhen: stepCountIs(5),
+  });
+
+  const collectedChunks: string[] = [];
+  let chunkIndex = 0;
+
+  for await (const chunk of breakDoubleNewlines(result.textStream)) {
+    console.log(`[ChatOrchestrateStream] chunk ${chunkIndex}: "${chunk.slice(0, 50)}..."`);
+    collectedChunks.push(chunk);
+    chunkIndex++;
+    yield { type: "chunk", text: chunk };
+  }
+
+  console.log(`[ChatOrchestrateStream] total chunks: ${collectedChunks.length}`);
+
+  // Wait for completion to get steps for session info extraction
+  const finalResult = await result;
+  const text = collectedChunks.join("\n\n");
+  const sessionInfo = extractSessionInfoFromSteps(await finalResult.steps);
+
+  const { sessionId, projectName, wasForwarded, attachments } = sessionInfo;
+
+  if (sessionId && wasForwarded) {
+    return {
+      action: "forwarded_message",
+      message: text || "Message sent to the session.",
+      messages: collectedChunks.length > 1 ? collectedChunks : undefined,
+      sessionId,
+      attachments: attachments.length > 0 ? attachments : undefined,
+    };
+  }
+
+  if (sessionId) {
+    return {
+      action: "created_session",
+      message: text || `Started working on your task in ${projectName ?? "the project"}.`,
+      messages: collectedChunks.length > 1 ? collectedChunks : undefined,
+      sessionId,
+      projectName,
+      attachments: attachments.length > 0 ? attachments : undefined,
+    };
+  }
+
+  return {
+    action: "response",
+    message: text,
+    messages: collectedChunks.length > 1 ? collectedChunks : undefined,
     attachments: attachments.length > 0 ? attachments : undefined,
   };
 }

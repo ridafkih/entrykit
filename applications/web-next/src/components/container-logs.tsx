@@ -250,7 +250,7 @@ function ContainerLogsLine({ entry, index }: { entry: LogEntry; index: number })
   const isEven = index % 2 === 0;
 
   return (
-    <div className={cn("px-3 py-0.5", text({ font: "mono" }), isEven ? "bg-black" : "bg-bg-muted")}>
+    <div className={cn("px-3 py-0.5", text({ font: "mono" }), isEven ? "bg-bg" : "bg-bg-muted")}>
       <span
         className={cn(
           "whitespace-nowrap",

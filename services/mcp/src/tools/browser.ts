@@ -285,8 +285,16 @@ const browserTree: Record<string, CommandNode> = {
     handler: simpleHandler("snapshot"),
   },
   screenshot: {
-    description: "Capture a screenshot of the current page",
-    params: { fullPage: z.boolean().optional() },
+    description:
+      "Capture a screenshot. By default captures only the visible viewport. Set fullPage: true in subcommandArguments to capture the ENTIRE scrollable page in one image.",
+    params: {
+      fullPage: z
+        .boolean()
+        .optional()
+        .describe(
+          "Set to true to capture the full scrollable page in a single image instead of just the viewport",
+        ),
+    },
     handler: screenshotHandler(),
   },
   interact: {
@@ -294,27 +302,34 @@ const browserTree: Record<string, CommandNode> = {
     children: {
       click: {
         description: "Click an element",
-        params: { selector: z.string() },
+        params: { selector: z.string().describe("CSS selector of element to click") },
         handler: simpleHandler("click", ["selector"]),
       },
       dblclick: {
         description: "Double-click an element",
-        params: { selector: z.string() },
+        params: { selector: z.string().describe("CSS selector of element to double-click") },
         handler: simpleHandler("dblclick", ["selector"]),
       },
       type: {
-        description: "Type text into element (appends to existing)",
-        params: { selector: z.string(), text: z.string() },
+        description: "Type text into element (appends to existing text)",
+        params: {
+          selector: z.string().describe("CSS selector of input element"),
+          text: z.string().describe("Text to type"),
+        },
         handler: simpleHandler("type", ["selector", "text"]),
       },
       fill: {
-        description: "Clear and fill input with value",
-        params: { selector: z.string(), value: z.string() },
+        description: "Clear input and fill with new value",
+        params: {
+          selector: z.string().describe("CSS selector of input element"),
+          value: z.string().describe("Value to fill"),
+        },
         handler: simpleHandler("fill", ["selector", "value"]),
       },
       press: {
-        description: "Press keyboard key (e.g., Enter, Tab, Control+a)",
-        params: { key: z.string() },
+        description:
+          "Press a keyboard key or key combination (e.g., Enter, Tab, Control+a, Shift+ArrowDown)",
+        params: { key: z.string().describe("Key or key combination to press") },
         handler: async (args, ctx) => {
           if (!args.key) return errorResult("'key' is required for press");
           const command = {
@@ -327,43 +342,55 @@ const browserTree: Record<string, CommandNode> = {
         },
       },
       hover: {
-        description: "Hover over element",
-        params: { selector: z.string() },
+        description: "Hover over an element",
+        params: { selector: z.string().describe("CSS selector of element to hover") },
         handler: simpleHandler("hover", ["selector"]),
       },
       focus: {
-        description: "Focus element",
-        params: { selector: z.string() },
+        description: "Focus an element",
+        params: { selector: z.string().describe("CSS selector of element to focus") },
         handler: simpleHandler("focus", ["selector"]),
       },
       drag: {
-        description: "Drag from source to target element",
-        params: { source: z.string(), target: z.string() },
+        description: "Drag from one element to another",
+        params: {
+          source: z.string().describe("CSS selector of element to drag from"),
+          target: z.string().describe("CSS selector of element to drag to"),
+        },
         handler: simpleHandler("drag", ["source", "target"]),
       },
       check: {
         description: "Check a checkbox",
-        params: { selector: z.string() },
+        params: { selector: z.string().describe("CSS selector of checkbox to check") },
         handler: simpleHandler("check", ["selector"]),
       },
       uncheck: {
         description: "Uncheck a checkbox",
-        params: { selector: z.string() },
+        params: { selector: z.string().describe("CSS selector of checkbox to uncheck") },
         handler: simpleHandler("uncheck", ["selector"]),
       },
       select: {
-        description: "Select dropdown option(s)",
-        params: { selector: z.string(), values: z.array(z.string()) },
+        description: "Select option(s) from a dropdown",
+        params: {
+          selector: z.string().describe("CSS selector of select element"),
+          values: z.array(z.string()).describe("Option values to select"),
+        },
         handler: simpleHandler("select", ["selector", "values"]),
       },
       upload: {
-        description: "Upload files to input",
-        params: { selector: z.string(), files: z.array(z.string()) },
+        description: "Upload files to a file input",
+        params: {
+          selector: z.string().describe("CSS selector of file input"),
+          files: z.array(z.string()).describe("File paths to upload"),
+        },
         handler: simpleHandler("upload", ["selector", "files"]),
       },
       download: {
-        description: "Download by clicking element",
-        params: { selector: z.string(), path: z.string() },
+        description: "Download a file by clicking an element",
+        params: {
+          selector: z.string().describe("CSS selector of download link/button"),
+          path: z.string().describe("Path to save the downloaded file"),
+        },
         handler: simpleHandler("download", ["selector", "path"]),
       },
     },
@@ -372,10 +399,13 @@ const browserTree: Record<string, CommandNode> = {
     description: "Page navigation and scrolling",
     children: {
       goto: {
-        description: "Navigate to URL",
+        description: "Navigate to a URL",
         params: {
-          url: z.string(),
-          waitUntil: z.enum(["load", "domcontentloaded", "networkidle"]).optional(),
+          url: z.string().describe("URL to navigate to"),
+          waitUntil: z
+            .enum(["load", "domcontentloaded", "networkidle"])
+            .optional()
+            .describe("When to consider navigation complete (default: load)"),
         },
         handler: async (args, ctx) => {
           if (!args.url) return errorResult("'url' is required for goto");
@@ -390,39 +420,78 @@ const browserTree: Record<string, CommandNode> = {
         },
       },
       back: {
-        description: "Go back in history",
+        description: "Go back in browser history",
         handler: simpleHandler("back"),
       },
       forward: {
-        description: "Go forward in history",
+        description: "Go forward in browser history",
         handler: simpleHandler("forward"),
       },
       reload: {
-        description: "Reload the page",
+        description: "Reload the current page",
         handler: simpleHandler("reload"),
       },
       scroll: {
-        description: "Scroll the page or element",
+        description: "Scroll the page in a direction",
         params: {
-          selector: z.string().optional(),
-          direction: z.enum(["up", "down", "left", "right"]).optional(),
-          amount: z.number().optional(),
+          direction: z.enum(["up", "down", "left", "right"]).describe("Direction to scroll"),
+          amount: z.number().optional().describe("Pixels to scroll (default: 300)"),
         },
-        handler: simpleHandler("scroll"),
+        handler: async (args, ctx) => {
+          const direction = args.direction as "up" | "down" | "left" | "right" | undefined;
+          if (!direction) {
+            return errorResult("'direction' is required for scroll (up, down, left, right)");
+          }
+          const amount = typeof args.amount === "number" ? args.amount : 300;
+
+          // Convert direction to x/y for scroll command (agent-browser ignores direction when using selector)
+          let x = 0;
+          let y = 0;
+          switch (direction) {
+            case "up":
+              y = -amount;
+              break;
+            case "down":
+              y = amount;
+              break;
+            case "left":
+              x = -amount;
+              break;
+            case "right":
+              x = amount;
+              break;
+          }
+
+          const command: BrowserCommand = {
+            id: ctx.generateCommandId(),
+            action: "scroll",
+            x,
+            y,
+          };
+
+          const result = await executeCommand(ctx.sessionId, command);
+          return handleResult(result);
+        },
       },
       scrollto: {
-        description: "Scroll element into view",
-        params: { selector: z.string() },
+        description: "Scroll an element into view",
+        params: { selector: z.string().describe("CSS selector of element to scroll into view") },
         handler: simpleHandler("scrollintoview", ["selector"]),
       },
       wait: {
-        description: "Wait for element or timeout",
+        description: "Wait for an element to reach a certain state",
         params: {
-          selector: z.string().optional(),
-          timeout: z.number().optional(),
-          state: z.enum(["attached", "detached", "visible", "hidden"]).optional(),
+          selector: z.string().describe("CSS selector of element to wait for"),
+          state: z
+            .enum(["attached", "detached", "visible", "hidden"])
+            .optional()
+            .describe("State to wait for (default: visible)"),
+          timeout: z
+            .number()
+            .optional()
+            .describe("Max time to wait in milliseconds (default: 30000)"),
         },
-        handler: simpleHandler("wait"),
+        handler: simpleHandler("wait", ["selector"]),
       },
     },
   },
@@ -431,13 +500,16 @@ const browserTree: Record<string, CommandNode> = {
     description: "Get element properties and state",
     children: {
       text: {
-        description: "Get text content of element",
-        params: { selector: z.string() },
+        description: "Get text content of an element",
+        params: { selector: z.string().describe("CSS selector of element") },
         handler: simpleHandler("gettext", ["selector"]),
       },
       attr: {
-        description: "Get attribute value",
-        params: { selector: z.string(), name: z.string() },
+        description: "Get an attribute value from an element",
+        params: {
+          selector: z.string().describe("CSS selector of element"),
+          name: z.string().describe("Attribute name to get"),
+        },
         handler: async (args, ctx) => {
           if (!args.selector) return errorResult("'selector' is required");
           if (!args.name) return errorResult("'name' is required");
@@ -452,50 +524,55 @@ const browserTree: Record<string, CommandNode> = {
         },
       },
       visible: {
-        description: "Check if element is visible",
-        params: { selector: z.string() },
+        description: "Check if an element is visible",
+        params: { selector: z.string().describe("CSS selector of element") },
         handler: simpleHandler("isvisible", ["selector"]),
       },
       enabled: {
-        description: "Check if element is enabled",
-        params: { selector: z.string() },
+        description: "Check if an element is enabled (not disabled)",
+        params: { selector: z.string().describe("CSS selector of element") },
         handler: simpleHandler("isenabled", ["selector"]),
       },
       checked: {
-        description: "Check if checkbox/radio is checked",
-        params: { selector: z.string() },
+        description: "Check if a checkbox or radio button is checked",
+        params: { selector: z.string().describe("CSS selector of checkbox/radio") },
         handler: simpleHandler("ischecked", ["selector"]),
       },
       count: {
-        description: "Count matching elements",
-        params: { selector: z.string() },
+        description: "Count how many elements match a selector",
+        params: { selector: z.string().describe("CSS selector to count matches for") },
         handler: simpleHandler("count", ["selector"]),
       },
       box: {
-        description: "Get bounding box",
-        params: { selector: z.string() },
+        description: "Get the bounding box (position and size) of an element",
+        params: { selector: z.string().describe("CSS selector of element") },
         handler: simpleHandler("boundingbox", ["selector"]),
       },
       styles: {
-        description: "Get computed styles",
-        params: { selector: z.string() },
+        description: "Get computed CSS styles of an element",
+        params: { selector: z.string().describe("CSS selector of element") },
         handler: simpleHandler("styles", ["selector"]),
       },
     },
   },
 
   page: {
-    description: "HTML, PDF, URL, title, eval, close",
+    description: "Page content, PDF export, URL, title, JavaScript evaluation",
     children: {
       html: {
-        description: "Get page HTML (optional selector)",
-        params: { selector: z.string().optional() },
+        description: "Get the HTML content of the page or a specific element",
+        params: {
+          selector: z
+            .string()
+            .optional()
+            .describe("CSS selector to get HTML from (default: entire page)"),
+        },
         handler: simpleHandler("content"),
       },
       pdf: {
-        description: "Save page as PDF",
+        description: "Save the page as a PDF file",
         params: {
-          path: z.string(),
+          path: z.string().describe("File path to save the PDF"),
           format: z
             .enum([
               "Letter",
@@ -510,83 +587,101 @@ const browserTree: Record<string, CommandNode> = {
               "A5",
               "A6",
             ])
-            .optional(),
+            .optional()
+            .describe("Paper format (default: Letter)"),
         },
         handler: simpleHandler("pdf", ["path"]),
       },
       url: {
-        description: "Get current URL",
+        description: "Get the current page URL",
         handler: simpleHandler("url"),
       },
       title: {
-        description: "Get page title",
+        description: "Get the current page title",
         handler: simpleHandler("title"),
       },
       eval: {
-        description: "Execute JavaScript",
-        params: { script: z.string() },
+        description: "Execute JavaScript code in the page context",
+        params: { script: z.string().describe("JavaScript code to execute") },
         handler: simpleHandler("evaluate", ["script"]),
       },
       close: {
-        description: "Close the browser",
+        description: "Close the browser session",
         handler: simpleHandler("close"),
       },
     },
   },
 
   debug: {
-    description: "Console logs, errors, highlighting",
+    description: "Debugging tools: console logs, errors, element highlighting",
     children: {
       console: {
-        description: "Get console logs",
-        params: { clear: z.boolean().optional() },
+        description: "Get browser console log messages",
+        params: {
+          clear: z.boolean().optional().describe("Clear logs after retrieving (default: false)"),
+        },
         handler: simpleHandler("console"),
       },
       errors: {
-        description: "Get page errors",
-        params: { clear: z.boolean().optional() },
+        description: "Get JavaScript errors from the page",
+        params: {
+          clear: z.boolean().optional().describe("Clear errors after retrieving (default: false)"),
+        },
         handler: simpleHandler("errors"),
       },
       highlight: {
-        description: "Highlight element on page",
-        params: { selector: z.string() },
+        description: "Visually highlight an element on the page for debugging",
+        params: { selector: z.string().describe("CSS selector of element to highlight") },
         handler: simpleHandler("highlight", ["selector"]),
       },
     },
   },
 
   state: {
-    description: "Viewport, cookies, storage, tabs",
+    description: "Browser state: viewport, cookies, storage, tabs",
     children: {
       viewport: {
-        description: "Set viewport size",
-        params: { width: z.number(), height: z.number() },
+        description: "Set the browser viewport size",
+        params: {
+          width: z.number().describe("Viewport width in pixels"),
+          height: z.number().describe("Viewport height in pixels"),
+        },
         handler: simpleHandler("viewport", ["width", "height"]),
       },
       cookies: {
-        description: "Cookie operations",
+        description: "Cookie management",
         children: {
           get: {
-            description: "Get cookies",
-            params: { urls: z.array(z.string()).optional() },
+            description: "Get cookies for the current page or specified URLs",
+            params: {
+              urls: z
+                .array(z.string())
+                .optional()
+                .describe("URLs to get cookies for (default: current page)"),
+            },
             handler: simpleHandler("cookies_get"),
           },
           set: {
-            description: "Set cookies",
+            description: "Set one or more cookies",
             params: {
-              cookies: z.array(
-                z.object({
-                  name: z.string(),
-                  value: z.string(),
-                  url: z.string().optional(),
-                  domain: z.string().optional(),
-                  path: z.string().optional(),
-                  expires: z.number().optional(),
-                  httpOnly: z.boolean().optional(),
-                  secure: z.boolean().optional(),
-                  sameSite: z.enum(["Strict", "Lax", "None"]).optional(),
-                }),
-              ),
+              cookies: z
+                .array(
+                  z.object({
+                    name: z.string().describe("Cookie name"),
+                    value: z.string().describe("Cookie value"),
+                    url: z.string().optional().describe("URL to set cookie for"),
+                    domain: z.string().optional().describe("Cookie domain"),
+                    path: z.string().optional().describe("Cookie path"),
+                    expires: z.number().optional().describe("Expiration timestamp"),
+                    httpOnly: z.boolean().optional().describe("HTTP only flag"),
+                    secure: z.boolean().optional().describe("Secure flag"),
+                    sameSite: z
+                      .enum(["Strict", "Lax", "None"])
+                      .optional()
+                      .describe("SameSite policy"),
+                  }),
+                )
+                .describe("Array of cookies to set"),
             },
             handler: simpleHandler("cookies_set", ["cookies"]),
           },
@@ -597,13 +692,13 @@ const browserTree: Record<string, CommandNode> = {
         },
       },
       storage: {
-        description: "localStorage/sessionStorage operations",
+        description: "Browser storage (localStorage/sessionStorage)",
         children: {
           get: {
-            description: "Get storage value",
+            description: "Get a value from storage",
             params: {
-              type: z.enum(["local", "session"]),
-              key: z.string().optional(),
+              type: z.enum(["local", "session"]).describe("Storage type: local or session"),
+              key: z.string().optional().describe("Key to get (omit to get all keys)"),
             },
             handler: async (args, ctx) => {
               if (!args.type) return errorResult("'type' is required (local or session)");
@@ -618,11 +713,11 @@ const browserTree: Record<string, CommandNode> = {
             },
           },
           set: {
-            description: "Set storage value",
+            description: "Set a value in storage",
             params: {
-              type: z.enum(["local", "session"]),
-              key: z.string(),
-              value: z.string(),
+              type: z.enum(["local", "session"]).describe("Storage type: local or session"),
+              key: z.string().describe("Key to set"),
+              value: z.string().describe("Value to store"),
             },
             handler: async (args, ctx) => {
               if (!args.type) return errorResult("'type' is required (local or session)");
@@ -640,8 +735,10 @@ const browserTree: Record<string, CommandNode> = {
             },
           },
           clear: {
-            description: "Clear storage",
-            params: { type: z.enum(["local", "session"]) },
+            description: "Clear all values from storage",
+            params: {
+              type: z.enum(["local", "session"]).describe("Storage type: local or session"),
+            },
             handler: async (args, ctx) => {
               if (!args.type) return errorResult("'type' is required (local or session)");
               const command = {
@@ -656,25 +753,29 @@ const browserTree: Record<string, CommandNode> = {
         },
       },
       tabs: {
-        description: "Tab management",
+        description: "Browser tab management",
         children: {
           list: {
-            description: "List all tabs",
+            description: "List all open tabs with their URLs and titles",
             handler: simpleHandler("tab_list"),
           },
           new: {
-            description: "Open new tab",
-            params: { url: z.string().optional() },
+            description: "Open a new tab",
+            params: {
+              url: z.string().optional().describe("URL to open in new tab (default: blank page)"),
+            },
             handler: simpleHandler("tab_new"),
           },
           switch: {
-            description: "Switch to tab by index",
-            params: { index: z.number() },
+            description: "Switch to a tab by its index",
+            params: { index: z.number().describe("Tab index (0-based)") },
             handler: simpleHandler("tab_switch", ["index"]),
           },
           close: {
-            description: "Close tab",
-            params: { index: z.number().optional() },
+            description: "Close a tab",
+            params: {
+              index: z.number().optional().describe("Tab index to close (default: current tab)"),
+            },
             handler: simpleHandler("tab_close"),
           },
         },
@@ -683,31 +784,44 @@ const browserTree: Record<string, CommandNode> = {
   },
 
   mouse: {
-    description: "Direct mouse control",
+    description: "Low-level mouse control",
     children: {
       move: {
-        description: "Move mouse to coordinates",
-        params: { x: z.number(), y: z.number() },
+        description: "Move mouse cursor to specific coordinates",
+        params: {
+          x: z.number().describe("X coordinate in pixels"),
+          y: z.number().describe("Y coordinate in pixels"),
+        },
         handler: simpleHandler("mousemove", ["x", "y"]),
       },
       down: {
-        description: "Press mouse button",
-        params: { button: z.enum(["left", "right", "middle"]).optional() },
+        description: "Press and hold a mouse button",
+        params: {
+          button: z
+            .enum(["left", "right", "middle"])
+            .optional()
+            .describe("Mouse button (default: left)"),
+        },
         handler: simpleHandler("mousedown"),
       },
       up: {
-        description: "Release mouse button",
-        params: { button: z.enum(["left", "right", "middle"]).optional() },
+        description: "Release a mouse button",
+        params: {
+          button: z
+            .enum(["left", "right", "middle"])
+            .optional()
+            .describe("Mouse button (default: left)"),
+        },
         handler: simpleHandler("mouseup"),
       },
       wheel: {
-        description: "Scroll with mouse wheel",
+        description:
+          "Scroll using mouse wheel at current position. Move mouse first with mouse move.",
         params: {
-          deltaX: z.number().optional(),
-          deltaY: z.number().optional(),
-          selector: z.string().optional(),
+          deltaY: z.number().describe("Vertical scroll amount (positive = down, negative = up)"),
+          deltaX: z.number().optional().describe("Horizontal scroll amount (default: 0)"),
         },
-        handler: simpleHandler("wheel"),
+        handler: simpleHandler("wheel", ["deltaY"]),
       },
     },
   },
