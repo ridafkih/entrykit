@@ -2,9 +2,23 @@ import type { CaddyConfig, CaddyRoute } from "../../types/proxy";
 
 export class CaddyClient {
   private readonly adminUrl: string;
+  private configLock: Promise<void> = Promise.resolve();
 
   constructor(adminUrl: string) {
     this.adminUrl = adminUrl;
+  }
+
+  private async withConfigLock<Result>(operation: () => Promise<Result>): Promise<Result> {
+    const { promise: acquired, resolve: release } = Promise.withResolvers<void>();
+    const previousLock = this.configLock;
+    this.configLock = acquired;
+
+    try {
+      await previousLock;
+      return await operation();
+    } finally {
+      release();
+    }
   }
 
   async getConfig(): Promise<unknown> {
@@ -65,5 +79,61 @@ export class CaddyClient {
     } catch {
       return false;
     }
+  }
+
+  async addRoutes(routes: CaddyRoute[]): Promise<void> {
+    return this.withConfigLock(async () => {
+      const currentConfig = (await this.getConfig()) as CaddyConfig;
+      const existingRoutes = currentConfig?.apps?.http?.servers?.srv0?.routes ?? [];
+
+      const newRouteIds = new Set(routes.map((route) => route["@id"]));
+      const filteredExisting = existingRoutes.filter(
+        (route: CaddyRoute) => !newRouteIds.has(route["@id"]),
+      );
+
+      const newConfig: CaddyConfig = {
+        admin: currentConfig?.admin ?? { listen: "0.0.0.0:2019" },
+        apps: {
+          http: {
+            servers: {
+              srv0: {
+                listen: currentConfig?.apps?.http?.servers?.srv0?.listen ?? [":80"],
+                routes: [...filteredExisting, ...routes],
+              },
+            },
+          },
+        },
+      };
+
+      await this.loadConfig(newConfig);
+    });
+  }
+
+  async deleteRoutes(ids: string[]): Promise<void> {
+    return this.withConfigLock(async () => {
+      const currentConfig = (await this.getConfig()) as CaddyConfig;
+      const existingRoutes = currentConfig?.apps?.http?.servers?.srv0?.routes ?? [];
+
+      const idsToDelete = new Set(ids);
+      const filteredRoutes = existingRoutes.filter(
+        (route: CaddyRoute) => !idsToDelete.has(route["@id"]),
+      );
+
+      const newConfig: CaddyConfig = {
+        admin: currentConfig?.admin ?? { listen: "0.0.0.0:2019" },
+        apps: {
+          http: {
+            servers: {
+              srv0: {
+                listen: currentConfig?.apps?.http?.servers?.srv0?.listen ?? [":80"],
+                routes: filteredRoutes,
+              },
+            },
+          },
+        },
+      };
+
+      await this.loadConfig(newConfig);
+    });
   }
 }

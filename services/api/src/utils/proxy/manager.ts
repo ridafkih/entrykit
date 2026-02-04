@@ -2,6 +2,7 @@ import type { DockerClient } from "@lab/sandbox-docker";
 import { CaddyClient } from "./caddy";
 import type {
   CaddyConfig,
+  CaddyRoute,
   ClusterContainer,
   ProxyManager,
   ReverseProxyHandler,
@@ -139,35 +140,31 @@ export class CaddyProxyManager implements ProxyManager {
       }
     }
 
-    const routePromises: Promise<void>[] = [];
+    const routes: CaddyRoute[] = [];
 
     for (const { routeId, subdomain, upstream, containerPort } of routeConfigs) {
-      routePromises.push(
-        this.caddy.addRoute({
-          "@id": routeId,
-          match: [
-            {
-              host: [
-                `${subdomain}.${this.matchDomain}`,
-                `${subdomain}.${this.baseDomain}`,
-                `${subdomain}.internal`,
-              ],
-            },
-          ],
-          handle: [createReverseProxyHandler(upstream)],
-        }),
-      );
+      routes.push({
+        "@id": routeId,
+        match: [
+          {
+            host: [
+              `${subdomain}.${this.matchDomain}`,
+              `${subdomain}.${this.baseDomain}`,
+              `${subdomain}.internal`,
+            ],
+          },
+        ],
+        handle: [createReverseProxyHandler(upstream)],
+      });
 
-      routePromises.push(
-        this.caddy.addRoute({
-          "@id": `${routeId}-path`,
-          match: [{ path: [`/${subdomain}`, `/${subdomain}/*`] }],
-          handle: [
-            { handler: "rewrite", strip_path_prefix: `/${subdomain}` },
-            createReverseProxyHandler(upstream),
-          ],
-        }),
-      );
+      routes.push({
+        "@id": `${routeId}-path`,
+        match: [{ path: [`/${subdomain}`, `/${subdomain}/*`] }],
+        handle: [
+          { handler: "rewrite", strip_path_prefix: `/${subdomain}` },
+          createReverseProxyHandler(upstream),
+        ],
+      });
 
       registeredRoutes.push({
         containerPort,
@@ -175,7 +172,7 @@ export class CaddyProxyManager implements ProxyManager {
       });
     }
 
-    await Promise.all(routePromises);
+    await this.caddy.addRoutes(routes);
 
     this.clusters.set(clusterId, { networkName, routes: registeredRoutes });
     return registeredRoutes;
@@ -187,11 +184,13 @@ export class CaddyProxyManager implements ProxyManager {
       throw new Error(`Cluster ${clusterId} is not registered`);
     }
 
+    const routeIds: string[] = [];
     for (const route of registration.routes) {
       const routeId = `${clusterId}-${route.containerPort}`;
-      await this.caddy.deleteRoute(routeId);
-      await this.caddy.deleteRoute(`${routeId}-path`);
+      routeIds.push(routeId, `${routeId}-path`);
     }
+
+    await this.caddy.deleteRoutes(routeIds);
 
     if (!this.caddyContainerId) {
       throw new Error("ProxyManager not initialized. Call initialize() first.");
