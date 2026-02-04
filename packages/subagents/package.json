@@ -1,0 +1,35 @@
+{
+  "name": "@lab/subagents",
+  "version": "0.1.0",
+  "type": "module",
+  "typesVersions": {
+    "*": {
+      "*": ["src/*"]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./browser": {
+      "types": "./src/browser/index.ts",
+      "default": "./src/browser/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lab/browser-protocol": "workspace:*",
+    "ai": "^6.0.67",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
