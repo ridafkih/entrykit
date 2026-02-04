@@ -53,9 +53,8 @@ export type ChatAction = "response" | "created_session" | "forwarded_message";
 
 export interface ChatRequest {
   content: string;
-  conversationHistory?: string[];
-  platformOrigin?: string;
-  platformChatId?: string;
+  platformOrigin: string;
+  platformChatId: string;
   modelId?: string;
   timestamp?: string;
 }

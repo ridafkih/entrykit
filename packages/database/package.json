@@ -62,6 +62,10 @@
     "./schema/port-reservations": {
       "types": "./src/schema/port-reservations.ts",
       "default": "./src/schema/port-reservations.ts"
+    },
+    "./schema/orchestrator-messages": {
+      "types": "./src/schema/orchestrator-messages.ts",
+      "default": "./src/schema/orchestrator-messages.ts"
     }
   },
   "scripts": {

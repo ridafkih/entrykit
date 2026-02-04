@@ -6,20 +6,11 @@ import { getAdapter } from "../platforms";
 
 export class MessageRouter {
   async handleIncomingMessage(message: IncomingPlatformMessage): Promise<void> {
-    const { platform, chatId, userId, messageId, content, timestamp, metadata } = message;
-    const conversationHistory = metadata?.conversationHistory;
+    const { platform, chatId, userId, messageId, content, timestamp } = message;
 
     console.log(`[MessageRouter] Received message from ${platform}:${chatId}`);
 
-    await this.routeToChatOrchestrator(
-      platform,
-      chatId,
-      userId,
-      messageId,
-      content,
-      conversationHistory,
-      timestamp,
-    );
+    await this.routeToChatOrchestrator(platform, chatId, userId, messageId, content, timestamp);
   }
 
   private async routeToChatOrchestrator(
@@ -28,22 +19,16 @@ export class MessageRouter {
     userId: string | undefined,
     messageId: string | undefined,
     content: string,
-    conversationHistory: string[] | undefined,
     timestamp: Date,
   ): Promise<void> {
     const adapter = getAdapter(platform);
     const messagingMode: MessagingMode = adapter?.messagingMode ?? "passive";
 
-    const mapping = await sessionTracker.getMapping(platform, chatId);
-    const currentSessionId = mapping ? await this.getActiveSessionId(mapping.sessionId) : undefined;
-
     const result = await apiClient.chat({
       content,
       platformOrigin: platform,
       platformChatId: chatId,
-      conversationHistory,
       timestamp: timestamp.toISOString(),
-      currentSessionId,
     });
 
     if (result.action === "created_session" && result.sessionId) {

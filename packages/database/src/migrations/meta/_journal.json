@@ -141,6 +141,13 @@
       "when": 1770219684973,
       "tag": "0019_chief_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1770226407055,
+      "tag": "0020_amazing_agent_brand",
+      "breakpoints": true
     }
   ]
 }
