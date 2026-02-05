@@ -2,6 +2,7 @@ import { createPublisher, type WebSocketData } from "@lab/multiplayer-server";
 import { schema } from "@lab/multiplayer-sdk";
 import type { Server as BunServer } from "bun";
 import type { ImageStore } from "@lab/context";
+import { logger, setWideErrorFields } from "../logging";
 import { SERVER } from "../config/constants";
 import { createWebSocketHandlers, type Auth } from "../websocket/websocket-handler";
 import { createOpenCodeProxyHandler } from "../opencode/handler";
@@ -149,21 +150,40 @@ export class ApiServer {
         }
 
         if (url.pathname.startsWith("/opencode/")) {
-          return handleOpenCodeProxy(request, url);
+          return this.handleRequestWithWideEvent(request, url, async () => {
+            this.services.widelog.set("route", "opencode_proxy");
+
+            const labSessionId = request.headers.get("X-Lab-Session-Id");
+            if (labSessionId) {
+              this.services.widelog.set("session_id", labSessionId);
+            }
+
+            return handleOpenCodeProxy(request, url);
+          });
         }
 
         const [, channel] = url.pathname.match(/^\/channels\/([^/]+)\/snapshot$/) ?? [];
         if (channel) {
-          return withCors(await handleChannelRequest(channel, url.searchParams));
+          return this.handleRequestWithWideEvent(request, url, async () => {
+            this.services.widelog.set("route", "channel_snapshot");
+            this.services.widelog.set("channel_id", channel);
+            return withCors(await handleChannelRequest(channel, url.searchParams));
+          });
         }
 
         return this.handleRouteRequest(request, url, routeContext);
       },
     });
 
-    reconcileNetworkConnections(sandbox).catch((error) =>
-      console.warn("[ApiServer] Network reconciliation failed:", error),
-    );
+    reconcileNetworkConnections(sandbox).catch((error) => {
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+
+      logger.error({
+        event_name: "api.server.network_reconciliation_failed",
+        status_code: statusCode,
+        ...setErrorPayload(error),
+      });
+    });
 
     return this.publisher;
   }
@@ -173,84 +193,104 @@ export class ApiServer {
     url: URL,
     routeContext: RouteContext,
   ): Promise<Response> {
+    return this.handleRequestWithWideEvent(request, url, async () => {
+      const { widelog } = this.services;
+      const match = this.router.match(request);
+
+      if (!match) {
+        widelog.set("route", "route_not_found");
+        return withCors(notFoundResponse());
+      }
+
+      widelog.set("route", match.name);
+      for (const [param, value] of Object.entries(match.params)) {
+        if (typeof value === "string" && value.length > 0) {
+          widelog.set(`route_params.${param}`, value);
+        }
+      }
+
+      const module: unknown = await import(match.filePath);
+      if (!isRouteModule(module)) {
+        widelog.set("route_module_valid", false);
+        return withCors(errorResponse());
+      }
+
+      if (!isHttpMethod(request.method)) {
+        widelog.set("method_supported", false);
+        return withCors(methodNotAllowedResponse());
+      }
+
+      const handler = module[request.method];
+      if (!handler) {
+        widelog.set("method_implemented", false);
+        return withCors(methodNotAllowedResponse());
+      }
+
+      return withCors(await handler(request, match.params, routeContext));
+    });
+  }
+
+  private async handleRequestWithWideEvent(
+    request: Request,
+    url: URL,
+    handler: () => Promise<Response>,
+  ): Promise<Response> {
     const { widelog } = this.services;
     const requestId = crypto.randomUUID();
 
     return widelog.context(async () => {
-      widelog.set("requestId", requestId);
+      widelog.set("request_id", requestId);
       widelog.set("method", request.method);
       widelog.set("path", url.pathname);
-      widelog.time.start("duration");
-
-      let match: ReturnType<typeof this.router.match> = null;
+      widelog.set("has_query", url.search.length > 0);
+      widelog.set("protocol", url.protocol.replace(":", ""));
+      const userAgent = request.headers.get("user-agent");
+      if (userAgent) {
+        widelog.set("user_agent", userAgent);
+      }
+      widelog.time.start("duration_ms");
 
       try {
-        match = this.router.match(request);
-
-        if (!match) {
-          widelog.set("status", 404);
-          const response = withCors(notFoundResponse());
-          response.headers.set("X-Request-Id", requestId);
-          return response;
-        }
-
-        widelog.set("route", match.name);
-
-        const module: unknown = await import(match.filePath);
-
-        if (!isRouteModule(module)) {
-          widelog.set("status", 500);
-          const response = withCors(errorResponse());
-          response.headers.set("X-Request-Id", requestId);
-          return response;
-        }
-
-        if (!isHttpMethod(request.method)) {
-          widelog.set("status", 405);
-          const response = withCors(methodNotAllowedResponse());
-          response.headers.set("X-Request-Id", requestId);
-          return response;
-        }
-
-        const handler = module[request.method];
-
-        if (!handler) {
-          widelog.set("status", 405);
-          const response = withCors(methodNotAllowedResponse());
-          response.headers.set("X-Request-Id", requestId);
-          return response;
-        }
-
-        const response = await handler(request, match.params, routeContext);
-        widelog.set("status", response.status);
-        const corsResponse = withCors(response);
-        corsResponse.headers.set("X-Request-Id", requestId);
-        return corsResponse;
+        const response = await handler();
+        this.setStatusOutcome(response.status);
+        response.headers.set("X-Request-Id", requestId);
+        return response;
       } catch (error) {
         const status = error instanceof AppError ? error.statusCode : 500;
         const message =
           error instanceof Error && status < 500 ? error.message : "Internal server error";
 
-        widelog.set("status", status);
-        widelog.set("error", error instanceof Error ? error.message : "Unknown error");
-        if (error instanceof Error) {
-          widelog.set("errorName", error.name);
-          widelog.set("errorStack", error.stack ?? "no_stack");
-        }
-        if (error instanceof AppError) {
-          widelog.set("errorCode", error.code);
-        }
+        this.setStatusOutcome(status);
+        setWideErrorFields(error);
 
-        if (status >= 500) console.error(`[${match?.name ?? "unknown"}]`, error);
+        if (error instanceof AppError) {
+          widelog.set("error.code", error.code);
+        }
 
         const response = withCors(Response.json({ error: message, requestId }, { status }));
         response.headers.set("X-Request-Id", requestId);
         return response;
       } finally {
-        widelog.time.stop("duration");
+        widelog.time.stop("duration_ms");
         widelog.flush();
       }
     });
+  }
+
+  private setStatusOutcome(statusCode: number): void {
+    const { widelog } = this.services;
+    widelog.set("status_code", statusCode);
+    if (statusCode >= 500) {
+      widelog.set("outcome", "error");
+      return;
+    }
+
+    if (statusCode >= 400) {
+      widelog.set("outcome", "client_error");
+      return;
+    }
+
+    widelog.set("outcome", "success");
   }
 
   shutdown(): void {
@@ -261,4 +301,26 @@ export class ApiServer {
     this.publisher = null;
     this.services.browserService.shutdown();
   }
+}
+
+function setErrorPayload(error: unknown): Record<string, string | undefined> {
+  if (error instanceof Error) {
+    return {
+      error_name: error.name,
+      error_message: error.message,
+      error_stack: error.stack,
+    };
+  }
+
+  if (typeof error === "string") {
+    return {
+      error_name: "Error",
+      error_message: error,
+    };
+  }
+
+  return {
+    error_name: "UnknownError",
+    error_message: "Unknown error",
+  };
 }

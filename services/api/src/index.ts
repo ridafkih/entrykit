@@ -2,7 +2,6 @@ import { entry } from "@lab/entry-point";
 import { type } from "arktype";
 import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import { createImageStoreFromEnv } from "@lab/context";
-import { widelogger } from "@lab/widelogger";
 import { ApiServer } from "./clients/server";
 import { ContainerMonitor } from "./monitors/container.monitor";
 import { OpenCodeMonitor } from "./monitors/opencode.monitor";
@@ -17,10 +16,7 @@ import type { Sandbox } from "@lab/sandbox-sdk";
 import { DeferredPublisher } from "./shared/deferred-publisher";
 import { SessionStateStore } from "./state/session-state-store";
 import { RedisClient } from "bun";
-
-const { widelog } = widelogger({
-  transport: (event) => process.stdout.write(JSON.stringify(event) + "\n"),
-});
+import { widelog } from "./logging";
 
 interface SandboxProviderModule {
   createSandboxFromEnv(env: Record<string, unknown>): Sandbox | Promise<Sandbox>;

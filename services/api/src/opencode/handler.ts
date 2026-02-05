@@ -6,6 +6,7 @@ import { getProjectSystemPrompt } from "../repositories/project.repository";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
 import type { SessionStateStore } from "../state/session-state-store";
 import type { Publisher } from "../types/dependencies";
+import { setWideErrorFields, widelog } from "../logging";
 
 const PROMPT_ENDPOINTS = ["/session/", "/prompt", "/message"];
 const QUESTION_ENDPOINTS = ["/question/"];
@@ -184,10 +185,9 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
 
     const isPromptEndpoint = shouldInjectSystemPrompt(path, request.method);
     if (!labSessionId || !isPromptEndpoint) {
-      console.log("[OpencodeProxy] Skipping prompt injection:", {
-        labSessionId,
-        isPromptEndpoint,
-      });
+      widelog.set("opencode.prompt_injection.skipped", true);
+      widelog.set("opencode.prompt_injection.session_present", Boolean(labSessionId));
+      widelog.set("opencode.prompt_injection.endpoint_match", isPromptEndpoint);
       return { body: request.body, userMessageText: null };
     }
 
@@ -197,7 +197,7 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
 
     const sessionData = await getSessionData(labSessionId);
     if (!sessionData) {
-      console.log("[OpencodeProxy] No session data found for:", labSessionId);
+      widelog.set("opencode.prompt_injection.session_data_found", false);
       return {
         body: JSON.stringify({ ...originalBody, directory: workspacePath }),
         userMessageText,
@@ -211,12 +211,12 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
     });
 
     const { text: composedPrompt, includedFragments } = promptService.compose(promptContext);
-    console.log("[OpencodeProxy] Composed prompt:", {
-      labSessionId,
-      includedFragments,
-      promptLength: composedPrompt?.length ?? 0,
-      fullPrompt: composedPrompt,
-    });
+    widelog.set("opencode.prompt_injection.session_data_found", true);
+    widelog.set("opencode.prompt_injection.prompt_length", composedPrompt?.length ?? 0);
+    widelog.set("opencode.prompt_injection.fragment_count", includedFragments.length);
+    for (const fragment of includedFragments) {
+      widelog.append("opencode.prompt_injection.fragments", fragment);
+    }
 
     const existingTools =
       originalBody.tools && typeof originalBody.tools === "object" ? originalBody.tools : {};
@@ -262,12 +262,12 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
     const workspacePath = labSessionId ? await resolveWorkspacePathBySession(labSessionId) : null;
     const targetUrl = buildTargetUrl(path, url, workspacePath);
 
-    console.log("[OpencodeProxy]", {
-      path,
-      labSessionId,
-      workspacePath,
-      targetUrl,
-    });
+    widelog.set("opencode.proxy_path", path);
+    widelog.set("opencode.has_lab_session_id", Boolean(labSessionId));
+    if (labSessionId) {
+      widelog.set("session_id", labSessionId);
+    }
+    widelog.set("opencode.has_workspace_path", Boolean(workspacePath));
 
     const forwardHeaders = buildForwardHeaders(request);
     const { body, userMessageText } = await buildProxyBody(
@@ -280,13 +280,21 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
     const upstreamAbort = new AbortController();
     request.signal.addEventListener("abort", () => upstreamAbort.abort(), { once: true });
 
-    const proxyResponse = await fetch(targetUrl, {
-      method: request.method,
-      headers: forwardHeaders,
-      body,
-      signal: upstreamAbort.signal,
-      ...(body ? { duplex: "half" } : {}),
-    });
+    let proxyResponse: Response;
+    try {
+      proxyResponse = await fetch(targetUrl, {
+        method: request.method,
+        headers: forwardHeaders,
+        body,
+        signal: upstreamAbort.signal,
+        ...(body ? { duplex: "half" } : {}),
+      });
+    } catch (error) {
+      setWideErrorFields(error, "opencode.upstream_error");
+      throw error;
+    }
+
+    widelog.set("opencode.upstream_status_code", proxyResponse.status);
 
     if (userMessageText && proxyResponse.ok && labSessionId) {
       await sessionStateStore.setLastMessage(labSessionId, userMessageText);
@@ -298,6 +306,7 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
     }
 
     if (isSseResponse(path, proxyResponse)) {
+      widelog.set("opencode.response_type", "sse");
       return buildSseResponse(
         createAbortableStream(proxyResponse.body, upstreamAbort),
         proxyResponse.status,
@@ -305,9 +314,11 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
     }
 
     if (isSessionCreateRequest(path, request.method) && labSessionId && workspacePath) {
+      widelog.set("opencode.response_type", "session_create");
       return handleSessionCreateResponse(proxyResponse, labSessionId, workspacePath);
     }
 
+    widelog.set("opencode.response_type", "standard");
     return buildStandardResponse(proxyResponse);
   };
 }
