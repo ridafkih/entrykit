@@ -117,16 +117,20 @@ export const createEventDrivenReconciler = (
 
         if (session.lastUrl && session.lastUrl !== "about:blank") {
           await daemonController.navigate(sessionId, session.lastUrl);
-        } else if (!session.lastUrl && config.getFirstExposedPort) {
-          const exposedPort = await config.getFirstExposedPort(sessionId);
-          if (exposedPort && config.getInitialNavigationUrl) {
-            if (config.waitForService) {
-              await config.waitForService(sessionId, exposedPort);
-            }
-            const url = await config.getInitialNavigationUrl(sessionId, exposedPort);
-            await daemonController.navigate(sessionId, url);
-          }
+          return;
         }
+
+        if (session.lastUrl || !config.getFirstExposedPort) return;
+
+        const exposedPort = await config.getFirstExposedPort(sessionId);
+        if (!exposedPort || !config.getInitialNavigationUrl) return;
+
+        if (config.waitForService) {
+          await config.waitForService(sessionId, exposedPort);
+        }
+
+        const url = await config.getInitialNavigationUrl(sessionId, exposedPort);
+        await daemonController.navigate(sessionId, url);
         break;
       }
 
@@ -137,15 +141,15 @@ export const createEventDrivenReconciler = (
         });
 
         const updatedSession = await stateStore.getState(sessionId);
-        if (updatedSession?.desiredState === "running") {
-          await reconcileSession(sessionId);
-        }
+        if (updatedSession?.desiredState !== "running") return;
+
+        await reconcileSession(sessionId);
         break;
       }
 
       case "daemon:error": {
         await updateCurrentState(sessionId, "error", {
-          errorMessage: data?.error ?? "Unknown daemon error",
+          errorMessage: data?.error,
         });
         break;
       }

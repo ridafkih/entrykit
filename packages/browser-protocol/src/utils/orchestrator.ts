@@ -144,6 +144,9 @@ export const createOrchestrator = (
       try {
         await reconciler.handleDaemonEvent(event);
       } catch (error) {
+        const session = await stateStore.getState(event.sessionId);
+        if (!session) return;
+
         notifyError(error);
       }
     },
