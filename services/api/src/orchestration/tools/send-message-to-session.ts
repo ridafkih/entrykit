@@ -4,6 +4,7 @@ import { getSession } from "../../services/session.service";
 import { sendMessageToSession } from "../message-sender";
 import { getErrorMessage } from "../../shared/errors";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
+import type { SessionStateStore } from "../../state/session-state-store";
 
 const inputSchema = z.object({
   sessionId: z.string().describe("The session ID to send the message to"),
@@ -14,6 +15,7 @@ export interface SendMessageToolContext {
   modelId?: string;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 export function createSendMessageToSessionTool(context: SendMessageToolContext) {
@@ -40,6 +42,7 @@ export function createSendMessageToSessionTool(context: SendMessageToolContext) 
           modelId: context.modelId,
           opencode: context.opencode,
           publisher: context.publisher,
+          sessionStateStore: context.sessionStateStore,
         });
 
         return { success: true, sessionId };

@@ -4,6 +4,7 @@ import type { SessionLifecycleManager } from "../../managers/session-lifecycle.m
 import type { PoolManager } from "../../managers/pool.manager";
 import type { ImageStore } from "@lab/context";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
+import type { SessionStateStore } from "../../state/session-state-store";
 
 export interface ChatOrchestratorInput {
   content: string;
@@ -18,6 +19,7 @@ export interface ChatOrchestratorInput {
   opencode: OpencodeClient;
   publisher: Publisher;
   imageStore?: ImageStore;
+  sessionStateStore: SessionStateStore;
 }
 
 export const CHAT_ORCHESTRATOR_ACTION = {

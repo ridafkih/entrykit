@@ -9,7 +9,9 @@
     }
   },
   "scripts": {
-    "types": "tsc --noEmit"
+    "types": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt ."
   },
   "dependencies": {
     "@lab/sandbox-sdk": "workspace:*",
@@ -18,6 +20,8 @@
   },
   "devDependencies": {
     "@types/dockerode": "^3.3.34",
-    "typescript": "^5"
+    "typescript": "^5",
+    "oxlint": "1.42.0",
+    "oxfmt": "0.27.0"
   }
 }

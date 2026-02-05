@@ -59,6 +59,7 @@ const POST: Handler<OrchestrationContext> = async (request, _params, context) =>
         opencode: context.opencode,
         publisher: context.publisher,
         imageStore: context.imageStore,
+        sessionStateStore: context.sessionStateStore,
       }),
       async (result) => {
         await saveOrchestratorMessage({
@@ -88,6 +89,7 @@ const POST: Handler<OrchestrationContext> = async (request, _params, context) =>
     opencode: context.opencode,
     publisher: context.publisher,
     imageStore: context.imageStore,
+    sessionStateStore: context.sessionStateStore,
   });
 
   await saveOrchestratorMessage({

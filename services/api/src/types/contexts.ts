@@ -5,6 +5,7 @@ import type { PoolManager } from "../managers/pool.manager";
 import type { LogMonitor } from "../monitors/log.monitor";
 import type { PromptService } from "./prompt";
 import type { Sandbox, OpencodeClient, Publisher } from "./dependencies";
+import type { SessionStateStore } from "../state/session-state-store";
 
 export interface BrowserContext {
   browserService: BrowserServiceManager;
@@ -20,6 +21,7 @@ export interface InfraContext {
   sandbox: Sandbox;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 export interface MonitorContext {

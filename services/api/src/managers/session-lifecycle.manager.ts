@@ -1,42 +1,33 @@
 import { initializeSessionContainers } from "../runtime/containers";
 import { SessionCleanupService } from "../services/session-cleanup.service";
-import {
-  cleanupSessionNetwork,
-  cleanupOrphanedNetworks,
-  type NetworkContainerNames,
-} from "../runtime/network";
+import { cleanupSessionNetwork, cleanupOrphanedNetworks } from "../runtime/network";
 import type { BrowserServiceManager } from "./browser-service.manager";
 import type { ProxyManager } from "../services/proxy.service";
 import type { Sandbox } from "../types/dependencies";
+import type { SessionStateStore } from "../state/session-state-store";
 import type { DeferredPublisher } from "../shared/deferred-publisher";
-
-export interface SessionLifecycleConfig {
-  containerNames: NetworkContainerNames;
-}
 
 export class SessionLifecycleManager {
   private readonly initializationTasks = new Map<string, Promise<void>>();
 
   constructor(
-    private readonly config: SessionLifecycleConfig,
     private readonly sandbox: Sandbox,
     private readonly proxyManager: ProxyManager,
     private readonly browserServiceManager: BrowserServiceManager,
     private readonly deferredPublisher: DeferredPublisher,
+    private readonly sessionStateStore: SessionStateStore,
   ) {}
 
   private getDeps() {
-    const { containerNames } = this.config;
     const cleanupService = new SessionCleanupService({
       sandbox: this.sandbox,
       publisher: this.deferredPublisher.get(),
       proxyManager: this.proxyManager,
-      cleanupSessionNetwork: (sessionId: string) =>
-        cleanupSessionNetwork(sessionId, containerNames, this.sandbox),
+      sessionStateStore: this.sessionStateStore,
+      cleanupSessionNetwork: (sessionId: string) => cleanupSessionNetwork(sessionId, this.sandbox),
     });
 
     return {
-      containerNames,
       sandbox: this.sandbox,
       publisher: this.deferredPublisher.get(),
       proxyManager: this.proxyManager,
@@ -45,7 +36,7 @@ export class SessionLifecycleManager {
   }
 
   async initialize(): Promise<void> {
-    await cleanupOrphanedNetworks(this.config.containerNames, this.sandbox);
+    await cleanupOrphanedNetworks(this.sandbox);
   }
 
   async initializeSession(sessionId: string, projectId: string): Promise<void> {

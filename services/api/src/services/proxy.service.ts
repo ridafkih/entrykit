@@ -3,7 +3,6 @@ import type { RouteInfo } from "../types/proxy";
 import type { RedisClient } from "bun";
 
 interface ClusterRegistration {
-  networkName: string;
   routes: RouteInfo[];
 }
 
@@ -15,7 +14,6 @@ export class ProxyManager {
 
   async registerCluster(
     clusterId: string,
-    networkName: string,
     containers: { containerId: string; hostname: string; ports: Record<number, number> }[],
   ): Promise<RouteInfo[]> {
     const routes: RouteInfo[] = [];
@@ -30,7 +28,7 @@ export class ProxyManager {
       }
     }
 
-    const registration: ClusterRegistration = { networkName, routes };
+    const registration: ClusterRegistration = { routes };
     await this.redis.set(`proxy:cluster:${clusterId}`, JSON.stringify(registration));
     await this.redis.sadd("proxy:clusters", clusterId);
     console.log(`[Proxy] Registered cluster ${clusterId} with ${routes.length} routes`);

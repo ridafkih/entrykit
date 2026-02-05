@@ -7,6 +7,7 @@ import {
 import type { Publisher, OpencodeClient } from "../types/dependencies";
 import type { BrowserService } from "../browser/browser-service";
 import type { LogMonitor } from "../monitors/log.monitor";
+import type { SessionStateStore } from "../state/session-state-store";
 import type { Auth } from "../types/websocket";
 import {
   loadProjects,
@@ -27,10 +28,12 @@ export interface WebSocketHandlerDeps {
   opencode: OpencodeClient;
   logMonitor: LogMonitor;
   proxyBaseDomain: string;
+  sessionStateStore: SessionStateStore;
 }
 
 export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
-  const { browserService, publisher, opencode, logMonitor, proxyBaseDomain } = deps;
+  const { browserService, publisher, opencode, logMonitor, proxyBaseDomain, sessionStateStore } =
+    deps;
   const sessionSubscribers = new Map<string, Set<object>>();
 
   const handlers: SchemaHandlers<AppSchema, Auth> = {
@@ -43,7 +46,7 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
     sessionMetadata: {
       getSnapshot: async ({ params }) => {
         if (!params.uuid) throw new ValidationError("Missing uuid parameter");
-        return loadSessionMetadata(params.uuid, opencode);
+        return loadSessionMetadata(params.uuid, opencode, sessionStateStore);
       },
     },
     sessionContainers: {

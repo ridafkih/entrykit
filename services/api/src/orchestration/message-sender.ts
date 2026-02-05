@@ -1,5 +1,5 @@
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
-import { setAndPublishLastMessage } from "../state/last-message-store";
+import type { SessionStateStore } from "../state/session-state-store";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
 import { throwOnOpencodeError } from "../shared/errors";
 
@@ -10,10 +10,12 @@ export interface SendMessageOptions {
   modelId?: string;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 export async function sendMessageToSession(options: SendMessageOptions): Promise<void> {
-  const { sessionId, opencodeSessionId, content, modelId, opencode, publisher } = options;
+  const { sessionId, opencodeSessionId, content, modelId, opencode, publisher, sessionStateStore } =
+    options;
 
   const workspacePath = await resolveWorkspacePathBySession(sessionId);
   const [providerID, modelID] = modelId?.split("/") ?? [];
@@ -31,5 +33,6 @@ export async function sendMessageToSession(options: SendMessageOptions): Promise
     "OPENCODE_PROMPT_FAILED",
   );
 
-  setAndPublishLastMessage(sessionId, content, publisher);
+  await sessionStateStore.setLastMessage(sessionId, content);
+  publisher.publishDelta("sessionMetadata", { uuid: sessionId }, { lastMessage: content });
 }

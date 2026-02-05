@@ -4,7 +4,9 @@
   "type": "module",
   "typesVersions": {
     "*": {
-      "*": ["src/*"]
+      "*": [
+        "src/*"
+      ]
     }
   },
   "exports": {
@@ -26,7 +28,9 @@
     }
   },
   "scripts": {
-    "types": "tsc --noEmit"
+    "types": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt ."
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.35",
@@ -37,6 +41,8 @@
   },
   "devDependencies": {
     "bun-types": "^1.2.11",
-    "typescript": "^5"
+    "typescript": "^5",
+    "oxlint": "1.42.0",
+    "oxfmt": "0.27.0"
   }
 }

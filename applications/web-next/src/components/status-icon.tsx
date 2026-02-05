@@ -9,12 +9,10 @@ const statusIcon = tv({
   base: "shrink-0",
   variants: {
     status: {
-      // Base session statuses
       creating: "animate-spin text-text-muted",
       loading: "animate-spin text-text-muted",
       idle: "text-text-muted",
       complete: "text-accent",
-      // Unified session statuses
       starting: "animate-spin text-text-muted",
       running: "text-text-muted",
       generating: "animate-spin text-accent",

@@ -1,7 +1,7 @@
 import { getChangeType } from "../types/file";
 import type { Publisher } from "../types/dependencies";
 import type { SessionDiffEvent } from "./event-parser";
-import type { InferenceStatus } from "../state/inference-status-store";
+import type { InferenceStatus } from "../state/session-state-store";
 
 export function publishSessionDiff(
   publisher: Publisher,

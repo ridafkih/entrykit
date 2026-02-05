@@ -7,6 +7,7 @@ import type { BrowserServiceManager } from "../../managers/browser-service.manag
 import type { SessionLifecycleManager } from "../../managers/session-lifecycle.manager";
 import type { PoolManager } from "../../managers/pool.manager";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
+import type { SessionStateStore } from "../../state/session-state-store";
 
 export interface CreateSessionToolContext {
   browserService: BrowserServiceManager;
@@ -15,6 +16,7 @@ export interface CreateSessionToolContext {
   modelId?: string;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 const inputSchema = z.object({
@@ -50,6 +52,7 @@ export function createCreateSessionTool(context: CreateSessionToolContext) {
           modelId: context.modelId,
           opencode: context.opencode,
           publisher: context.publisher,
+          sessionStateStore: context.sessionStateStore,
         });
 
         return {

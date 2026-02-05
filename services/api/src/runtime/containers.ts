@@ -1,4 +1,4 @@
-import { formatContainerName, formatUniqueHostname } from "../shared/naming";
+import { formatUniqueHostname } from "../shared/naming";
 import { findContainersWithDependencies } from "../repositories/container-dependency.repository";
 import {
   updateSessionContainerRuntimeId,
@@ -9,7 +9,7 @@ import { findSessionById } from "../repositories/session.repository";
 import { SESSION_STATUS } from "../types/session";
 import { CONTAINER_STATUS } from "../types/container";
 import type { BrowserService } from "../browser/browser-service";
-import { createSessionNetwork, type NetworkContainerNames } from "./network";
+import { createSessionNetwork } from "./network";
 import { buildEnvironmentVariables } from "./environment-builder";
 import { buildNetworkAliasesAndPortMap } from "./port-mapper";
 import {
@@ -30,7 +30,6 @@ interface ClusterContainer {
 }
 
 export interface InitializeSessionContainersDeps {
-  containerNames: NetworkContainerNames;
   sandbox: Sandbox;
   publisher: Publisher;
   proxyManager: ProxyManager;
@@ -40,7 +39,7 @@ export interface InitializeSessionContainersDeps {
 async function createAndStartContainer(
   sessionId: string,
   projectId: string,
-  networkName: string,
+  networkId: string,
   prepared: PreparedContainer,
   deps: Pick<InitializeSessionContainersDeps, "sandbox">,
 ): Promise<{ runtimeId: string; clusterContainer: ClusterContainer | null }> {
@@ -48,9 +47,7 @@ async function createAndStartContainer(
   const { sandbox } = deps;
 
   const env = buildEnvironmentVariables(sessionId, envVars);
-  const serviceHostname = containerDefinition.hostname || containerDefinition.id;
   const uniqueHostname = formatUniqueHostname(sessionId, containerDefinition.id);
-  const containerName = formatContainerName(sessionId, containerDefinition.id);
   const { portMap, networkAliases } = buildNetworkAliasesAndPortMap(
     sessionId,
     containerDefinition.id,
@@ -62,15 +59,13 @@ async function createAndStartContainer(
     sessionId,
     projectId,
     containerId: containerDefinition.id,
-    serviceName: serviceHostname,
-    containerName,
     image: containerDefinition.image,
-    networkName,
+    networkId,
     hostname: uniqueHostname,
     workdir: containerWorkspace,
     env: Object.keys(env).length > 0 ? env : undefined,
     ports: ports.map(({ port }) => port),
-    networkAliases,
+    aliases: networkAliases,
   });
   console.log(`[Container] Created and started ${runtimeId}`);
 
@@ -87,7 +82,7 @@ async function createAndStartContainer(
 async function startContainersInLevel(
   sessionId: string,
   projectId: string,
-  networkName: string,
+  networkId: string,
   containerIds: string[],
   preparedByContainerId: Map<string, PreparedContainer>,
   deps: Pick<InitializeSessionContainersDeps, "sandbox">,
@@ -104,7 +99,7 @@ async function startContainersInLevel(
           "PREPARED_CONTAINER_NOT_FOUND",
         );
       }
-      return createAndStartContainer(sessionId, projectId, networkName, prepared, deps);
+      return createAndStartContainer(sessionId, projectId, networkId, prepared, deps);
     }),
   );
 
@@ -124,7 +119,7 @@ export async function initializeSessionContainers(
   browserService: BrowserService,
   deps: InitializeSessionContainersDeps,
 ): Promise<void> {
-  const { containerNames, sandbox, proxyManager, cleanupService } = deps;
+  const { sandbox, proxyManager, cleanupService } = deps;
 
   const containerDefinitions = await findContainersWithDependencies(projectId);
   const runtimeIds: string[] = [];
@@ -134,7 +129,7 @@ export async function initializeSessionContainers(
     const containerNodes = buildContainerNodes(containerDefinitions);
     const startLevels = resolveStartOrder(containerNodes);
 
-    const networkName = await createSessionNetwork(sessionId, containerNames, sandbox);
+    const networkId = await createSessionNetwork(sessionId, sandbox);
 
     const preparedContainers = await Promise.all(
       containerDefinitions.map((definition) =>
@@ -151,7 +146,7 @@ export async function initializeSessionContainers(
       const levelResult = await startContainersInLevel(
         sessionId,
         projectId,
-        networkName,
+        networkId,
         level.containerIds,
         preparedByContainerId,
         deps,
@@ -161,7 +156,7 @@ export async function initializeSessionContainers(
     }
 
     if (clusterContainers.length > 0) {
-      await proxyManager.registerCluster(sessionId, networkName, clusterContainers);
+      await proxyManager.registerCluster(sessionId, clusterContainers);
     }
 
     const session = await findSessionById(sessionId);

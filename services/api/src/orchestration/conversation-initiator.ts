@@ -1,7 +1,7 @@
 import { findSessionById, updateSessionFields } from "../repositories/session.repository";
 import { getProjectSystemPrompt } from "../repositories/project.repository";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
-import { setAndPublishLastMessage } from "../state/last-message-store";
+import type { SessionStateStore } from "../state/session-state-store";
 import { createPromptContext } from "../prompts/context";
 import { createDefaultPromptService } from "../prompts/builder";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
@@ -13,6 +13,7 @@ export interface InitiateConversationOptions {
   modelId?: string;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 async function composeSystemPrompt(sessionId: string): Promise<string | undefined> {
@@ -38,7 +39,7 @@ function getDefaultModelId(): string | undefined {
 }
 
 export async function initiateConversation(options: InitiateConversationOptions): Promise<void> {
-  const { sessionId, task, opencode, publisher } = options;
+  const { sessionId, task, opencode, publisher, sessionStateStore } = options;
   const modelId = options.modelId ?? getDefaultModelId();
   const workspacePath = await resolveWorkspacePathBySession(sessionId);
 
@@ -71,5 +72,6 @@ export async function initiateConversation(options: InitiateConversationOptions)
     "OPENCODE_INITIAL_PROMPT_FAILED",
   );
 
-  setAndPublishLastMessage(sessionId, task, publisher);
+  await sessionStateStore.setLastMessage(sessionId, task);
+  publisher.publishDelta("sessionMetadata", { uuid: sessionId }, { lastMessage: task });
 }

@@ -35,6 +35,7 @@ export async function prepareOrchestration(
     opencode: input.opencode,
     publisher: input.publisher,
     imageStore: input.imageStore,
+    sessionStateStore: input.sessionStateStore,
     visionContext: vision,
   });
 

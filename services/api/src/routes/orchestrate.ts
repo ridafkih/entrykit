@@ -29,6 +29,7 @@ const POST: Handler<OrchestrationContext> = async (request, _params, context) =>
     poolManager: context.poolManager,
     opencode: context.opencode,
     publisher: context.publisher,
+    sessionStateStore: context.sessionStateStore,
   });
 
   return Response.json(result, { status: 201 });

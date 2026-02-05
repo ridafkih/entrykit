@@ -5,8 +5,7 @@ import { findProjectSummaries } from "../repositories/project.repository";
 import { findAllSessionSummaries, findSessionById } from "../repositories/session.repository";
 import { getSessionContainersWithDetails } from "../repositories/container-session.repository";
 import { findPortsByContainerId } from "../repositories/container-port.repository";
-import { getInferenceStatus } from "../state/inference-status-store";
-import { getLastMessage, setLastMessage } from "../state/last-message-store";
+import type { SessionStateStore } from "../state/session-state-store";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
 import type { BrowserService } from "../browser/browser-service";
 import type { AppSchema } from "@lab/multiplayer-sdk";
@@ -75,11 +74,17 @@ export function loadSessionLogs(sessionId: string, logMonitor: LogMonitor) {
   return logMonitor.getSessionSnapshot(sessionId);
 }
 
-export async function loadSessionMetadata(sessionId: string, opencode: OpencodeClient) {
+export async function loadSessionMetadata(
+  sessionId: string,
+  opencode: OpencodeClient,
+  sessionStateStore: SessionStateStore,
+) {
   const session = await findSessionById(sessionId);
   const title = session?.title ?? "";
-  const inferenceStatus = getInferenceStatus(sessionId);
-  const storedLastMessage = getLastMessage(sessionId);
+  const [inferenceStatus, storedLastMessage] = await Promise.all([
+    sessionStateStore.getInferenceStatus(sessionId),
+    sessionStateStore.getLastMessage(sessionId),
+  ]);
 
   if (!session?.opencodeSessionId) {
     return { title, lastMessage: storedLastMessage, inferenceStatus, participantCount: 0 };
@@ -100,7 +105,7 @@ export async function loadSessionMetadata(sessionId: string, opencode: OpencodeC
     const text = textPart && "text" in textPart && textPart.text;
 
     if (text) {
-      setLastMessage(sessionId, text);
+      await sessionStateStore.setLastMessage(sessionId, text);
       return { title, lastMessage: text, inferenceStatus, participantCount: 0 };
     }
 
@@ -118,17 +123,19 @@ export interface SnapshotLoaderDeps {
   opencode: OpencodeClient;
   logMonitor: LogMonitor;
   proxyBaseDomain: string;
+  sessionStateStore: SessionStateStore;
 }
 
 export function createSnapshotLoaders(
   deps: SnapshotLoaderDeps,
 ): Record<ChannelName, SnapshotLoader> {
-  const { browserService, opencode, logMonitor, proxyBaseDomain } = deps;
+  const { browserService, opencode, logMonitor, proxyBaseDomain, sessionStateStore } = deps;
 
   return {
     projects: async () => loadProjects(),
     sessions: async () => loadSessions(),
-    sessionMetadata: async (session) => (session ? loadSessionMetadata(session, opencode) : null),
+    sessionMetadata: async (session) =>
+      session ? loadSessionMetadata(session, opencode, sessionStateStore) : null,
     sessionContainers: async (session) =>
       session ? loadSessionContainers(session, proxyBaseDomain) : null,
     sessionTyping: async () => [],

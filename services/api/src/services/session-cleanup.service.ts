@@ -5,7 +5,7 @@ import {
   updateSessionStatus,
 } from "../repositories/session.repository";
 import { SESSION_STATUS } from "../types/session";
-import { clearAllSessionState } from "../state/state.service";
+import type { SessionStateStore } from "../state/session-state-store";
 import type { BrowserService } from "../browser/browser-service";
 import type { Sandbox, Publisher } from "../types/dependencies";
 import type { ProxyManager } from "./proxy.service";
@@ -21,6 +21,7 @@ export interface CleanupSessionDeps {
   sandbox: Sandbox;
   publisher: Publisher;
   proxyManager: ProxyManager;
+  sessionStateStore: SessionStateStore;
   cleanupSessionNetwork: (sessionId: string) => Promise<void>;
 }
 
@@ -66,7 +67,7 @@ export class SessionCleanupService {
     }
 
     await deleteSession(sessionId);
-    clearAllSessionState(sessionId);
+    await this.deps.sessionStateStore.clear(sessionId);
   }
 
   async cleanupOrphanedResources(

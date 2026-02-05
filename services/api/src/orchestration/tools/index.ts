@@ -1,7 +1,7 @@
 export { listProjectsTool } from "./list-projects";
 export { listSessionsTool } from "./list-sessions";
 export { createGetSessionMessagesTool } from "./get-session-messages";
-export { getSessionStatusTool } from "./get-session-status";
+export { createGetSessionStatusTool } from "./get-session-status";
 export { createSearchSessionsTool } from "./search-sessions";
 export { getContainersTool } from "./get-containers";
 export { createCreateSessionTool, type CreateSessionToolContext } from "./create-session";

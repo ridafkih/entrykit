@@ -37,6 +37,7 @@ const POST: Handler<OrchestrationContext> = async (request, _params, context) =>
       modelId,
       opencode: context.opencode,
       publisher: context.publisher,
+      sessionStateStore: context.sessionStateStore,
     });
   }
 

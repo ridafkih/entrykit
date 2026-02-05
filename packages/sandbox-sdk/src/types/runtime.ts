@@ -2,15 +2,13 @@ export interface RuntimeContainerStartInput {
   sessionId: string;
   projectId: string;
   containerId: string;
-  serviceName: string;
-  containerName: string;
   image: string;
-  networkName: string;
+  networkId: string;
   hostname: string;
   workdir: string;
   env?: Record<string, string>;
   ports?: number[];
-  networkAliases?: string[];
+  aliases?: string[];
 }
 
 export interface RuntimeContainerStartResult {

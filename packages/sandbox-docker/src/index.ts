@@ -29,6 +29,10 @@ export { toContainerState } from "./utils/container-state";
 
 export { DockerWorkspaceManager } from "./modules/docker-workspace-manager";
 export { DockerNetworkManager } from "./modules/docker-network-manager";
+export {
+  DockerSessionManager,
+  type DockerSessionManagerConfig,
+} from "./modules/docker-session-manager";
 export { DockerImageManager } from "./modules/docker-image-manager";
 export { DockerContainerManager } from "./modules/docker-container-manager";
 export { DockerVolumeManager } from "./modules/docker-volume-manager";
@@ -36,3 +40,4 @@ export { DockerRuntimeManager, type DockerRuntimeManagerConfig } from "./modules
 export { NetworkOperations } from "./modules/network-operations";
 export { ExecOperations } from "./modules/exec-operations";
 export { DockerEventStream } from "./modules/docker-event-stream";
+export { createSandboxFromEnv, type DockerSandboxFactoryEnv } from "./provider";

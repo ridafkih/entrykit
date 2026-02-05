@@ -4,52 +4,16 @@ import { sessionContainers } from "@lab/database/schema/session-containers";
 import { containers } from "@lab/database/schema/containers";
 import { containerPorts } from "@lab/database/schema/container-ports";
 import { eq, and } from "drizzle-orm";
-import { DockerClient } from "@lab/sandbox-docker";
 
 const PORT = parseInt(process.env.PROXY_PORT ?? "8080", 10);
-const PROXY_CONTAINER_NAME = process.env.PROXY_CONTAINER_NAME;
-
-const docker = new DockerClient();
-const networkConnectionCache = new Set<string>();
 
 interface UpstreamInfo {
   hostname: string;
   port: number;
-  networkName: string;
 }
 
 function formatUniqueHostname(sessionId: string, containerId: string): string {
   return `s-${sessionId.slice(0, 8)}-${containerId.slice(0, 8)}`;
-}
-
-function formatNetworkName(sessionId: string): string {
-  return `lab-${sessionId}`;
-}
-
-async function ensureConnectedToNetwork(networkName: string): Promise<boolean> {
-  if (networkConnectionCache.has(networkName)) {
-    return false;
-  }
-
-  if (!PROXY_CONTAINER_NAME) {
-    console.warn("[Proxy] PROXY_CONTAINER_NAME not set, skipping network connection");
-    return false;
-  }
-
-  try {
-    const isConnected = await docker.isConnectedToNetwork(PROXY_CONTAINER_NAME, networkName);
-    if (!isConnected) {
-      await docker.connectToNetwork(PROXY_CONTAINER_NAME, networkName);
-      console.log(`[Proxy] Connected to network ${networkName}`);
-      networkConnectionCache.add(networkName);
-      return true;
-    }
-    networkConnectionCache.add(networkName);
-    return false;
-  } catch (error) {
-    console.warn(`[Proxy] Failed to connect to network ${networkName}:`, error);
-    return false;
-  }
 }
 
 async function resolveUpstream(sessionId: string, port: number): Promise<UpstreamInfo | null> {
@@ -77,7 +41,6 @@ async function resolveUpstream(sessionId: string, port: number): Promise<Upstrea
   return {
     hostname: formatUniqueHostname(sessionId, row.containerId),
     port,
-    networkName: formatNetworkName(sessionId),
   };
 }
 
@@ -184,12 +147,6 @@ async function handleRequest(
     return new Response("Not Found: Session or port not available", { status: 404 });
   }
 
-  const justConnected = await ensureConnectedToNetwork(upstream.networkName);
-
-  if (justConnected) {
-    await new Promise((resolve) => setTimeout(resolve, 150));
-  }
-
   const upgradeHeader = request.headers.get("upgrade");
   if (upgradeHeader?.toLowerCase() === "websocket") {
     const url = new URL(request.url);
@@ -207,7 +164,7 @@ async function handleRequest(
     return new Response("WebSocket upgrade failed", { status: 500 });
   }
 
-  const response = await proxyRequest(request, upstream, justConnected ? 3 : 0);
+  const response = await proxyRequest(request, upstream, 0);
 
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(corsHeaders())) {

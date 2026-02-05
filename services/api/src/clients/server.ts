@@ -8,7 +8,7 @@ import { createOpenCodeProxyHandler } from "../opencode/handler";
 import { createChannelRestHandler } from "../snapshots/rest-handler";
 import type { PoolManager } from "../managers/pool.manager";
 import type { LogMonitor } from "../monitors/log.monitor";
-import { reconcileNetworkConnections, type NetworkContainerNames } from "../runtime/network";
+import { reconcileNetworkConnections } from "../runtime/network";
 import { isHttpMethod, isRouteModule } from "@lab/router";
 import type { RouteContext } from "../types/route";
 import { join } from "node:path";
@@ -17,6 +17,7 @@ import type { Sandbox, OpencodeClient, Publisher, Widelog } from "../types/depen
 import { AppError, ServiceUnavailableError } from "../shared/errors";
 import type { BrowserServiceManager } from "../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
+import type { SessionStateStore } from "../state/session-state-store";
 import {
   withCors,
   optionsResponse,
@@ -26,7 +27,6 @@ import {
 } from "@lab/http-utilities";
 
 export interface ApiServerConfig {
-  containerNames: NetworkContainerNames;
   proxyBaseDomain: string;
   opencodeUrl: string;
   github: {
@@ -47,6 +47,7 @@ export interface ApiServerServices {
   promptService: PromptService;
   imageStore?: ImageStore;
   widelog: Widelog;
+  sessionStateStore: SessionStateStore;
 }
 
 export class ApiServer {
@@ -75,7 +76,7 @@ export class ApiServer {
   }
 
   async start(port: string): Promise<Publisher> {
-    const { containerNames, proxyBaseDomain, opencodeUrl, github, frontendUrl } = this.config;
+    const { proxyBaseDomain, opencodeUrl, github, frontendUrl } = this.config;
     const {
       browserService,
       sessionLifecycle,
@@ -85,16 +86,16 @@ export class ApiServer {
       opencode,
       promptService,
       imageStore,
+      sessionStateStore,
     } = this.services;
 
-    // Create publisher with lazy server access - publisher can be used in handlers
-    // but will only access the server when actually publishing (after server starts)
     this.publisher = createPublisher(schema, () => this.getServer());
 
     const handleOpenCodeProxy = createOpenCodeProxyHandler({
       opencodeUrl,
       publisher: this.publisher,
       promptService,
+      sessionStateStore,
     });
 
     const routeContext: RouteContext = {
@@ -108,6 +109,7 @@ export class ApiServer {
       logMonitor,
       imageStore,
       proxyBaseDomain,
+      sessionStateStore,
       githubClientId: github.clientId,
       githubClientSecret: github.clientSecret,
       githubCallbackUrl: github.callbackUrl,
@@ -120,6 +122,7 @@ export class ApiServer {
       opencode,
       logMonitor,
       proxyBaseDomain,
+      sessionStateStore,
     });
 
     const handleChannelRequest = createChannelRestHandler({
@@ -127,6 +130,7 @@ export class ApiServer {
       opencode,
       logMonitor,
       proxyBaseDomain,
+      sessionStateStore,
     });
 
     this.server = Bun.serve<WebSocketData<Auth>>({
@@ -157,7 +161,7 @@ export class ApiServer {
       },
     });
 
-    reconcileNetworkConnections(containerNames, sandbox).catch((error) =>
+    reconcileNetworkConnections(sandbox).catch((error) =>
       console.warn("[ApiServer] Network reconciliation failed:", error),
     );
 

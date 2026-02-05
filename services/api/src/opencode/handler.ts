@@ -4,7 +4,7 @@ import type { PromptService } from "../types/prompt";
 import { findSessionById, updateSessionFields } from "../repositories/session.repository";
 import { getProjectSystemPrompt } from "../repositories/project.repository";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
-import { setLastMessage } from "../state/last-message-store";
+import type { SessionStateStore } from "../state/session-state-store";
 import type { Publisher } from "../types/dependencies";
 
 const PROMPT_ENDPOINTS = ["/session/", "/prompt", "/message"];
@@ -148,10 +148,11 @@ export interface OpenCodeProxyDeps {
   opencodeUrl: string;
   publisher: Publisher;
   promptService: PromptService;
+  sessionStateStore: SessionStateStore;
 }
 
 export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodeProxyHandler {
-  const { opencodeUrl, publisher, promptService } = deps;
+  const { opencodeUrl, publisher, promptService, sessionStateStore } = deps;
 
   async function buildProxyBody(
     request: Request,
@@ -288,7 +289,7 @@ export function createOpenCodeProxyHandler(deps: OpenCodeProxyDeps): OpenCodePro
     });
 
     if (userMessageText && proxyResponse.ok && labSessionId) {
-      setLastMessage(labSessionId, userMessageText);
+      await sessionStateStore.setLastMessage(labSessionId, userMessageText);
       publisher.publishDelta(
         "sessionMetadata",
         { uuid: labSessionId },

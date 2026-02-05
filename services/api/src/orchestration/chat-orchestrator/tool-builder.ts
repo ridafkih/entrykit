@@ -2,7 +2,7 @@ import type { LanguageModel } from "ai";
 import {
   listProjectsTool,
   listSessionsTool,
-  getSessionStatusTool,
+  createGetSessionStatusTool,
   getContainersTool,
   createCreateSessionTool,
   createSendMessageToSessionTool,
@@ -17,6 +17,7 @@ import type { PoolManager } from "../../managers/pool.manager";
 import type { ImageStore } from "@lab/context";
 import type { ImageAnalyzerContext } from "@lab/subagents/vision";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
+import type { SessionStateStore } from "../../state/session-state-store";
 
 export interface BuildOrchestratorToolsConfig {
   browserService: BrowserServiceManager;
@@ -28,6 +29,7 @@ export interface BuildOrchestratorToolsConfig {
   visionContext?: ImageAnalyzerContext;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 export async function buildOrchestratorTools(toolsConfig: BuildOrchestratorToolsConfig) {
@@ -38,13 +40,17 @@ export async function buildOrchestratorTools(toolsConfig: BuildOrchestratorTools
     modelId: toolsConfig.modelId,
     opencode: toolsConfig.opencode,
     publisher: toolsConfig.publisher,
+    sessionStateStore: toolsConfig.sessionStateStore,
   });
 
   const sendMessageToSessionTool = createSendMessageToSessionTool({
     modelId: toolsConfig.modelId,
     opencode: toolsConfig.opencode,
     publisher: toolsConfig.publisher,
+    sessionStateStore: toolsConfig.sessionStateStore,
   });
+
+  const getSessionStatusTool = createGetSessionStatusTool(toolsConfig.sessionStateStore);
 
   const getSessionScreenshotTool = createGetSessionScreenshotTool({
     daemonController: toolsConfig.browserService.daemonController,

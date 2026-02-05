@@ -17,6 +17,7 @@ import type { BrowserServiceManager } from "../managers/browser-service.manager"
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
 import type { PoolManager } from "../managers/pool.manager";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
+import type { SessionStateStore } from "../state/session-state-store";
 import { NotFoundError } from "../shared/errors";
 
 export interface OrchestrationInput {
@@ -31,6 +32,7 @@ export interface OrchestrationInput {
   poolManager: PoolManager;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 export interface OrchestrationResult {
@@ -49,6 +51,7 @@ interface OrchestrationContext {
   poolManager: PoolManager;
   opencode: OpencodeClient;
   publisher: Publisher;
+  sessionStateStore: SessionStateStore;
 }
 
 async function transitionTo(
@@ -143,6 +146,7 @@ async function startConversation(ctx: OrchestrationContext, sessionId: string): 
     modelId: ctx.modelId,
     opencode: ctx.opencode,
     publisher: ctx.publisher,
+    sessionStateStore: ctx.sessionStateStore,
   });
 }
 
@@ -168,13 +172,11 @@ async function markFailed(
 }
 
 export async function orchestrate(input: OrchestrationInput): Promise<OrchestrationResult> {
-  const { opencode, publisher } = input;
+  const { opencode, publisher, sessionStateStore } = input;
 
-  // Check if this is a message to an existing session
   if (input.channelId) {
     const existingSession = await findSessionById(input.channelId);
     if (existingSession && existingSession.opencodeSessionId) {
-      // Route to existing session
       await sendMessageToSession({
         sessionId: input.channelId,
         opencodeSessionId: existingSession.opencodeSessionId,
@@ -182,6 +184,7 @@ export async function orchestrate(input: OrchestrationInput): Promise<Orchestrat
         modelId: input.modelId,
         opencode,
         publisher,
+        sessionStateStore,
       });
 
       return {
@@ -193,7 +196,6 @@ export async function orchestrate(input: OrchestrationInput): Promise<Orchestrat
     }
   }
 
-  // Create new orchestration for new sessions
   const orchestrationId = await createOrchestrationRequest({
     content: input.content,
     channelId: input.channelId,
@@ -205,7 +207,7 @@ export async function orchestrate(input: OrchestrationInput): Promise<Orchestrat
 
   initializeStatusChannel(orchestrationId, publisher);
 
-  const ctx: OrchestrationContext = {
+  const context: OrchestrationContext = {
     id: orchestrationId,
     content: input.content,
     modelId: input.modelId,
@@ -214,13 +216,14 @@ export async function orchestrate(input: OrchestrationInput): Promise<Orchestrat
     poolManager: input.poolManager,
     opencode,
     publisher,
+    sessionStateStore,
   };
 
   try {
-    const resolution = await resolveTargetProject(ctx);
-    const sessionId = await spawnSessionForProject(ctx, resolution);
-    await startConversation(ctx, sessionId);
-    await markComplete(ctx, sessionId, resolution.projectName);
+    const resolution = await resolveTargetProject(context);
+    const sessionId = await spawnSessionForProject(context, resolution);
+    await startConversation(context, sessionId);
+    await markComplete(context, sessionId, resolution.projectName);
 
     return {
       orchestrationId,

@@ -38,7 +38,8 @@ export type {
   RuntimeContainerStartResult,
 } from "./types/runtime";
 
-// Types - Events
+export type { SessionManager, SessionNetwork } from "./types/session";
+
 export type {
   ContainerEvent,
   ContainerEventAction,
@@ -46,7 +47,6 @@ export type {
   ContainerEventStreamOptions,
 } from "./types/events";
 
-// Schemas
 export {
   PortMappingSchema,
   VolumeBindingSchema,
@@ -56,13 +56,10 @@ export {
 export { NetworkCreateOptionsSchema } from "./schemas/network";
 export { PortAllocatorOptionsSchema } from "./schemas/port";
 
-// Error
 export { SandboxError, SandboxErrorKind } from "./error";
 
-// Guards
 export { isContainerState, isSandboxError } from "./guards";
 
-// Constants
 export {
   VALID_CONTAINER_STATES,
   DEFAULT_PORT_RANGE,
@@ -70,7 +67,6 @@ export {
   DEFAULT_PROTOCOL,
 } from "./constants";
 
-// Utils
 export {
   resolveStartOrder,
   CircularDependencyError,
@@ -78,5 +74,4 @@ export {
   type StartLevel,
 } from "./utils/dependency-resolver";
 
-// Sandbox
 export { Sandbox, type SandboxConfig } from "./sandbox";

@@ -4,8 +4,8 @@ import type {
   RuntimeContainerStartResult,
   SandboxProvider,
   VolumeBinding,
-  RestartPolicy,
 } from "@lab/sandbox-sdk";
+import type { RestartPolicy } from "@lab/sandbox-sdk";
 
 export interface DockerRuntimeManagerConfig {
   workspacesSource: string;
@@ -29,18 +29,18 @@ export class DockerRuntimeManager implements RuntimeManager {
   ) {}
 
   async startContainer(input: RuntimeContainerStartInput): Promise<RuntimeContainerStartResult> {
+    const containerName = this.formatContainerName(input.sessionId, input.containerId);
+
     const runtimeId = await this.provider.createContainer({
-      name: input.containerName,
+      name: containerName,
       image: input.image,
       hostname: input.hostname,
-      networkMode: input.networkName,
+      networkMode: input.networkId,
       workdir: input.workdir,
       env: input.env,
       ports: (input.ports ?? []).map((port) => ({ container: port, host: undefined })),
       volumes: this.getVolumeBindings(),
       labels: {
-        "com.docker.compose.project": `lab-${input.sessionId}`,
-        "com.docker.compose.service": input.serviceName,
         "lab.session": input.sessionId,
         "lab.project": input.projectId,
         "lab.container": input.containerId,
@@ -56,22 +56,17 @@ export class DockerRuntimeManager implements RuntimeManager {
     }
 
     try {
-      const aliases = input.networkAliases ?? [];
+      const aliases = input.aliases ?? [];
       if (aliases.length > 0) {
-        const isConnected = await this.provider.isConnectedToNetwork(runtimeId, input.networkName);
+        const isConnected = await this.provider.isConnectedToNetwork(runtimeId, input.networkId);
         if (isConnected) {
-          await this.provider.disconnectFromNetwork(runtimeId, input.networkName);
+          await this.provider.disconnectFromNetwork(runtimeId, input.networkId);
         }
-        await this.provider.connectToNetwork(runtimeId, input.networkName, { aliases });
+        await this.provider.connectToNetwork(runtimeId, input.networkId, { aliases });
 
-        const verifyConnected = await this.provider.isConnectedToNetwork(
-          runtimeId,
-          input.networkName,
-        );
+        const verifyConnected = await this.provider.isConnectedToNetwork(runtimeId, input.networkId);
         if (!verifyConnected) {
-          throw new Error(
-            `Failed to connect container ${runtimeId} to network ${input.networkName}`,
-          );
+          throw new Error(`Failed to connect container ${runtimeId} to network ${input.networkId}`);
         }
       }
     } catch (networkError) {
@@ -88,5 +83,9 @@ export class DockerRuntimeManager implements RuntimeManager {
       { source: this.config.opencodeAuthSource, target: this.config.opencodeAuthTarget },
       { source: this.config.browserSocketSource, target: this.config.browserSocketTarget },
     ];
+  }
+
+  private formatContainerName(sessionId: string, containerId: string): string {
+    return `lab-${sessionId}-${containerId}`;
   }
 }
