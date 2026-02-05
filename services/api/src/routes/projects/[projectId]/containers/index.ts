@@ -5,6 +5,8 @@ import {
 } from "../../../../repositories/container-dependency.repository";
 import { ValidationError } from "../../../../shared/errors";
 import { withParams } from "../../../../shared/route-helpers";
+import { parseRequestBody } from "../../../../shared/validation";
+import { z } from "zod";
 
 interface DependencyInput {
   containerId: string;
@@ -12,6 +14,21 @@ interface DependencyInput {
 }
 
 type DependsOnInput = (DependencyInput | string)[];
+
+const dependencyInputSchema = z.union([
+  z.string().min(1),
+  z.object({
+    containerId: z.string().min(1),
+    condition: z.string().optional(),
+  }),
+]);
+
+const createContainerSchema = z.object({
+  image: z.string().min(1),
+  hostname: z.string().min(1).optional(),
+  ports: z.array(z.number().int().positive()).optional(),
+  dependsOn: z.array(dependencyInputSchema).optional(),
+});
 
 function normalizeDependencies(
   dependsOn: DependsOnInput | undefined,
@@ -43,7 +60,7 @@ const GET = withParams<{ projectId: string }>(["projectId"], async ({ projectId 
 });
 
 const POST = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, request) => {
-  const body = await request.json();
+  const body = await parseRequestBody(request, createContainerSchema);
 
   const normalizedDependencies = normalizeDependencies(body.dependsOn);
 
@@ -57,8 +74,7 @@ const POST = withParams<{ projectId: string }>(["projectId"], async ({ projectId
     }
   }
 
-  const ports =
-    body.ports && Array.isArray(body.ports) && body.ports.length > 0 ? body.ports : undefined;
+  const ports = body.ports && body.ports.length > 0 ? body.ports : undefined;
 
   const container = await createContainerWithDetails({
     projectId,

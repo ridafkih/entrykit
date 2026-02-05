@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { tool } from "ai";
-import { findSessionById } from "../../repositories/session.repository";
+import { getSession } from "../../services/session.service";
 import { resolveWorkspacePathBySession } from "../../shared/path-resolver";
 import { isOpencodeMessage, extractTextFromParts } from "../opencode-messages";
 import type { OpencodeClient } from "../../types/dependencies";
@@ -20,7 +20,7 @@ export function createGetSessionMessagesTool(opencode: OpencodeClient) {
       "Gets conversation messages from a session. Returns messages in reverse chronological order (most recent first) with role and content.",
     inputSchema,
     execute: async ({ sessionId, limit }) => {
-      const session = await findSessionById(sessionId);
+      const session = await getSession(sessionId);
 
       if (!session) {
         return { error: "Session not found", messages: [] };

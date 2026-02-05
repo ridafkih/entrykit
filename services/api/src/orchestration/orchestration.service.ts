@@ -1,19 +1,21 @@
-import { db } from "@lab/database/client";
 import {
-  orchestrationRequests,
   type OrchestrationStatus,
+  type ResolutionConfidence,
   type MessagingMode,
 } from "@lab/database/schema/orchestration-requests";
-import { eq } from "drizzle-orm";
-import { findAllProjects } from "../repositories/project.repository";
+import { findAllProjects, findProjectById } from "../repositories/project.repository";
 import { resolveProject, type ProjectResolutionResult } from "./project-resolver";
 import { spawnSession } from "./session-spawner";
 import { initiateConversation } from "./conversation-initiator";
 import { sendMessageToSession } from "./message-sender";
 import { findSessionById } from "../repositories/session.repository";
+import {
+  createOrchestrationRequest,
+  updateOrchestrationStatus,
+} from "../repositories/orchestration-request.repository";
 import type { BrowserServiceManager } from "../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
-import type { PoolManager } from "../services/pool.manager";
+import type { PoolManager } from "../managers/pool.manager";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
 
 export interface OrchestrationInput {
@@ -31,10 +33,10 @@ export interface OrchestrationInput {
 }
 
 export interface OrchestrationResult {
-  orchestrationId: string;
+  orchestrationId: string | null;
   sessionId: string;
   projectId: string;
-  projectName: string;
+  projectName: string | null;
 }
 
 interface OrchestrationContext {
@@ -48,31 +50,6 @@ interface OrchestrationContext {
   publisher: Publisher;
 }
 
-async function createOrchestrationRecord(input: {
-  content: string;
-  channelId?: string;
-  modelId?: string;
-  platformOrigin?: string;
-  platformChatId?: string;
-  messagingMode?: MessagingMode;
-}): Promise<string> {
-  const [record] = await db
-    .insert(orchestrationRequests)
-    .values({
-      content: input.content,
-      channelId: input.channelId,
-      modelId: input.modelId,
-      platformOrigin: input.platformOrigin,
-      platformChatId: input.platformChatId,
-      messagingMode: input.messagingMode ?? "passive",
-      status: "pending",
-    })
-    .returning({ id: orchestrationRequests.id });
-
-  if (!record) throw new Error("Failed to create orchestration record");
-  return record.id;
-}
-
 async function transitionTo(
   orchestrationId: string,
   status: OrchestrationStatus,
@@ -80,25 +57,20 @@ async function transitionTo(
   data?: {
     resolvedProjectId?: string;
     resolvedSessionId?: string;
-    resolutionConfidence?: string;
+    resolutionConfidence?: ResolutionConfidence;
     resolutionReasoning?: string;
     projectName?: string | null;
     sessionId?: string | null;
     errorMessage?: string | null;
   },
 ): Promise<void> {
-  await db
-    .update(orchestrationRequests)
-    .set({
-      status,
-      resolvedProjectId: data?.resolvedProjectId,
-      resolvedSessionId: data?.resolvedSessionId,
-      resolutionConfidence: data?.resolutionConfidence,
-      resolutionReasoning: data?.resolutionReasoning,
-      errorMessage: data?.errorMessage,
-      updatedAt: new Date(),
-    })
-    .where(eq(orchestrationRequests.id, orchestrationId));
+  await updateOrchestrationStatus(orchestrationId, status, {
+    resolvedProjectId: data?.resolvedProjectId,
+    resolvedSessionId: data?.resolvedSessionId,
+    resolutionConfidence: data?.resolutionConfidence,
+    resolutionReasoning: data?.resolutionReasoning,
+    errorMessage: data?.errorMessage,
+  });
 
   publisher.publishDelta(
     "orchestrationStatus",
@@ -212,16 +184,16 @@ export async function orchestrate(input: OrchestrationInput): Promise<Orchestrat
       });
 
       return {
-        orchestrationId: "", // No new orchestration created for existing session messages
+        orchestrationId: null,
         sessionId: input.channelId,
         projectId: existingSession.projectId,
-        projectName: existingSession.title ?? "Unknown",
+        projectName: (await findProjectById(existingSession.projectId))?.name ?? null,
       };
     }
   }
 
   // Create new orchestration for new sessions
-  const orchestrationId = await createOrchestrationRecord({
+  const orchestrationId = await createOrchestrationRequest({
     content: input.content,
     channelId: input.channelId,
     modelId: input.modelId,

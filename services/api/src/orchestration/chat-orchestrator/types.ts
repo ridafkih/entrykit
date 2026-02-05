@@ -1,7 +1,7 @@
 export type { MessageAttachment } from "../tool-result-handler";
 import type { BrowserServiceManager } from "../../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../../managers/session-lifecycle.manager";
-import type { PoolManager } from "../../services/pool.manager";
+import type { PoolManager } from "../../managers/pool.manager";
 import type { ImageStore } from "@lab/context";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
 

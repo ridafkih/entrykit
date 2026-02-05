@@ -40,9 +40,11 @@ export function useOrchestrate(): UseOrchestrateResult {
   const { useChannel } = useMultiplayer();
   const [state, setState] = useState<OrchestrationState>(initialState);
 
-  const orchestrationStatus = useChannel("orchestrationStatus", {
-    uuid: state.orchestrationId ?? "",
-  });
+  const orchestrationStatus = useChannel(
+    "orchestrationStatus",
+    state.orchestrationId ? { uuid: state.orchestrationId } : undefined,
+    { enabled: Boolean(state.orchestrationId) },
+  );
 
   const isLoading =
     state.status === "pending" ||

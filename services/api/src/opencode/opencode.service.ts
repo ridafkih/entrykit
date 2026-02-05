@@ -22,14 +22,14 @@ export async function getSessionData(labSessionId: string): Promise<SessionData 
   };
 }
 
-export function getServiceRoutes(
+export async function getServiceRoutes(
   sessionId: string,
   proxyManager: ProxyManager | null,
-): RouteInfo[] {
+): Promise<RouteInfo[]> {
   if (!proxyManager) return [];
 
   try {
-    return proxyManager.getUrls(sessionId);
+    return await proxyManager.getUrls(sessionId);
   } catch {
     return [];
   }

@@ -10,7 +10,7 @@ import { findSessionById } from "../repositories/session.repository";
 import { SESSION_STATUS } from "../types/session";
 import { CONTAINER_STATUS } from "../types/container";
 import type { BrowserService } from "../browser/browser-service";
-import { createSessionNetwork, cleanupSessionNetwork, type NetworkContainerNames } from "./network";
+import { createSessionNetwork, type NetworkContainerNames } from "./network";
 import { buildEnvironmentVariables } from "./environment-builder";
 import { buildNetworkAliasesAndPortMap } from "./port-mapper";
 import {
@@ -19,11 +19,7 @@ import {
   resolveStartOrder,
   type PreparedContainer,
 } from "./container-preparer";
-import {
-  cleanupOrphanedResources,
-  cleanupOnError,
-  type CleanupSessionDeps,
-} from "../services/session-cleanup.service";
+import type { SessionCleanupService } from "../services/session-cleanup.service";
 import type { Sandbox, Publisher } from "../types/dependencies";
 import type { ProxyManager } from "../services/proxy.service";
 
@@ -39,6 +35,7 @@ export interface InitializeSessionContainersDeps {
   sandbox: Sandbox;
   publisher: Publisher;
   proxyManager: ProxyManager;
+  cleanupService: SessionCleanupService;
 }
 
 async function createAndStartContainer(
@@ -167,19 +164,11 @@ export async function initializeSessionContainers(
   browserService: BrowserService,
   deps: InitializeSessionContainersDeps,
 ): Promise<void> {
-  const { containerNames, sandbox, publisher, proxyManager } = deps;
+  const { containerNames, sandbox, proxyManager, cleanupService } = deps;
 
   const containerDefinitions = await findContainersWithDependencies(projectId);
   const dockerIds: string[] = [];
   const clusterContainers: ClusterContainer[] = [];
-
-  // Build cleanup deps for error handling and orphan cleanup
-  const cleanupDeps: CleanupSessionDeps = {
-    sandbox,
-    publisher,
-    proxyManager,
-    cleanupSessionNetwork: (sid: string) => cleanupSessionNetwork(sid, containerNames, sandbox),
-  };
 
   try {
     const containerNodes = buildContainerNodes(containerDefinitions);
@@ -218,7 +207,7 @@ export async function initializeSessionContainers(
     const session = await findSessionById(sessionId);
     if (!session || session.status === SESSION_STATUS.DELETING) {
       console.log(`Session ${sessionId} was deleted during initialization, cleaning up`);
-      await cleanupOrphanedContainers(sessionId, dockerIds, browserService, cleanupDeps);
+      await cleanupService.cleanupOrphanedResources(sessionId, dockerIds, browserService);
       return;
     }
   } catch (error) {
@@ -226,17 +215,8 @@ export async function initializeSessionContainers(
       console.error(`Circular dependency in project ${projectId}: ${error.cycle.join(" -> ")}`);
     }
     console.error(`Failed to initialize session ${sessionId}:`, error);
-    await handleInitializationError(sessionId, projectId, dockerIds, browserService, cleanupDeps);
+    await handleInitializationError(sessionId, projectId, dockerIds, browserService, deps);
   }
-}
-
-async function cleanupOrphanedContainers(
-  sessionId: string,
-  dockerIds: string[],
-  browserService: BrowserService,
-  deps: CleanupSessionDeps,
-): Promise<void> {
-  await cleanupOrphanedResources(sessionId, dockerIds, browserService, deps);
 }
 
 async function handleInitializationError(
@@ -244,9 +224,8 @@ async function handleInitializationError(
   projectId: string,
   dockerIds: string[],
   browserService: BrowserService,
-  deps: CleanupSessionDeps,
+  deps: Pick<InitializeSessionContainersDeps, "publisher" | "cleanupService">,
 ): Promise<void> {
-  // Update container statuses to error before cleanup
   const errorContainers = await updateSessionContainersStatusBySessionId(
     sessionId,
     CONTAINER_STATUS.ERROR,
@@ -260,5 +239,5 @@ async function handleInitializationError(
     );
   }
 
-  await cleanupOnError(sessionId, projectId, dockerIds, browserService, deps);
+  await deps.cleanupService.cleanupOnError(sessionId, projectId, dockerIds, browserService);
 }

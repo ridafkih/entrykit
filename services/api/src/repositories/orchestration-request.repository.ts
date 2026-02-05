@@ -2,6 +2,9 @@ import { db } from "@lab/database/client";
 import {
   orchestrationRequests,
   type OrchestrationRequest,
+  type OrchestrationStatus,
+  type MessagingMode,
+  type ResolutionConfidence,
   type SummaryStatus,
 } from "@lab/database/schema/orchestration-requests";
 import { eq } from "drizzle-orm";
@@ -33,6 +36,62 @@ export async function findOrchestrationBySessionIdOrThrow(
     "Orchestration for session",
     sessionId,
   );
+}
+
+interface CreateOrchestrationRequestInput {
+  content: string;
+  channelId?: string;
+  modelId?: string;
+  platformOrigin?: string;
+  platformChatId?: string;
+  messagingMode?: MessagingMode;
+}
+
+export async function createOrchestrationRequest(
+  input: CreateOrchestrationRequestInput,
+): Promise<string> {
+  const [record] = await db
+    .insert(orchestrationRequests)
+    .values({
+      content: input.content,
+      channelId: input.channelId,
+      modelId: input.modelId,
+      platformOrigin: input.platformOrigin,
+      platformChatId: input.platformChatId,
+      messagingMode: input.messagingMode ?? "passive",
+      status: "pending",
+    })
+    .returning({ id: orchestrationRequests.id });
+
+  if (!record) throw new Error("Failed to create orchestration record");
+  return record.id;
+}
+
+interface UpdateOrchestrationStatusInput {
+  resolvedProjectId?: string;
+  resolvedSessionId?: string;
+  resolutionConfidence?: ResolutionConfidence;
+  resolutionReasoning?: string;
+  errorMessage?: string | null;
+}
+
+export async function updateOrchestrationStatus(
+  orchestrationId: string,
+  status: OrchestrationStatus,
+  data?: UpdateOrchestrationStatusInput,
+): Promise<void> {
+  await db
+    .update(orchestrationRequests)
+    .set({
+      status,
+      resolvedProjectId: data?.resolvedProjectId,
+      resolvedSessionId: data?.resolvedSessionId,
+      resolutionConfidence: data?.resolutionConfidence,
+      resolutionReasoning: data?.resolutionReasoning,
+      errorMessage: data?.errorMessage,
+      updatedAt: new Date(),
+    })
+    .where(eq(orchestrationRequests.id, orchestrationId));
 }
 
 export async function updateOrchestrationSummaryStatus(

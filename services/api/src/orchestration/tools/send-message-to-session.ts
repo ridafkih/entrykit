@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { tool } from "ai";
-import { findSessionById } from "../../repositories/session.repository";
+import { getSession } from "../../services/session.service";
 import { sendMessageToSession } from "../message-sender";
 import { getErrorMessage } from "../../shared/errors";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
@@ -22,7 +22,7 @@ export function createSendMessageToSessionTool(context: SendMessageToolContext) 
       "Sends a message to an existing active session. Use this to forward the user's request or follow-up to a session that is already working on a task.",
     inputSchema,
     execute: async ({ sessionId, message }) => {
-      const session = await findSessionById(sessionId);
+      const session = await getSession(sessionId);
 
       if (!session) {
         return { success: false, error: "Session not found" };

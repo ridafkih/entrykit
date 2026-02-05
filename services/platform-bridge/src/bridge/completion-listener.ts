@@ -71,8 +71,7 @@ class CompletionListener {
 
       const threadId = responseSubscriber.getThreadId(sessionId);
 
-      // If messages array exists, send each as a separate message
-      const messagesToSend = result.messages ?? [result.message];
+      const messagesToSend = [result.message];
 
       for (let i = 0; i < messagesToSend.length; i++) {
         const content = messagesToSend[i];

@@ -68,26 +68,27 @@ export function createHooks<S extends Schema>(schema: S) {
 
     function useChannel<K extends ChannelName<S>>(
       channelName: K,
-      ...args: ChannelParams<S, K> extends undefined
-        ? [params?: undefined, options?: ChannelOptions]
-        : [params: ChannelParams<S, K>, options?: ChannelOptions]
+      params?: ChannelParams<S, K>,
+      options?: ChannelOptions,
     ): SnapshotOf<S["channels"][K]> {
       const channel = schema.channels[channelName];
       if (!channel) throw new Error(`Unknown channel: ${channelName}`);
 
-      const params = args[0] ?? {};
-      const options = args[1] ?? {};
+      const resolvedParams = (params ?? {}) as Record<string, unknown>;
+      const resolvedOptions = options ?? {};
       const isInvalidParam = (value: unknown) => value === "" || value == null;
       const hasInvalidParams =
-        hasParams(channel.path) && Object.values(params).some(isInvalidParam);
-      const shouldSkip = hasInvalidParams || options.enabled === false;
+        hasParams(channel.path) &&
+        (Object.keys(resolvedParams).length === 0 ||
+          Object.values(resolvedParams).some(isInvalidParam));
+      const shouldSkip = hasInvalidParams || resolvedOptions.enabled === false;
 
       const resolvedPath = useMemo(
         () =>
           hasParams(channel.path)
-            ? resolvePath(channel.path, toStringRecord(params))
+            ? resolvePath(channel.path, toStringRecord(resolvedParams))
             : channel.path,
-        [channel.path, params],
+        [channel.path, resolvedParams],
       );
 
       const stateAtom = useMemo(() => channelStateFamily(resolvedPath), [resolvedPath]);

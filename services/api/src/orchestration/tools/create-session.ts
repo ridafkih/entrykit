@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { tool } from "ai";
-import { findProjectById } from "../../repositories/project.repository";
+import { getProject } from "../../services/project.service";
 import { spawnSession } from "../session-spawner";
 import { initiateConversation } from "../conversation-initiator";
 import type { BrowserServiceManager } from "../../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../../managers/session-lifecycle.manager";
-import type { PoolManager } from "../../services/pool.manager";
+import type { PoolManager } from "../../managers/pool.manager";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
 
 export interface CreateSessionToolContext {
@@ -28,7 +28,7 @@ export function createCreateSessionTool(context: CreateSessionToolContext) {
       "Creates a new session for a project and starts working on a task. Use this when the user wants to start a new coding task.",
     inputSchema,
     execute: async ({ projectId, taskSummary }) => {
-      const project = await findProjectById(projectId);
+      const project = await getProject(projectId);
 
       if (!project) {
         return { error: "Project not found", sessionId: null, projectName: null };

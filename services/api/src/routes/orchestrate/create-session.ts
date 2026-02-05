@@ -25,7 +25,7 @@ const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
 
   const { session } = await spawnSession({
     projectId,
-    taskSummary: taskSummary ?? "New session",
+    taskSummary,
     browserService: context.browserService,
     sessionLifecycle: context.sessionLifecycle,
     poolManager: context.poolManager,

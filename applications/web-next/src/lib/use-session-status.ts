@@ -14,10 +14,15 @@ type SessionContainer = {
 
 export function useSessionStatus(session: Session | null): SessionStatus {
   const { useChannel } = useMultiplayer();
-  const containers: SessionContainer[] = useChannel("sessionContainers", {
-    uuid: session?.id ?? "",
-  });
-  const metadata = useChannel("sessionMetadata", { uuid: session?.id ?? "" });
+  const sessionChannelParams = session ? { uuid: session.id } : undefined;
+  const channelOptions = { enabled: Boolean(session?.id) };
+
+  const containers: SessionContainer[] = useChannel(
+    "sessionContainers",
+    sessionChannelParams,
+    channelOptions,
+  );
+  const metadata = useChannel("sessionMetadata", sessionChannelParams, channelOptions);
 
   if (!session) {
     return "starting";

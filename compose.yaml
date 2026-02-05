@@ -1,4 +1,19 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: lab-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - redis_data:/data
+
   postgres:
     image: postgres:17-alpine
     container_name: lab-postgres
@@ -133,11 +148,18 @@ services:
       IMAGE_ANALYZER_PROVIDER: $IMAGE_ANALYZER_PROVIDER
       IMAGE_ANALYZER_MODEL: $IMAGE_ANALYZER_MODEL
       IMAGE_ANALYZER_API_KEY: $IMAGE_ANALYZER_API_KEY
+      REDIS_URL: redis://redis:6379
     depends_on:
-      - postgres
-      - opencode
-      - browser
-      - rustfs
+      postgres:
+        condition: service_started
+      opencode:
+        condition: service_started
+      browser:
+        condition: service_started
+      rustfs:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   browser:
     build:
@@ -210,6 +232,7 @@ services:
       - postgres
 
 volumes:
+  redis_data:
   postgres_data:
   session_workspaces:
   browser_sockets:

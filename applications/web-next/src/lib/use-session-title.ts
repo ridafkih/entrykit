@@ -11,5 +11,5 @@ export function useSessionTitle(sessionId: string, fallbackTitle?: string | null
   const { useChannel } = useMultiplayer();
   const metadata = useChannel("sessionMetadata", { uuid: sessionId });
 
-  return metadata.title || fallbackTitle || null;
+  return metadata.title ?? fallbackTitle ?? null;
 }

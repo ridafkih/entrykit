@@ -101,8 +101,8 @@ export interface OrchestrationInput {
 }
 
 export interface OrchestrationResult {
-  orchestrationId: string;
+  orchestrationId: string | null;
   sessionId: string;
   projectId: string;
-  projectName: string;
+  projectName: string | null;
 }

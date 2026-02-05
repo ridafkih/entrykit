@@ -9,8 +9,8 @@ import {
 import { findAllProjects } from "../repositories/project.repository";
 import { findContainersByProjectId } from "../repositories/container-definition.repository";
 import { createSessionContainer } from "../repositories/container-session.repository";
-import type { BrowserServiceManager } from "../managers/browser-service.manager";
-import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
+import type { BrowserServiceManager } from "./browser-service.manager";
+import type { SessionLifecycleManager } from "./session-lifecycle.manager";
 import type { Session } from "@lab/database/schema/sessions";
 
 interface PoolStats {

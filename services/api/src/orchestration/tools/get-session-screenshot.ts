@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { tool } from "ai";
-import { findSessionById } from "../../repositories/session.repository";
+import { getSession } from "../../services/session.service";
 import type { DaemonController } from "@lab/browser-protocol";
 import { ImageStore } from "@lab/context";
 
@@ -27,7 +27,7 @@ export function createGetSessionScreenshotTool(context: GetSessionScreenshotTool
       "To understand what's in the screenshot, use the analyzeImage tool with the returned URL.",
     inputSchema,
     execute: async ({ sessionId, fullPage }) => {
-      const session = await findSessionById(sessionId);
+      const session = await getSession(sessionId);
 
       if (!session) {
         return { error: "Session not found", hasScreenshot: false };

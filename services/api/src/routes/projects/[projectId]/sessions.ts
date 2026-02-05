@@ -1,7 +1,14 @@
 import { findSessionsByProjectId } from "../../../repositories/session.repository";
 import { spawnSession } from "../../../orchestration/session-spawner";
 import { withParams } from "../../../shared/route-helpers";
+import { parseRequestBody } from "../../../shared/validation";
 import type { BrowserContext, SessionContext, InfraContext } from "../../../types/route";
+import { z } from "zod";
+
+const createProjectSessionSchema = z.object({
+  initialMessage: z.string().optional(),
+  title: z.string().optional(),
+});
 
 const GET = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, _request) => {
   const sessions = await findSessionsByProjectId(projectId);
@@ -11,11 +18,11 @@ const GET = withParams<{ projectId: string }>(["projectId"], async ({ projectId 
 const POST = withParams<{ projectId: string }, BrowserContext & SessionContext & InfraContext>(
   ["projectId"],
   async ({ projectId }, request, context) => {
-    const body = await request.json();
+    const body = await parseRequestBody(request, createProjectSessionSchema);
 
     const result = await spawnSession({
       projectId,
-      taskSummary: body.initialMessage || body.title || "",
+      taskSummary: body.initialMessage ?? body.title,
       browserService: context.browserService,
       sessionLifecycle: context.sessionLifecycle,
       poolManager: context.poolManager,

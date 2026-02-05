@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { tool } from "ai";
-import { findSessionById } from "../../repositories/session.repository";
+import { getSession } from "../../services/session.service";
 import { getInferenceStatus } from "../../state/inference-status-store";
 
 const inputSchema = z.object({
@@ -12,7 +12,7 @@ export const getSessionStatusTool = tool({
     "Gets the current status of a session including whether it is busy (inferring), idle, or complete.",
   inputSchema,
   execute: async ({ sessionId }) => {
-    const session = await findSessionById(sessionId);
+    const session = await getSession(sessionId);
 
     if (!session) {
       return { error: "Session not found", status: null, lastActivity: null };

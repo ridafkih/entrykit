@@ -7,14 +7,14 @@ import {
 } from "../repositories/container-session.repository";
 import type { BrowserServiceManager } from "../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
-import type { PoolManager } from "../services/pool.manager";
+import type { PoolManager } from "../managers/pool.manager";
 import { generateSessionTitle } from "../generators/title.generator";
 import type { Publisher } from "../types/dependencies";
 import { CONTAINER_STATUS, isContainerStatus, type ContainerStatus } from "../types/container";
 
 export interface SpawnSessionOptions {
   projectId: string;
-  taskSummary: string;
+  taskSummary?: string;
   browserService: BrowserServiceManager;
   sessionLifecycle: SessionLifecycleManager;
   poolManager: PoolManager;
@@ -157,7 +157,7 @@ export async function spawnSession(options: SpawnSessionOptions): Promise<SpawnS
 
 function scheduleBackgroundTitleGeneration(
   sessionId: string,
-  userMessage: string,
+  userMessage: string | undefined,
   publisher: Publisher,
 ): void {
   if (!userMessage?.trim()) {

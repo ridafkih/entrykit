@@ -50,10 +50,10 @@ export interface OrchestrationRequest {
 }
 
 export interface OrchestrationResult {
-  orchestrationId: string;
+  orchestrationId: string | null;
   sessionId: string;
   projectId: string;
-  projectName: string;
+  projectName: string | null;
 }
 
 export interface SessionMessage {

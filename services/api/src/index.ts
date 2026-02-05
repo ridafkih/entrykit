@@ -9,13 +9,14 @@ import { ApiServer } from "./clients/server";
 import { ContainerMonitor } from "./monitors/container.monitor";
 import { OpenCodeMonitor } from "./monitors/opencode.monitor";
 import { LogMonitor } from "./monitors/log.monitor";
-import { PoolManager } from "./services/pool.manager";
+import { PoolManager } from "./managers/pool.manager";
 import { BrowserServiceManager } from "./managers/browser-service.manager";
 import { SessionLifecycleManager } from "./managers/session-lifecycle.manager";
 import { ProxyManager } from "./services/proxy.service";
 import { createDefaultPromptService } from "./prompts/builder";
 import { Sandbox } from "@lab/sandbox-sdk";
 import { DeferredPublisher } from "./shared/deferred-publisher";
+import { RedisClient } from "bun";
 
 const { widelog } = widelogger({
   transport: (event) => process.stdout.write(JSON.stringify(event) + "\n"),
@@ -39,6 +40,7 @@ const envSchema = type({
   GITHUB_CLIENT_SECRET: "string?",
   GITHUB_CALLBACK_URL: "string?",
   FRONTEND_URL: "string?",
+  REDIS_URL: "string = 'redis://localhost:6379'",
 });
 
 entry({
@@ -61,7 +63,8 @@ entry({
       opencodeContainerName: env.OPENCODE_CONTAINER_NAME,
     };
 
-    const proxyManager = new ProxyManager(env.PROXY_BASE_DOMAIN);
+    const redis = new RedisClient(env.REDIS_URL);
+    const proxyManager = new ProxyManager(env.PROXY_BASE_DOMAIN, redis);
 
     const deferredPublisher = new DeferredPublisher();
 
@@ -123,6 +126,7 @@ entry({
 
     return {
       server,
+      redis,
       deferredPublisher,
       browserService,
       sessionLifecycle,
@@ -135,6 +139,7 @@ entry({
   main: async ({ env, extras }) => {
     const {
       server,
+      redis,
       deferredPublisher,
       browserService,
       sessionLifecycle,
@@ -161,6 +166,7 @@ entry({
       openCodeMonitor.stop();
       logMonitor.stop();
       server.shutdown();
+      redis.close();
     };
   },
 });

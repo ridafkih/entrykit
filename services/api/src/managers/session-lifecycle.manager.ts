@@ -1,5 +1,5 @@
 import { initializeSessionContainers } from "../docker/containers";
-import { cleanupSessionFull } from "../services/session-cleanup.service";
+import { SessionCleanupService } from "../services/session-cleanup.service";
 import {
   cleanupSessionNetwork,
   cleanupOrphanedNetworks,
@@ -26,14 +26,21 @@ export class SessionLifecycleManager {
 
   private getDeps() {
     const { containerNames, browserSocketVolume } = this.config;
+    const cleanupService = new SessionCleanupService({
+      sandbox: this.sandbox,
+      publisher: this.deferredPublisher.get(),
+      proxyManager: this.proxyManager,
+      cleanupSessionNetwork: (sessionId: string) =>
+        cleanupSessionNetwork(sessionId, containerNames, this.sandbox),
+    });
+
     return {
       containerNames,
       browserSocketVolume,
       sandbox: this.sandbox,
       publisher: this.deferredPublisher.get(),
       proxyManager: this.proxyManager,
-      cleanupSessionNetwork: (sessionId: string) =>
-        cleanupSessionNetwork(sessionId, containerNames, this.sandbox),
+      cleanupService,
     };
   }
 
@@ -51,6 +58,7 @@ export class SessionLifecycleManager {
   }
 
   async cleanupSession(sessionId: string): Promise<void> {
-    await cleanupSessionFull(sessionId, this.browserServiceManager.service, this.getDeps());
+    const { cleanupService } = this.getDeps();
+    await cleanupService.cleanupSessionFull(sessionId, this.browserServiceManager.service);
   }
 }

@@ -1,5 +1,13 @@
 import { findAllProjectsWithContainers, createProject } from "../repositories/project.repository";
 import type { Handler, InfraContext } from "../types/route";
+import { parseRequestBody } from "../shared/validation";
+import { z } from "zod";
+
+const createProjectSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  systemPrompt: z.string().optional(),
+});
 
 const GET: Handler = async () => {
   const projects = await findAllProjectsWithContainers();
@@ -7,7 +15,7 @@ const GET: Handler = async () => {
 };
 
 const POST: Handler<InfraContext> = async (request, _params, ctx) => {
-  const body = await request.json();
+  const body = await parseRequestBody(request, createProjectSchema);
   const project = await createProject({
     name: body.name,
     description: body.description,

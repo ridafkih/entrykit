@@ -1,13 +1,9 @@
 import { z } from "zod";
 import { tool } from "ai";
-import { db } from "@lab/database/client";
-import { sessions } from "@lab/database/schema/sessions";
-import { projects } from "@lab/database/schema/projects";
-import { eq, ne, and, desc, or, ilike } from "drizzle-orm";
+import { searchSessions } from "../../services/session.service";
 import { resolveWorkspacePathBySession } from "../../shared/path-resolver";
 import { isOpencodeMessage, extractTextFromParts } from "../opencode-messages";
 import type { OpencodeClient } from "../../types/dependencies";
-import { SESSION_STATUS } from "../../types/session";
 
 const inputSchema = z.object({
   query: z.string().describe("The search query to find relevant sessions"),
@@ -22,29 +18,8 @@ export function createSearchSessionsTool(opencode: OpencodeClient) {
     execute: async ({ query, limit }) => {
       const searchLimit = limit ?? 5;
 
-      const rows = await db
-        .select({
-          id: sessions.id,
-          projectId: sessions.projectId,
-          projectName: projects.name,
-          title: sessions.title,
-          opencodeSessionId: sessions.opencodeSessionId,
-          status: sessions.status,
-          createdAt: sessions.createdAt,
-        })
-        .from(sessions)
-        .innerJoin(projects, eq(sessions.projectId, projects.id))
-        .where(
-          and(
-            ne(sessions.status, SESSION_STATUS.DELETING),
-            ne(sessions.status, SESSION_STATUS.POOLED),
-            or(ilike(sessions.title, `%${query}%`), ilike(projects.name, `%${query}%`)),
-          ),
-        )
-        .orderBy(desc(sessions.createdAt))
-        .limit(searchLimit * 2);
+      const rows = await searchSessions({ query, limit });
 
-      // Fetch all messages in parallel to avoid N+1 queries
       const messagePromises = rows.map(async (row) => {
         if (!row.opencodeSessionId) return null;
         try {
