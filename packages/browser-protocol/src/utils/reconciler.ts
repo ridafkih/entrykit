@@ -1,6 +1,12 @@
 import { type BrowserSessionState, type CurrentState } from "../types/session";
 import { computeRequiredAction, type Action } from "../utils/state-machine";
-import type { StateStore, StateStoreOptions, DaemonController, Reconciler, ReconcilerConfig } from "../types/orchestrator";
+import type {
+  StateStore,
+  StateStoreOptions,
+  DaemonController,
+  Reconciler,
+  ReconcilerConfig,
+} from "../types/orchestrator";
 
 export type { Reconciler, ReconcilerConfig } from "../types/orchestrator";
 

@@ -1,5 +1,11 @@
 import type { BrowserSessionState, CurrentState } from "../types/session";
-import type { StateStore, StateStoreOptions, DaemonController, ReconcilerConfig, DaemonEvent } from "../types/orchestrator";
+import type {
+  StateStore,
+  StateStoreOptions,
+  DaemonController,
+  ReconcilerConfig,
+  DaemonEvent,
+} from "../types/orchestrator";
 import { computeRequiredAction, type Action } from "./state-machine";
 
 export interface EventDrivenReconciler {

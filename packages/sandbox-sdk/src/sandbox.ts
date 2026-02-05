@@ -20,7 +20,7 @@ export class Sandbox {
 
   constructor(
     public readonly provider: SandboxProvider & ContainerEventStream,
-    public readonly config: SandboxConfig
+    public readonly config: SandboxConfig,
   ) {
     this.network = config.network;
     this.workspace = config.workspace;

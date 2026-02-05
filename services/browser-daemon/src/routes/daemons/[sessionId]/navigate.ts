@@ -1,6 +1,10 @@
 import { z } from "zod";
 import type { RouteHandler } from "../../../utils/route-handler";
-import { notFoundResponse, badRequestResponse, serviceUnavailableResponse } from "../../../shared/http";
+import {
+  notFoundResponse,
+  badRequestResponse,
+  serviceUnavailableResponse,
+} from "../../../shared/http";
 
 const NavigateBody = z.object({
   url: z.string().url(),

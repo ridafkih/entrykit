@@ -1,4 +1,10 @@
-import type { BrowserSessionState, CurrentState, DesiredState, DaemonStatus, SessionSnapshot } from "./session";
+import type {
+  BrowserSessionState,
+  CurrentState,
+  DesiredState,
+  DaemonStatus,
+  SessionSnapshot,
+} from "./session";
 
 export type DaemonEventType = "daemon:started" | "daemon:ready" | "daemon:stopped" | "daemon:error";
 
@@ -60,7 +66,10 @@ export interface DaemonController {
   getCurrentUrl(sessionId: string): Promise<string | null>;
   launch(sessionId: string): Promise<void>;
   isHealthy(): Promise<boolean>;
-  executeCommand<T = unknown>(sessionId: string, command: BrowserCommand): Promise<CommandResult<T>>;
+  executeCommand<T = unknown>(
+    sessionId: string,
+    command: BrowserCommand,
+  ): Promise<CommandResult<T>>;
 }
 
 export interface ReconcilerConfig {

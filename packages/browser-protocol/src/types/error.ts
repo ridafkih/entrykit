@@ -24,7 +24,11 @@ export class BrowserError extends Error {
   }
 
   static daemonNotFound(sessionId: string) {
-    return new BrowserError("DaemonNotFound", `Daemon not found for session ${sessionId}`, sessionId);
+    return new BrowserError(
+      "DaemonNotFound",
+      `Daemon not found for session ${sessionId}`,
+      sessionId,
+    );
   }
 
   static daemonStartFailed(sessionId: string, reason: string) {
@@ -40,11 +44,19 @@ export class BrowserError extends Error {
   }
 
   static navigationFailed(sessionId: string, url: string, reason: string) {
-    return new BrowserError("NavigationFailed", `Failed to navigate to ${url}: ${reason}`, sessionId);
+    return new BrowserError(
+      "NavigationFailed",
+      `Failed to navigate to ${url}: ${reason}`,
+      sessionId,
+    );
   }
 
   static stateTransitionInvalid(sessionId: string, from: string, to: string) {
-    return new BrowserError("StateTransitionInvalid", `Invalid transition from ${from} to ${to}`, sessionId);
+    return new BrowserError(
+      "StateTransitionInvalid",
+      `Invalid transition from ${from} to ${to}`,
+      sessionId,
+    );
   }
 
   static sessionNotFound(sessionId: string) {

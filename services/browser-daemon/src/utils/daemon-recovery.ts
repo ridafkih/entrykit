@@ -1,9 +1,4 @@
-import {
-  isDaemonRunning,
-  cleanupSocket,
-  getSocketDir,
-  getStreamPortFile,
-} from "agent-browser";
+import { isDaemonRunning, cleanupSocket, getSocketDir, getStreamPortFile } from "agent-browser";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import type { DaemonSession } from "../types/daemon";
 
@@ -15,7 +10,10 @@ function getCdpPortFile(sessionId: string): string {
   return `${getSocketDir()}/${sessionId}.cdp`;
 }
 
-export function recoverSession(sessionId: string, callbacks: RecoveryCallbacks): DaemonSession | null {
+export function recoverSession(
+  sessionId: string,
+  callbacks: RecoveryCallbacks,
+): DaemonSession | null {
   try {
     const streamPortPath = getStreamPortFile(sessionId);
     if (!existsSync(streamPortPath)) {
@@ -45,8 +43,15 @@ export function recoverSession(sessionId: string, callbacks: RecoveryCallbacks):
     }
 
     callbacks.onRecover(sessionId, streamPort, cdpPort);
-    console.log(`[DaemonRecovery] Recovered: ${sessionId} on stream port ${streamPort}, CDP port ${cdpPort ?? "unknown"}`);
-    return { sessionId, port: streamPort, cdpPort: cdpPort ?? 0, ready: isDaemonRunning(sessionId) };
+    console.log(
+      `[DaemonRecovery] Recovered: ${sessionId} on stream port ${streamPort}, CDP port ${cdpPort ?? "unknown"}`,
+    );
+    return {
+      sessionId,
+      port: streamPort,
+      cdpPort: cdpPort ?? 0,
+      ready: isDaemonRunning(sessionId),
+    };
   } catch (error) {
     console.warn(`[DaemonRecovery] Failed to recover ${sessionId}:`, error);
     return null;

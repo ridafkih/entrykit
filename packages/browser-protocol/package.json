@@ -28,8 +28,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@lab/typescript-config": "workspace:*",
+    "oxfmt": "0.27.0",
     "oxlint": "1.42.0",
-    "oxfmt": "0.27.0"
+    "typescript": "^5"
   }
 }

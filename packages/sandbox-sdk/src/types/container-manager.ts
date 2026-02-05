@@ -1,9 +1,4 @@
-import type {
-  ContainerCreateOptions,
-  ContainerInfo,
-  ExitResult,
-  LogChunk,
-} from "./container";
+import type { ContainerCreateOptions, ContainerInfo, ExitResult, LogChunk } from "./container";
 
 export interface ContainerManager {
   createContainer(options: ContainerCreateOptions): Promise<string>;

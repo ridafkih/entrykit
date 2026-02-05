@@ -25,10 +25,7 @@ export const isValidTransition = (from: CurrentState, to: CurrentState): boolean
   return validTargets.includes(to);
 };
 
-export const computeRequiredAction = (
-  desired: DesiredState,
-  actual: CurrentState,
-): Action => {
+export const computeRequiredAction = (desired: DesiredState, actual: CurrentState): Action => {
   if (desired === "running") {
     switch (actual) {
       case "pending":
@@ -62,10 +59,7 @@ export const computeRequiredAction = (
   }
 };
 
-export const computeNextState = (
-  current: CurrentState,
-  action: Action,
-): CurrentState | null => {
+export const computeNextState = (current: CurrentState, action: Action): CurrentState | null => {
   switch (action) {
     case "StartDaemon":
       if (current === "stopped" || current === "error") return "starting";

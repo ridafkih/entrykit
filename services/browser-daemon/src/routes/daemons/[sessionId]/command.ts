@@ -1,7 +1,11 @@
 import * as fs from "node:fs/promises";
 import type { Command } from "agent-browser/dist/types.js";
 import type { RouteHandler } from "../../../utils/route-handler";
-import { notFoundResponse, badRequestResponse, serviceUnavailableResponse } from "../../../shared/http";
+import {
+  notFoundResponse,
+  badRequestResponse,
+  serviceUnavailableResponse,
+} from "../../../shared/http";
 
 async function transformScreenshotResponse(response: {
   id: string;
@@ -18,7 +22,11 @@ async function transformScreenshotResponse(response: {
     const base64 = buffer.toString("base64");
     return { ...response, data: { base64 } };
   } catch {
-    return { ...response, success: false, error: `Failed to read screenshot file: ${response.data.path}` };
+    return {
+      ...response,
+      success: false,
+      error: `Failed to read screenshot file: ${response.data.path}`,
+    };
   }
 }
 

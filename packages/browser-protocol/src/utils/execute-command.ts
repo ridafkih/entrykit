@@ -40,7 +40,11 @@ export async function executeCommand<T = unknown>(
 
   const parsed = CommandResultSchema.safeParse(rawData);
   if (!parsed.success) {
-    return { id: command.id, success: false, error: `Invalid response format: ${parsed.error.message}` };
+    return {
+      id: command.id,
+      success: false,
+      error: `Invalid response format: ${parsed.error.message}`,
+    };
   }
 
   return {

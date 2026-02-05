@@ -1,0 +1,26 @@
+{
+  "name": "@lab/typescript-config",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "base.json",
+    "bun.json",
+    "next.json"
+  ],
+  "type": "module",
+  "exports": {
+    "./base.json": "./base.json",
+    "./bun.json": "./bun.json",
+    "./next.json": "./next.json"
+  },
+  "scripts": {
+    "types": "tsc --noEmit -p tsconfig.json",
+    "lint": "oxlint",
+    "format": "oxfmt ."
+  },
+  "devDependencies": {
+    "oxfmt": "0.27.0",
+    "oxlint": "1.42.0",
+    "typescript": "^5"
+  }
+}

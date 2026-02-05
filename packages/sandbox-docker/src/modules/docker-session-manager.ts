@@ -57,7 +57,9 @@ export class DockerSessionManager implements SessionManager {
       return;
     }
 
-    console.log(`[Network] Reconciling network connections for ${activeSessionIds.length} sessions`);
+    console.log(
+      `[Network] Reconciling network connections for ${activeSessionIds.length} sessions`,
+    );
 
     for (const sessionId of activeSessionIds) {
       const networkId = formatNetworkName(sessionId);

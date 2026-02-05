@@ -1,14 +1,8 @@
 {
+  "extends": "@lab/typescript-config/base.json",
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "verbatimModuleSyntax": true
+    "module": "ESNext"
   },
   "include": ["src/**/*"]
 }

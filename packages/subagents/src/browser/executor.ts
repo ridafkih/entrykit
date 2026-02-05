@@ -59,10 +59,7 @@ function recordTraceStep(
   });
 }
 
-async function cleanupDaemon(
-  daemonController: DaemonController,
-  sessionId: string,
-): Promise<void> {
+async function cleanupDaemon(daemonController: DaemonController, sessionId: string): Promise<void> {
   try {
     await daemonController.stop(sessionId);
   } catch (stopError) {

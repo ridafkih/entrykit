@@ -121,7 +121,10 @@ export const createDaemonController = (config: DaemonControllerConfig): DaemonCo
 
     const parsed = UrlResponse.safeParse(data);
     if (!parsed.success) {
-      throw BrowserError.connectionFailed(sessionId, `Invalid URL response: ${parsed.error.message}`);
+      throw BrowserError.connectionFailed(
+        sessionId,
+        `Invalid URL response: ${parsed.error.message}`,
+      );
     }
 
     return parsed.data.url;

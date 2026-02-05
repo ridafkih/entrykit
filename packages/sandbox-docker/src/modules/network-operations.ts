@@ -71,10 +71,7 @@ export class NetworkOperations {
     }
   }
 
-  async isConnectedToNetwork(
-    containerIdOrName: string,
-    networkName: string,
-  ): Promise<boolean> {
+  async isConnectedToNetwork(containerIdOrName: string, networkName: string): Promise<boolean> {
     try {
       const networkInfo = await this.docker.getNetwork(networkName).inspect();
       const connectedContainers = networkInfo.Containers ?? {};

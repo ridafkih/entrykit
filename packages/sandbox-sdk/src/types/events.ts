@@ -24,7 +24,5 @@ export interface ContainerEventStreamOptions {
 }
 
 export interface ContainerEventStream {
-  streamContainerEvents(
-    options?: ContainerEventStreamOptions,
-  ): AsyncGenerator<ContainerEvent>;
+  streamContainerEvents(options?: ContainerEventStreamOptions): AsyncGenerator<ContainerEvent>;
 }

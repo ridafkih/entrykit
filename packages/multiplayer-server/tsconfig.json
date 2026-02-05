@@ -1,14 +1,8 @@
 {
+  "extends": "@lab/typescript-config/bun.json",
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "verbatimModuleSyntax": true,
-    "types": ["bun-types"]
+    "module": "ESNext"
   },
   "include": ["src/**/*"]
 }

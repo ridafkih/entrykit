@@ -1,4 +1,4 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@lab/typescript-config/base.json",
   "include": ["src/**/*.ts", "drizzle.config.ts"]
 }

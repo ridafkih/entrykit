@@ -1,7 +1,4 @@
 {
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "types": ["bun-types"]
-  },
+  "extends": "@lab/typescript-config/bun.json",
   "include": ["src/**/*"]
 }

@@ -147,9 +147,7 @@ export class DockerContainerManager implements ContainerManager {
     });
   }
 
-  private buildRestartPolicy(
-    restartPolicy?: ContainerCreateOptions["restartPolicy"],
-  ):
+  private buildRestartPolicy(restartPolicy?: ContainerCreateOptions["restartPolicy"]):
     | {
         Name: string;
         MaximumRetryCount?: number;
@@ -241,9 +239,7 @@ export class DockerContainerManager implements ContainerManager {
     yield* this.parseLogStream(logStream);
   }
 
-  private async *parseLogStream(
-    logStream: NodeJS.ReadableStream,
-  ): AsyncGenerator<LogChunk> {
+  private async *parseLogStream(logStream: NodeJS.ReadableStream): AsyncGenerator<LogChunk> {
     let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0);
     const pendingChunks: LogChunk[] = [];
     let resolveWait: (() => void) | null = null;
@@ -310,13 +306,13 @@ export class DockerContainerManager implements ContainerManager {
     return buffer.length >= DOCKER_LOG_HEADER_SIZE + frameSize;
   }
 
-  private extractFrame(buffer: Buffer<ArrayBufferLike>): { chunk: LogChunk; remainingBuffer: Buffer<ArrayBufferLike> } {
+  private extractFrame(buffer: Buffer<ArrayBufferLike>): {
+    chunk: LogChunk;
+    remainingBuffer: Buffer<ArrayBufferLike>;
+  } {
     const streamType = buffer[0];
     const frameSize = buffer.readUInt32BE(DOCKER_LOG_SIZE_OFFSET);
-    const frameData = buffer.subarray(
-      DOCKER_LOG_HEADER_SIZE,
-      DOCKER_LOG_HEADER_SIZE + frameSize,
-    );
+    const frameData = buffer.subarray(DOCKER_LOG_HEADER_SIZE, DOCKER_LOG_HEADER_SIZE + frameSize);
     const remainingBuffer = buffer.subarray(DOCKER_LOG_HEADER_SIZE + frameSize);
 
     return {

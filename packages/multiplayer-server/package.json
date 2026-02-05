@@ -28,6 +28,7 @@
     "@lab/multiplayer-sdk": "workspace:*"
   },
   "devDependencies": {
+    "@lab/typescript-config": "workspace:*",
     "@types/bun": "^1.2.15",
     "oxfmt": "0.27.0",
     "oxlint": "1.42.0",

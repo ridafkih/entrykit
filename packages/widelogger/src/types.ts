@@ -3,12 +3,15 @@ export type FieldValue = string | number | boolean;
 declare const KeyError: unique symbol;
 type KeyErrorBrand = { [KeyError]: true };
 
-type ValidateKey<T extends string> =
-  T extends "" ? "widelog keys cannot be empty" & KeyErrorBrand :
-  T extends `.${string}` ? "widelog keys cannot start with a dot" & KeyErrorBrand :
-  T extends `${string}.` ? "widelog keys cannot end with a dot" & KeyErrorBrand :
-  T extends `${string}..${string}` ? "widelog keys cannot contain empty segments" & KeyErrorBrand :
-  T;
+type ValidateKey<T extends string> = T extends ""
+  ? "widelog keys cannot be empty" & KeyErrorBrand
+  : T extends `.${string}`
+    ? "widelog keys cannot start with a dot" & KeyErrorBrand
+    : T extends `${string}.`
+      ? "widelog keys cannot end with a dot" & KeyErrorBrand
+      : T extends `${string}..${string}`
+        ? "widelog keys cannot contain empty segments" & KeyErrorBrand
+        : T;
 
 export type DottedKey<T extends string> = ValidateKey<T>;
 

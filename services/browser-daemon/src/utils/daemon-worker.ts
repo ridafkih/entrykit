@@ -38,12 +38,18 @@ const setupPageEvents = (sessionId: string, page: BrowserPage) => {
 
   page.on("request", (request) => {
     console.log(`[DaemonWorker:${sessionId}] Request:`, request.method(), request.url());
-    postMessage({ type: "browser:request", data: { method: request.method(), url: request.url() } });
+    postMessage({
+      type: "browser:request",
+      data: { method: request.method(), url: request.url() },
+    });
   });
 
   page.on("response", (response) => {
     console.log(`[DaemonWorker:${sessionId}] Response:`, response.status(), response.url());
-    postMessage({ type: "browser:response", data: { status: response.status(), url: response.url() } });
+    postMessage({
+      type: "browser:response",
+      data: { status: response.status(), url: response.url() },
+    });
   });
 
   page.on("framenavigated", (frame) => {
@@ -87,7 +93,10 @@ const setupBrowserEvents = (sessionId: string, browser: BrowserManager) => {
         if (newIndex !== -1 && newIndex !== browser.getActiveIndex()) {
           console.log(`[DaemonWorker:${sessionId}] Auto-switching to new tab ${newIndex}`);
           await browser.switchTo(newIndex);
-          postMessage({ type: "browser:tab_switched", data: { index: newIndex, url: newPage.url() } });
+          postMessage({
+            type: "browser:tab_switched",
+            data: { index: newIndex, url: newPage.url() },
+          });
         }
       });
     }
@@ -155,7 +164,9 @@ const startWorker = async (config: DaemonWorkerConfig) => {
   const streamPortFile = `${socketDir}/${sessionId}.stream`;
   const cdpPortFile = `${socketDir}/${sessionId}.cdp`;
 
-  console.log(`[DaemonWorker:${sessionId}] Starting browser on stream port ${streamPort}, CDP port ${cdpPort}`);
+  console.log(
+    `[DaemonWorker:${sessionId}] Starting browser on stream port ${streamPort}, CDP port ${cdpPort}`,
+  );
 
   if (!fs.existsSync(socketDir)) {
     fs.mkdirSync(socketDir, { recursive: true });
@@ -245,7 +256,7 @@ const startWorker = async (config: DaemonWorkerConfig) => {
           if (fs.existsSync(streamPortFile)) fs.unlinkSync(streamPortFile);
           if (fs.existsSync(cdpPortFile)) fs.unlinkSync(cdpPortFile);
         } catch (error) {
-          console.error("Termination error from daemon-worker.ts", error)
+          console.error("Termination error from daemon-worker.ts", error);
         }
 
         process.exit(0);

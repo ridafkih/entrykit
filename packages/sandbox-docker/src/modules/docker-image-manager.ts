@@ -53,7 +53,7 @@ export class DockerImageManager implements ImageManager {
 
     return {
       workdir: imageInfo.Config.WorkingDir || "/",
-      entrypoint: typeof entrypoint === "string" ? [entrypoint] : entrypoint ?? null,
+      entrypoint: typeof entrypoint === "string" ? [entrypoint] : (entrypoint ?? null),
       cmd: imageInfo.Config.Cmd ?? null,
     };
   }

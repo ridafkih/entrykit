@@ -72,7 +72,6 @@ export function resizeImage(input: Buffer, maxDimension = MAX_DIMENSION): Resize
 
   free_buffer(outPtr);
 
-
   return {
     buffer: outputBuffer,
     width: outWidth[0] ?? 0,

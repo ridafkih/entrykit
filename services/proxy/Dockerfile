@@ -19,9 +19,7 @@ RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
 COPY --from=prune /app/out/json/ .
 RUN bun install --ignore-scripts
 COPY --from=build /app/services/proxy/src ./services/proxy/src
-COPY --from=build /app/packages/sandbox-sdk/src ./packages/sandbox-sdk/src
 COPY --from=build /app/packages/database/src ./packages/database/src
-COPY --from=build /app/packages/sandbox-docker/src ./packages/sandbox-docker/src
 
 ENV NODE_ENV=production
 EXPOSE 8080

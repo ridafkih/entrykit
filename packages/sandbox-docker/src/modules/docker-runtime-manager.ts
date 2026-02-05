@@ -64,7 +64,10 @@ export class DockerRuntimeManager implements RuntimeManager {
         }
         await this.provider.connectToNetwork(runtimeId, input.networkId, { aliases });
 
-        const verifyConnected = await this.provider.isConnectedToNetwork(runtimeId, input.networkId);
+        const verifyConnected = await this.provider.isConnectedToNetwork(
+          runtimeId,
+          input.networkId,
+        );
         if (!verifyConnected) {
           throw new Error(`Failed to connect container ${runtimeId} to network ${input.networkId}`);
         }

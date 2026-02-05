@@ -4,12 +4,12 @@ RUN npm install -g bun
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json bun.lock ./
 COPY services/browser-daemon/package.json ./services/browser-daemon/
 COPY packages/browser-protocol/package.json ./packages/browser-protocol/
-COPY packages/database/package.json ./packages/database/
 COPY packages/http-utilities/package.json ./packages/http-utilities/
 COPY packages/router/package.json ./packages/router/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
 
 RUN bun install --filter @lab/browser-daemon
 
@@ -18,7 +18,6 @@ RUN chmod +x /app/node_modules/.bun/agent-browser@*/node_modules/agent-browser/b
 
 COPY services/browser-daemon/src ./services/browser-daemon/src
 COPY packages/browser-protocol/src ./packages/browser-protocol/src
-COPY packages/database/src ./packages/database/src
 COPY packages/http-utilities/src ./packages/http-utilities/src
 COPY packages/router/src ./packages/router/src
 

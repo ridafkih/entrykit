@@ -11,7 +11,12 @@ import type {
 import { createEventDrivenReconciler } from "./event-driven-reconciler";
 import { createSessionManager } from "./session-manager";
 
-export type { Orchestrator, OrchestratorConfig, StateChangeHandler, ErrorHandler } from "../types/orchestrator";
+export type {
+  Orchestrator,
+  OrchestratorConfig,
+  StateChangeHandler,
+  ErrorHandler,
+} from "../types/orchestrator";
 
 export const createOrchestrator = (
   stateStore: StateStore,

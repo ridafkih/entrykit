@@ -245,7 +245,12 @@ export function createBrowserTools(
           selector,
           timeout: timeout ?? 5000,
         });
-        logStep("waitFor", { selector, timeout }, result.success ? "found" : undefined, result.error);
+        logStep(
+          "waitFor",
+          { selector, timeout },
+          result.success ? "found" : undefined,
+          result.error,
+        );
         if (!result.success) return { success: false, error: result.error };
         return { success: true };
       },
@@ -350,13 +355,7 @@ export function createBrowserTools(
             "Recording timeout in milliseconds. Default: 60000 (60s). Max: 300000 (5 min). Increase for longer recordings, decrease for quick captures.",
           ),
       }),
-      execute: async ({
-        url,
-        timeout,
-      }: {
-        url?: string;
-        timeout?: number;
-      }) => {
+      execute: async ({ url, timeout }: { url?: string; timeout?: number }) => {
         const maxTimeout = 5 * 60 * 1000; // 5 minutes
         const clampedTimeout = Math.min(Math.max(timeout ?? 60000, 1000), maxTimeout);
 

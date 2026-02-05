@@ -70,7 +70,10 @@ export function spawnDaemon(options: SpawnOptions): DaemonWorkerHandle {
 
   const messageHandlers = new Set<WorkerMessageHandler>();
   const closeHandlers = new Set<WorkerCloseHandler>();
-  const pendingCommands = new Map<string, { resolve: (response: Response) => void; reject: (error: Error) => void }>();
+  const pendingCommands = new Map<
+    string,
+    { resolve: (response: Response) => void; reject: (error: Error) => void }
+  >();
 
   worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
     if (event.data.type === "ready") {

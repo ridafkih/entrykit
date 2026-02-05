@@ -3,10 +3,7 @@ export type {
   DockerContainerEvent,
   DockerContainerEventAction,
 } from "./types/client";
-export {
-  DockerClientOptionsSchema,
-  DockerContainerEventActionSchema,
-} from "./types/client";
+export { DockerClientOptionsSchema, DockerContainerEventActionSchema } from "./types/client";
 
 export { DockerClient } from "./clients/docker-client";
 export { PortAllocator } from "./clients/port-allocator";
@@ -36,7 +33,10 @@ export {
 export { DockerImageManager } from "./modules/docker-image-manager";
 export { DockerContainerManager } from "./modules/docker-container-manager";
 export { DockerVolumeManager } from "./modules/docker-volume-manager";
-export { DockerRuntimeManager, type DockerRuntimeManagerConfig } from "./modules/docker-runtime-manager";
+export {
+  DockerRuntimeManager,
+  type DockerRuntimeManagerConfig,
+} from "./modules/docker-runtime-manager";
 export { NetworkOperations } from "./modules/network-operations";
 export { ExecOperations } from "./modules/exec-operations";
 export { DockerEventStream } from "./modules/docker-event-stream";

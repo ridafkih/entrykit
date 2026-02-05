@@ -21,11 +21,7 @@ import { DockerVolumeManager } from "../modules/docker-volume-manager";
 import { NetworkOperations } from "../modules/network-operations";
 import { ExecOperations } from "../modules/exec-operations";
 import { DockerEventStream } from "../modules/docker-event-stream";
-import {
-  DEFAULT_SOCKET_PATH,
-  DEFAULT_DOCKER_PORT,
-  DEFAULT_DOCKER_PROTOCOL,
-} from "../constants";
+import { DEFAULT_SOCKET_PATH, DEFAULT_DOCKER_PORT, DEFAULT_DOCKER_PROTOCOL } from "../constants";
 
 export class DockerClient implements SandboxProvider, ContainerEventStream {
   private readonly docker: Dockerode;
@@ -144,10 +140,7 @@ export class DockerClient implements SandboxProvider, ContainerEventStream {
     return this.networkOps.networkExists(name);
   }
 
-  isConnectedToNetwork(
-    containerIdOrName: string,
-    networkName: string,
-  ): Promise<boolean> {
+  isConnectedToNetwork(containerIdOrName: string, networkName: string): Promise<boolean> {
     return this.networkOps.isConnectedToNetwork(containerIdOrName, networkName);
   }
 
@@ -171,9 +164,7 @@ export class DockerClient implements SandboxProvider, ContainerEventStream {
     return this.execOps.exec(containerId, options);
   }
 
-  streamContainerEvents(
-    options?: ContainerEventStreamOptions,
-  ): AsyncGenerator<ContainerEvent> {
+  streamContainerEvents(options?: ContainerEventStreamOptions): AsyncGenerator<ContainerEvent> {
     return this.eventStream.streamContainerEvents(options);
   }
 }

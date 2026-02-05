@@ -32,6 +32,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@lab/typescript-config": "workspace:*",
     "@types/sodium-native": "^2.3.9",
     "bun-types": "^1.2.11",
     "oxfmt": "0.27.0",

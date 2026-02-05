@@ -1,11 +1,23 @@
 import { cleanupSocket } from "agent-browser";
 import type { Command, Response } from "agent-browser/dist/types.js";
-import type { DaemonManager, DaemonManagerConfig, DaemonSession, StartResult, StopResult } from "../types/daemon";
+import type {
+  DaemonManager,
+  DaemonManagerConfig,
+  DaemonSession,
+  StartResult,
+  StopResult,
+} from "../types/daemon";
 import type { DaemonEvent, DaemonEventHandler } from "../types/events";
 import { spawnDaemon, killByPidFile, type DaemonWorkerHandle } from "./daemon-process";
 import { recoverSession, discoverExistingSessions } from "./daemon-recovery";
 
-export type { DaemonManager, DaemonManagerConfig, DaemonSession, StartResult, StopResult } from "../types/daemon";
+export type {
+  DaemonManager,
+  DaemonManagerConfig,
+  DaemonSession,
+  StartResult,
+  StopResult,
+} from "../types/daemon";
 
 interface SessionPorts {
   streamPort: number;
@@ -79,7 +91,12 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
       const handle = spawnDaemon({ sessionId, streamPort, cdpPort, profileDir: config.profileDir });
       daemonWorkers.set(sessionId, handle);
 
-      emit({ type: "daemon:started", sessionId, timestamp: Date.now(), data: { port: streamPort, cdpPort } });
+      emit({
+        type: "daemon:started",
+        sessionId,
+        timestamp: Date.now(),
+        data: { port: streamPort, cdpPort },
+      });
 
       handle.onMessage((message) => {
         switch (message.type) {
@@ -89,14 +106,24 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
 
           case "daemon:ready":
             console.log(`[DaemonManager] Browser ready: ${sessionId}`);
-            emit({ type: "daemon:ready", sessionId, timestamp: Date.now(), data: { port: streamPort, cdpPort } });
+            emit({
+              type: "daemon:ready",
+              sessionId,
+              timestamp: Date.now(),
+              data: { port: streamPort, cdpPort },
+            });
             break;
 
           case "daemon:error":
             console.error(`[DaemonManager] Browser error: ${sessionId}`, message.error);
             daemonWorkers.delete(sessionId);
             activeSessions.delete(sessionId);
-            emit({ type: "daemon:error", sessionId, timestamp: Date.now(), data: { error: message.error } });
+            emit({
+              type: "daemon:error",
+              sessionId,
+              timestamp: Date.now(),
+              data: { error: message.error },
+            });
             break;
 
           case "browser:navigated": {
@@ -106,7 +133,6 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
             }
             break;
           }
-
         }
       });
 
@@ -115,7 +141,12 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
         daemonWorkers.delete(sessionId);
         activeSessions.delete(sessionId);
         sessionUrls.delete(sessionId);
-        emit({ type: "daemon:stopped", sessionId, timestamp: Date.now(), data: { exitCode: code } });
+        emit({
+          type: "daemon:stopped",
+          sessionId,
+          timestamp: Date.now(),
+          data: { exitCode: code },
+        });
       });
 
       return { type: "started", sessionId, port: streamPort, cdpPort, ready: false };
@@ -137,7 +168,12 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
     getSession(sessionId: string): DaemonSession | null {
       const ports = activeSessions.get(sessionId);
       if (ports === undefined) return null;
-      return { sessionId, port: ports.streamPort, cdpPort: ports.cdpPort, ready: daemonWorkers.has(sessionId) };
+      return {
+        sessionId,
+        port: ports.streamPort,
+        cdpPort: ports.cdpPort,
+        ready: daemonWorkers.has(sessionId),
+      };
     },
 
     getOrRecoverSession(sessionId: string): DaemonSession | null {
