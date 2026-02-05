@@ -1,7 +1,7 @@
-import { findSessionById } from "../repositories/session.repository";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
-import { setLastMessage } from "../state/last-message-store";
+import { setAndPublishLastMessage } from "../state/last-message-store";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
+import { throwOnOpencodeError } from "../shared/errors";
 
 export interface SendMessageOptions {
   sessionId: string;
@@ -25,10 +25,11 @@ export async function sendMessageToSession(options: SendMessageOptions): Promise
     parts: [{ type: "text", text: content }],
   });
 
-  if (promptResponse.error) {
-    throw new Error(`Failed to send message to session: ${JSON.stringify(promptResponse.error)}`);
-  }
+  throwOnOpencodeError(
+    promptResponse,
+    "Failed to send message to session",
+    "OPENCODE_PROMPT_FAILED",
+  );
 
-  setLastMessage(sessionId, content);
-  publisher.publishDelta("sessionMetadata", { uuid: sessionId }, { lastMessage: content });
+  setAndPublishLastMessage(sessionId, content, publisher);
 }

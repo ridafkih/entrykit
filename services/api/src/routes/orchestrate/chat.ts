@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Handler, BrowserContext, SessionContext, InfraContext } from "../../types/route";
+import type { Handler, RouteContextFor } from "../../types/route";
 import {
   chatOrchestrate,
   chatOrchestrateStream,
@@ -7,7 +7,7 @@ import {
 } from "../../orchestration/chat-orchestrator";
 import {
   saveOrchestratorMessage,
-  getOrchestratorMessages,
+  getConversationHistory,
 } from "../../repositories/orchestrator-message.repository";
 import { getPlatformConfig } from "../../config/platforms";
 import { buildSseResponse } from "@lab/http-utilities";
@@ -22,11 +22,9 @@ const chatRequestSchema = z.object({
   timestamp: z.string().datetime().optional(),
 });
 
-const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
-  request,
-  _params,
-  context,
-) => {
+type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
+
+const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
   const body = await parseRequestBody(request, chatRequestSchema);
   const content = body.content.trim();
 
@@ -37,13 +35,11 @@ const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
     content,
   });
 
-  const history = await getOrchestratorMessages({
+  const conversationHistory = await getConversationHistory({
     platform: body.platformOrigin,
     platformChatId: body.platformChatId,
     limit: 20,
   });
-
-  const conversationHistory = history.map((msg) => `${msg.role}: ${msg.content}`);
 
   const platformConfig = getPlatformConfig(body.platformOrigin);
 

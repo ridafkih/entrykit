@@ -50,7 +50,6 @@ class LogStreamTracker {
 
     this.runStreamLoop().catch((error) => {
       console.error(`[LogMonitor] Stream error for ${this.containerId}:`, error);
-      this.updateStatus("error");
     });
   }
 
@@ -85,9 +84,9 @@ class LogStreamTracker {
       }
     } catch (error) {
       if (this.isStreaming) {
-        console.error(`[LogMonitor] Error streaming logs for ${this.containerId}:`, error);
         this.updateStatus("error");
       }
+      throw error;
     } finally {
       if (this.isStreaming) {
         this.isStreaming = false;

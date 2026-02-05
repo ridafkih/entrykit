@@ -14,7 +14,7 @@ import type { RouteContext } from "../types/route";
 import { join } from "node:path";
 import type { PromptService } from "../types/prompt";
 import type { Sandbox, OpencodeClient, Publisher, Widelog } from "../types/dependencies";
-import { AppError } from "../shared/errors";
+import { AppError, ServiceUnavailableError } from "../shared/errors";
 import type { BrowserServiceManager } from "../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
 import {
@@ -63,12 +63,14 @@ export class ApiServer {
   ) {}
 
   private getServer(): BunServer<unknown> {
-    if (!this.server) throw new Error("Server not started");
+    if (!this.server) throw new ServiceUnavailableError("Server not started", "SERVER_NOT_STARTED");
     return this.server;
   }
 
   private getPublisher(): Publisher {
-    if (!this.publisher) throw new Error("Server not started");
+    if (!this.publisher) {
+      throw new ServiceUnavailableError("Server not started", "SERVER_NOT_STARTED");
+    }
     return this.publisher;
   }
 
@@ -227,6 +229,10 @@ export class ApiServer {
 
         widelog.set("status", status);
         widelog.set("error", error instanceof Error ? error.message : "Unknown error");
+        if (error instanceof Error) {
+          widelog.set("errorName", error.name);
+          widelog.set("errorStack", error.stack ?? "no_stack");
+        }
         if (error instanceof AppError) {
           widelog.set("errorCode", error.code);
         }
@@ -244,6 +250,11 @@ export class ApiServer {
   }
 
   shutdown(): void {
+    if (this.server) {
+      this.server.stop(true);
+      this.server = null;
+    }
+    this.publisher = null;
     this.services.browserService.shutdown();
   }
 }

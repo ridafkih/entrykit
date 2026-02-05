@@ -9,10 +9,31 @@ export class AppError extends Error {
   }
 }
 
+export class InternalError extends AppError {
+  constructor(message = "Internal server error", code = "INTERNAL_ERROR") {
+    super(message, code, 500);
+    this.name = "InternalError";
+  }
+}
+
 export class NotFoundError extends AppError {
   constructor(resource: string, id?: string) {
     super(id ? `${resource} with id ${id} not found` : `${resource} not found`, "NOT_FOUND", 404);
     this.name = "NotFoundError";
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message = "Service unavailable", code = "SERVICE_UNAVAILABLE") {
+    super(message, code, 503);
+    this.name = "ServiceUnavailableError";
+  }
+}
+
+export class ExternalServiceError extends AppError {
+  constructor(message = "Upstream service request failed", code = "EXTERNAL_SERVICE_ERROR") {
+    super(message, code, 502);
+    this.name = "ExternalServiceError";
   }
 }
 
@@ -60,4 +81,14 @@ export function orThrow<T>(value: T | null | undefined, resource: string, id?: s
  */
 export function getErrorMessage(error: unknown, fallback = "An error occurred"): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+export function throwOnOpencodeError(
+  response: { error?: unknown },
+  message: string,
+  code: string,
+): void {
+  if (response.error) {
+    throw new ExternalServiceError(`${message}: ${JSON.stringify(response.error)}`, code);
+  }
 }

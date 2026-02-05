@@ -21,6 +21,7 @@ import {
   updateHeartbeat,
   setLastUrl,
 } from "./state-store";
+import { ExternalServiceError, NotFoundError } from "../shared/errors";
 
 export interface BrowserBootstrapConfig {
   browserApiUrl: string;
@@ -47,7 +48,7 @@ const stateStore: StateStore = {
 async function getInitialNavigationUrl(sessionId: string, _port: number): Promise<string> {
   const service = await getFirstExposedService(sessionId);
   if (!service) {
-    throw new Error(`No exposed service found for session ${sessionId}`);
+    throw new NotFoundError("Exposed service", sessionId);
   }
   return `http://${service.hostname}:${service.port}/`;
 }
@@ -83,7 +84,10 @@ async function waitForService(
     await Bun.sleep(intervalMs);
   }
 
-  throw new Error(`Service not available: ${sessionId}--${port} (last status: ${lastStatus})`);
+  throw new ExternalServiceError(
+    `Service not available: ${sessionId}--${port} (last status: ${lastStatus})`,
+    "SERVICE_NOT_AVAILABLE",
+  );
 }
 
 export interface BrowserBootstrapResult {

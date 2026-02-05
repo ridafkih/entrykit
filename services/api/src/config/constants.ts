@@ -1,6 +1,3 @@
-// Re-export HTTP_STATUS from shared package for backward compatibility
-export { HTTP_STATUS } from "@lab/http-utilities";
-
 export const LABELS = {
   SESSION: "lab.session",
   PROJECT: "lab.project",

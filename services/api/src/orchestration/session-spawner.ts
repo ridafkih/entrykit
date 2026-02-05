@@ -11,6 +11,7 @@ import type { PoolManager } from "../managers/pool.manager";
 import { generateSessionTitle } from "../generators/title.generator";
 import type { Publisher } from "../types/dependencies";
 import { CONTAINER_STATUS, isContainerStatus, type ContainerStatus } from "../types/container";
+import { InternalError, ValidationError } from "../shared/errors";
 
 export interface SpawnSessionOptions {
   projectId: string;
@@ -37,7 +38,7 @@ function validateContainerStatus(status: string): ContainerStatus {
   if (isContainerStatus(status)) {
     return status;
   }
-  throw new Error(`Invalid container status: ${status}`);
+  throw new ValidationError(`Invalid container status: ${status}`);
 }
 
 function extractContainerDisplayName(container: {
@@ -49,7 +50,10 @@ function extractContainerDisplayName(container: {
   }
   const imageName = container.image.split("/").pop()?.split(":")[0];
   if (!imageName) {
-    throw new Error(`Unable to extract display name from container image: ${container.image}`);
+    throw new InternalError(
+      `Unable to extract display name from container image: ${container.image}`,
+      "CONTAINER_NAME_EXTRACTION_FAILED",
+    );
   }
   return imageName;
 }
@@ -73,17 +77,18 @@ function scheduleBackgroundWork(
   poolManager: PoolManager,
   publisher: Publisher,
 ): void {
-  sessionLifecycle.initializeSession(sessionId, projectId).catch((error) => {
+  sessionLifecycle.scheduleInitializeSession(sessionId, projectId).catch((error) => {
     console.error(`[Orchestration] Background initialization failed for ${sessionId}:`, error);
     publisher.publishDelta(
       "sessionMetadata",
       { uuid: sessionId },
-      { initializationError: error instanceof Error ? error.message : "Initialization failed" },
+      {
+        initializationError:
+          error instanceof Error ? `${error.name}: ${error.message}` : "Initialization failed",
+      },
     );
   });
-  poolManager.reconcilePool(projectId).catch((error) => {
-    console.error(`[Orchestration] Pool reconciliation failed for project ${projectId}:`, error);
-  });
+  poolManager.triggerReconcileInBackground(projectId, "session_spawn");
 }
 
 async function claimAndPreparePooledSession(
@@ -114,7 +119,7 @@ async function createSessionWithContainers(
 ): Promise<SpawnSessionResult> {
   const containerDefinitions = await findContainersByProjectId(projectId);
   if (containerDefinitions.length === 0) {
-    throw new Error("Project has no container definitions");
+    throw new ValidationError("Project has no container definitions");
   }
 
   const session = await createSession(projectId);

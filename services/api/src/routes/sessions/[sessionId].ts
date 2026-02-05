@@ -5,7 +5,7 @@ import { findSessionContainersBySessionId } from "../../repositories/container-s
 import { formatProxyUrl } from "../../shared/naming";
 import { parseRequestBody } from "../../shared/validation";
 import { withParams } from "../../shared/route-helpers";
-import type { InfraContext, ProxyContext, SessionContext } from "../../types/route";
+import type { RouteContextFor } from "../../types/route";
 
 const patchSessionSchema = z.object({
   opencodeSessionId: z.string().optional(),
@@ -23,7 +23,10 @@ function buildContainerUrls(
   );
 }
 
-const GET = withParams<{ sessionId: string }, InfraContext & ProxyContext>(
+type SessionReadContext = RouteContextFor<"infra" | "proxy">;
+type SessionCleanupContext = RouteContextFor<"session">;
+
+const GET = withParams<{ sessionId: string }, SessionReadContext>(
   ["sessionId"],
   async ({ sessionId }, _request, ctx) => {
     const session = await findSessionByIdOrThrow(sessionId);
@@ -59,7 +62,7 @@ const PATCH = withParams<{ sessionId: string }>(["sessionId"], async ({ sessionI
   return Response.json(updated);
 });
 
-const DELETE = withParams<{ sessionId: string }, SessionContext>(
+const DELETE = withParams<{ sessionId: string }, SessionCleanupContext>(
   ["sessionId"],
   async ({ sessionId }, _request, ctx) => {
     await findSessionByIdOrThrow(sessionId);

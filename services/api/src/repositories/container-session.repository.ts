@@ -4,6 +4,8 @@ import { containerPorts } from "@lab/database/schema/container-ports";
 import { sessionContainers, type SessionContainer } from "@lab/database/schema/session-containers";
 import { eq, and, asc, inArray } from "drizzle-orm";
 import { groupBy } from "../shared/collection-utils";
+import { InternalError } from "../shared/errors";
+import { formatNetworkAlias } from "../shared/naming";
 import { CONTAINER_STATUS, type ContainerStatus } from "../types/container";
 
 export interface SessionService {
@@ -21,7 +23,12 @@ export async function createSessionContainer(data: {
   status: string;
 }): Promise<SessionContainer> {
   const [sessionContainer] = await db.insert(sessionContainers).values(data).returning();
-  if (!sessionContainer) throw new Error("Failed to create session container");
+  if (!sessionContainer) {
+    throw new InternalError(
+      "Failed to create session container",
+      "SESSION_CONTAINER_CREATE_FAILED",
+    );
+  }
   return sessionContainer;
 }
 
@@ -181,7 +188,7 @@ export async function getFirstExposedService(
 
   if (!result[0]) return null;
 
-  const hostname = `${sessionId}--${result[0].port}`;
+  const hostname = formatNetworkAlias(sessionId, result[0].port);
   return { hostname, port: result[0].port };
 }
 
@@ -259,7 +266,7 @@ export async function getSessionContainersWithPorts(sessionId: string): Promise<
     .orderBy(asc(containerPorts.port));
 
   return result.map((row) => ({
-    hostname: `${sessionId}--${row.port}`,
+    hostname: formatNetworkAlias(sessionId, row.port),
     port: row.port,
   }));
 }

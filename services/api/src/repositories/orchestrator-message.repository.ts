@@ -5,6 +5,7 @@ import {
   type OrchestratorMessageRole,
 } from "@lab/database/schema/orchestrator-messages";
 import { and, eq, desc, asc, inArray } from "drizzle-orm";
+import { InternalError } from "../shared/errors";
 
 export async function saveOrchestratorMessage(params: {
   platform: string;
@@ -25,7 +26,10 @@ export async function saveOrchestratorMessage(params: {
     .returning();
 
   if (!message) {
-    throw new Error("Failed to save orchestrator message");
+    throw new InternalError(
+      "Failed to save orchestrator message",
+      "ORCHESTRATOR_MESSAGE_SAVE_FAILED",
+    );
   }
 
   return message;
@@ -64,4 +68,13 @@ export async function getOrchestratorMessages(params: {
     .from(orchestratorMessages)
     .where(inArray(orchestratorMessages.id, messageIds))
     .orderBy(asc(orchestratorMessages.createdAt));
+}
+
+export async function getConversationHistory(params: {
+  platform: string;
+  platformChatId: string;
+  limit?: number;
+}): Promise<string[]> {
+  const messages = await getOrchestratorMessages(params);
+  return messages.map((msg) => `${msg.role}: ${msg.content}`);
 }

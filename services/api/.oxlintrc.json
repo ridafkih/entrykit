@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "overrides": [
+    {
+      "files": ["src/routes/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/types/route"],
+                "importNames": ["RouteContext"],
+                "message": "Use RouteContextFor<...> for route handlers instead of full RouteContext."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

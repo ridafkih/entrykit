@@ -1,7 +1,7 @@
 import { TIMING } from "../config/constants";
 import { findRunningSessions, findSessionById } from "../repositories/session.repository";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
-import { parseEvent, extractTextFromParts, type OpenCodeEvent } from "../opencode/event-parser";
+import { parseEvent, extractTextFromParts } from "../opencode/event-parser";
 import {
   updateInferenceGenerating,
   updateInferenceIdle,

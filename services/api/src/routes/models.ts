@@ -1,10 +1,11 @@
 import type { Handler, InfraContext } from "../types/route";
+import { ExternalServiceError } from "../shared/errors";
 
 const GET: Handler<InfraContext> = async (_request, _params, ctx) => {
   const response = await ctx.opencode.provider.list();
 
   if (response.error || !response.data) {
-    throw new Error("Failed to fetch providers");
+    throw new ExternalServiceError("Failed to fetch providers", "PROVIDER_LIST_FAILED");
   }
 
   const { all, connected } = response.data;

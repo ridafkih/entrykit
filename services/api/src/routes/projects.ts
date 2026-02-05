@@ -1,5 +1,5 @@
 import { findAllProjectsWithContainers, createProject } from "../repositories/project.repository";
-import type { Handler, InfraContext } from "../types/route";
+import type { Handler, InfraContext, NoRouteContext } from "../types/route";
 import { parseRequestBody } from "../shared/validation";
 import { z } from "zod";
 
@@ -9,7 +9,7 @@ const createProjectSchema = z.object({
   systemPrompt: z.string().optional(),
 });
 
-const GET: Handler = async () => {
+const GET: Handler<NoRouteContext> = async () => {
   const projects = await findAllProjectsWithContainers();
   return Response.json(projects);
 };

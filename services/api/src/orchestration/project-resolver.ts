@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Project } from "@lab/database/schema/projects";
 import { complete } from "./llm";
 import { buildProjectResolutionPrompt } from "./prompts";
+import { NotFoundError, ValidationError } from "../shared/errors";
 
 const resolutionResponseSchema = z.object({
   projectId: z.string(),
@@ -30,7 +31,7 @@ function formatProjectContext(projects: ProjectInfo[]): string {
 function extractJsonFromResponse(response: string): string {
   const jsonMatch = response.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error("Failed to parse LLM response: no JSON found");
+    throw new ValidationError("Failed to parse LLM response: no JSON found");
   }
   return jsonMatch[0];
 }
@@ -42,12 +43,12 @@ function parseResolutionResponse(response: string): ProjectResolutionResult {
   try {
     rawJson = JSON.parse(jsonString);
   } catch {
-    throw new Error("Failed to parse LLM response: invalid JSON");
+    throw new ValidationError("Failed to parse LLM response: invalid JSON");
   }
 
   const parseResult = resolutionResponseSchema.safeParse(rawJson);
   if (!parseResult.success) {
-    throw new Error(`Failed to parse LLM response: ${parseResult.error.message}`);
+    throw new ValidationError(`Failed to parse LLM response: ${parseResult.error.message}`);
   }
 
   return parseResult.data;
@@ -75,7 +76,7 @@ function validateProjectExists(
     return { ...result, projectId: matchedByName.id, projectName: matchedByName.name };
   }
 
-  throw new Error(`LLM returned invalid project: ${result.projectName} (${result.projectId})`);
+  throw new NotFoundError("Resolved project", `${result.projectName} (${result.projectId})`);
 }
 
 function resolveSingleProject(project: Project): ProjectResolutionResult {
@@ -93,7 +94,7 @@ export async function resolveProject(
 ): Promise<ProjectResolutionResult> {
   const firstProject = projects[0];
   if (!firstProject) {
-    throw new Error("No projects available for resolution");
+    throw new NotFoundError("Project");
   }
 
   if (projects.length === 1) {

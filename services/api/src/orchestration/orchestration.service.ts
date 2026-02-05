@@ -17,6 +17,7 @@ import type { BrowserServiceManager } from "../managers/browser-service.manager"
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
 import type { PoolManager } from "../managers/pool.manager";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
+import { NotFoundError } from "../shared/errors";
 
 export interface OrchestrationInput {
   content: string;
@@ -102,7 +103,7 @@ async function resolveTargetProject(ctx: OrchestrationContext): Promise<ProjectR
 
   const projects = await findAllProjects();
   if (projects.length === 0) {
-    throw new Error("No projects available");
+    throw new NotFoundError("Project");
   }
 
   const resolution = await resolveProject(ctx.content, projects);

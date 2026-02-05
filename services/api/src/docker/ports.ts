@@ -1,6 +1,7 @@
 import { db } from "@lab/database/client";
 import { portReservations } from "@lab/database/schema/port-reservations";
 import { eq, and, isNull, or, gt, lt } from "drizzle-orm";
+import { ServiceUnavailableError } from "../shared/errors";
 
 export type PortType = "cdp" | "stream" | "container";
 
@@ -16,7 +17,6 @@ const PORT_RANGES: Record<PortType, PortRange> = {
 };
 
 async function getUsedPortsForType(portType: PortType): Promise<Set<number>> {
-  const range = PORT_RANGES[portType];
   const now = new Date();
 
   const reservations = await db
@@ -52,8 +52,9 @@ export async function reservePort(
   const availablePort = findFirstAvailablePort(range, usedPorts);
 
   if (availablePort === null) {
-    throw new Error(
+    throw new ServiceUnavailableError(
       `Port exhaustion: no available ${portType} ports in range ${range.start}-${range.end}`,
+      "PORT_EXHAUSTION",
     );
   }
 

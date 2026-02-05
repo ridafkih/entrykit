@@ -17,6 +17,7 @@ import {
   loadSessionLogs,
 } from "../snapshots/snapshot-loaders";
 import { MESSAGE_ROLE } from "../types/message";
+import { ValidationError } from "../shared/errors";
 
 export { type Auth } from "../types/websocket";
 
@@ -41,13 +42,13 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
     },
     sessionMetadata: {
       getSnapshot: async ({ params }) => {
-        if (!params.uuid) throw new Error("Missing uuid parameter");
+        if (!params.uuid) throw new ValidationError("Missing uuid parameter");
         return loadSessionMetadata(params.uuid, opencode);
       },
     },
     sessionContainers: {
       getSnapshot: async ({ params }) => {
-        if (!params.uuid) throw new Error("Missing uuid parameter");
+        if (!params.uuid) throw new ValidationError("Missing uuid parameter");
         return loadSessionContainers(params.uuid, proxyBaseDomain);
       },
     },
@@ -59,7 +60,7 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
     },
     sessionChangedFiles: {
       getSnapshot: async ({ params }) => {
-        if (!params.uuid) throw new Error("Missing uuid parameter");
+        if (!params.uuid) throw new ValidationError("Missing uuid parameter");
         return loadSessionChangedFiles(params.uuid, opencode);
       },
     },
@@ -80,7 +81,7 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
     },
     sessionBrowserState: {
       getSnapshot: async ({ params }) => {
-        if (!params.uuid) throw new Error("Missing uuid parameter");
+        if (!params.uuid) throw new ValidationError("Missing uuid parameter");
         return browserService.getBrowserSnapshot(params.uuid);
       },
       onSubscribe: ({ params, ws }) => {

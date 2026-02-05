@@ -1,7 +1,23 @@
 import { db } from "@lab/database/client";
-import { githubSettings } from "@lab/database/schema/github-settings";
+import { githubSettings, type GitHubSettings } from "@lab/database/schema/github-settings";
 import { eq } from "drizzle-orm";
 import { encrypt, decrypt } from "../shared/crypto";
+import { InternalError } from "../shared/errors";
+
+function toSettingsOutput(settings: GitHubSettings): GitHubSettingsOutput {
+  return {
+    id: settings.id,
+    username: settings.username,
+    authorName: settings.authorName,
+    authorEmail: settings.authorEmail,
+    attributeAgent: settings.attributeAgent,
+    hasPatConfigured: !!settings.patEncrypted,
+    isOAuthConnected: !!settings.accessTokenEncrypted,
+    oauthConnectedAt: settings.oauthConnectedAt,
+    createdAt: settings.createdAt,
+    updatedAt: settings.updatedAt,
+  };
+}
 
 export interface GitHubSettingsInput {
   pat?: string;
@@ -42,18 +58,7 @@ export async function getGitHubSettings(): Promise<GitHubSettingsOutput | null> 
   const [settings] = await db.select().from(githubSettings).limit(1);
   if (!settings) return null;
 
-  return {
-    id: settings.id,
-    username: settings.username,
-    authorName: settings.authorName,
-    authorEmail: settings.authorEmail,
-    attributeAgent: settings.attributeAgent,
-    hasPatConfigured: !!settings.patEncrypted,
-    isOAuthConnected: !!settings.accessTokenEncrypted,
-    oauthConnectedAt: settings.oauthConnectedAt,
-    createdAt: settings.createdAt,
-    updatedAt: settings.updatedAt,
-  };
+  return toSettingsOutput(settings);
 }
 
 export async function getGitHubCredentials(): Promise<GitHubCredentials | null> {
@@ -121,20 +126,11 @@ export async function saveGitHubSettings(
     [settings] = await db.insert(githubSettings).values(values).returning();
   }
 
-  if (!settings) throw new Error("Failed to save GitHub settings");
+  if (!settings) {
+    throw new InternalError("Failed to save GitHub settings", "GITHUB_SETTINGS_SAVE_FAILED");
+  }
 
-  return {
-    id: settings.id,
-    username: settings.username,
-    authorName: settings.authorName,
-    authorEmail: settings.authorEmail,
-    attributeAgent: settings.attributeAgent,
-    hasPatConfigured: !!settings.patEncrypted,
-    isOAuthConnected: !!settings.accessTokenEncrypted,
-    oauthConnectedAt: settings.oauthConnectedAt,
-    createdAt: settings.createdAt,
-    updatedAt: settings.updatedAt,
-  };
+  return toSettingsOutput(settings);
 }
 
 export async function deleteGitHubSettings(): Promise<void> {
@@ -166,20 +162,11 @@ export async function saveGitHubOAuthToken(input: GitHubOAuthInput): Promise<Git
     [settings] = await db.insert(githubSettings).values(values).returning();
   }
 
-  if (!settings) throw new Error("Failed to save GitHub OAuth token");
+  if (!settings) {
+    throw new InternalError("Failed to save GitHub OAuth token", "GITHUB_OAUTH_SAVE_FAILED");
+  }
 
-  return {
-    id: settings.id,
-    username: settings.username,
-    authorName: settings.authorName,
-    authorEmail: settings.authorEmail,
-    attributeAgent: settings.attributeAgent,
-    hasPatConfigured: !!settings.patEncrypted,
-    isOAuthConnected: !!settings.accessTokenEncrypted,
-    oauthConnectedAt: settings.oauthConnectedAt,
-    createdAt: settings.createdAt,
-    updatedAt: settings.updatedAt,
-  };
+  return toSettingsOutput(settings);
 }
 
 export async function clearGitHubOAuthToken(): Promise<void> {

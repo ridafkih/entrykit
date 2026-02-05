@@ -8,6 +8,7 @@ import { cleanupOrphanedSessions } from "../browser/state-store";
 import { LIMITS } from "../config/constants";
 import type { BrowserService } from "../browser/browser-service";
 import type { DeferredPublisher } from "../shared/deferred-publisher";
+import { InternalError, ServiceUnavailableError } from "../shared/errors";
 
 export interface BrowserServiceConfig {
   apiUrl: string;
@@ -32,21 +33,27 @@ export class BrowserServiceManager {
 
   get service(): BrowserService {
     if (!this.result) {
-      throw new Error("BrowserServiceManager not initialized - call initialize() first");
+      throw new ServiceUnavailableError(
+        "BrowserServiceManager not initialized - call initialize() first",
+        "BROWSER_SERVICE_NOT_INITIALIZED",
+      );
     }
     return this.result.browserService;
   }
 
   get daemonController(): DaemonController {
     if (!this.result) {
-      throw new Error("BrowserServiceManager not initialized - call initialize() first");
+      throw new ServiceUnavailableError(
+        "BrowserServiceManager not initialized - call initialize() first",
+        "BROWSER_SERVICE_NOT_INITIALIZED",
+      );
     }
     return this.result.daemonController;
   }
 
   async initialize(): Promise<void> {
     if (this.result) {
-      throw new Error("BrowserServiceManager already initialized");
+      throw new InternalError("BrowserServiceManager already initialized", "BROWSER_ALREADY_INIT");
     }
 
     await cleanupOrphanedSessions();

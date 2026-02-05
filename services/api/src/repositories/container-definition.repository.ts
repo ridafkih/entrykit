@@ -3,6 +3,7 @@ import { containers, type Container } from "@lab/database/schema/containers";
 import { containerPorts } from "@lab/database/schema/container-ports";
 import { containerDependencies } from "@lab/database/schema/container-dependencies";
 import { eq, and } from "drizzle-orm";
+import { InternalError } from "../shared/errors";
 
 export async function findContainersByProjectId(projectId: string): Promise<Container[]> {
   return db.select().from(containers).where(eq(containers.projectId, projectId));
@@ -14,7 +15,7 @@ export async function createContainer(data: {
   hostname?: string;
 }): Promise<Container> {
   const [container] = await db.insert(containers).values(data).returning();
-  if (!container) throw new Error("Failed to create container");
+  if (!container) throw new InternalError("Failed to create container", "CONTAINER_CREATE_FAILED");
   return container;
 }
 
@@ -46,7 +47,9 @@ export async function createContainerWithDetails(data: {
         hostname: data.hostname,
       })
       .returning();
-    if (!container) throw new Error("Failed to create container");
+    if (!container) {
+      throw new InternalError("Failed to create container", "CONTAINER_CREATE_FAILED");
+    }
 
     if (data.ports && data.ports.length > 0) {
       await tx

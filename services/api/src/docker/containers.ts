@@ -22,6 +22,7 @@ import {
 import type { SessionCleanupService } from "../services/session-cleanup.service";
 import type { Sandbox, Publisher } from "../types/dependencies";
 import type { ProxyManager } from "../services/proxy.service";
+import { InternalError, NetworkError } from "../shared/errors";
 
 interface ClusterContainer {
   containerId: string;
@@ -115,7 +116,10 @@ async function createAndStartContainer(
 
     const verifyConnected = await provider.isConnectedToNetwork(dockerId, networkName);
     if (!verifyConnected) {
-      throw new Error(`Failed to connect container ${dockerId} to network ${networkName}`);
+      throw new NetworkError(
+        `Failed to connect container ${dockerId} to network ${networkName}`,
+        networkName,
+      );
     }
   }
 
@@ -142,7 +146,10 @@ async function startContainersInLevel(
     containerIds.map((containerId) => {
       const prepared = preparedByContainerId.get(containerId);
       if (!prepared) {
-        throw new Error(`Prepared container not found for ${containerId}`);
+        throw new InternalError(
+          `Prepared container not found for ${containerId}`,
+          "PREPARED_CONTAINER_NOT_FOUND",
+        );
       }
       return createAndStartContainer(sessionId, projectId, networkName, prepared, deps);
     }),

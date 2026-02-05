@@ -1,4 +1,4 @@
-import type { Handler } from "../../types/route";
+import type { Handler, NoRouteContext } from "../../types/route";
 import {
   getGitHubSettings,
   saveGitHubSettings,
@@ -16,7 +16,7 @@ const settingsSchema = z.object({
   attributeAgent: z.boolean().optional(),
 });
 
-const GET: Handler = async () => {
+const GET: Handler<NoRouteContext> = async () => {
   const settings = await getGitHubSettings();
   if (!settings) {
     return Response.json({ configured: false });
@@ -24,7 +24,7 @@ const GET: Handler = async () => {
   return Response.json({ configured: true, ...settings });
 };
 
-const POST: Handler = async (request) => {
+const POST: Handler<NoRouteContext> = async (request) => {
   const body = await parseRequestBody(request, settingsSchema);
 
   const settings = await saveGitHubSettings({
@@ -38,7 +38,7 @@ const POST: Handler = async (request) => {
   return Response.json(settings, { status: 201 });
 };
 
-const DELETE: Handler = async () => {
+const DELETE: Handler<NoRouteContext> = async () => {
   await deleteGitHubSettings();
   return noContentResponse();
 };

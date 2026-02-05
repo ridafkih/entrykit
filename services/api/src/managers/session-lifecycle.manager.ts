@@ -16,6 +16,8 @@ export interface SessionLifecycleConfig {
 }
 
 export class SessionLifecycleManager {
+  private readonly initializationTasks = new Map<string, Promise<void>>();
+
   constructor(
     private readonly config: SessionLifecycleConfig,
     private readonly sandbox: Sandbox,
@@ -55,6 +57,24 @@ export class SessionLifecycleManager {
       this.browserServiceManager.service,
       this.getDeps(),
     );
+  }
+
+  scheduleInitializeSession(sessionId: string, projectId: string): Promise<void> {
+    const existing = this.initializationTasks.get(sessionId);
+    if (existing) {
+      return existing;
+    }
+
+    const task = this.initializeSession(sessionId, projectId).finally(() => {
+      this.initializationTasks.delete(sessionId);
+    });
+
+    this.initializationTasks.set(sessionId, task);
+    return task;
+  }
+
+  hasPendingInitialization(sessionId: string): boolean {
+    return this.initializationTasks.has(sessionId);
   }
 
   async cleanupSession(sessionId: string): Promise<void> {

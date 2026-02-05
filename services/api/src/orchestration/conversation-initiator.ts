@@ -1,10 +1,11 @@
 import { findSessionById, updateSessionFields } from "../repositories/session.repository";
 import { getProjectSystemPrompt } from "../repositories/project.repository";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
-import { setLastMessage } from "../state/last-message-store";
+import { setAndPublishLastMessage } from "../state/last-message-store";
 import { createPromptContext } from "../prompts/context";
 import { createDefaultPromptService } from "../prompts/builder";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
+import { ExternalServiceError, throwOnOpencodeError } from "../shared/errors";
 
 export interface InitiateConversationOptions {
   sessionId: string;
@@ -43,7 +44,10 @@ export async function initiateConversation(options: InitiateConversationOptions)
 
   const createResponse = await opencode.session.create({ directory: workspacePath });
   if (createResponse.error || !createResponse.data) {
-    throw new Error(`Failed to create OpenCode session: ${JSON.stringify(createResponse.error)}`);
+    throw new ExternalServiceError(
+      `Failed to create OpenCode session: ${JSON.stringify(createResponse.error)}`,
+      "OPENCODE_SESSION_CREATE_FAILED",
+    );
   }
 
   const opencodeSessionId = createResponse.data.id;
@@ -61,10 +65,11 @@ export async function initiateConversation(options: InitiateConversationOptions)
     tools: { question: false, bash: false },
   });
 
-  if (promptResponse.error) {
-    throw new Error(`Failed to send initial message: ${JSON.stringify(promptResponse.error)}`);
-  }
+  throwOnOpencodeError(
+    promptResponse,
+    "Failed to send initial message",
+    "OPENCODE_INITIAL_PROMPT_FAILED",
+  );
 
-  setLastMessage(sessionId, task);
-  publisher.publishDelta("sessionMetadata", { uuid: sessionId }, { lastMessage: task });
+  setAndPublishLastMessage(sessionId, task, publisher);
 }

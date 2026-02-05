@@ -3,9 +3,8 @@ import { projects } from "@lab/database/schema/projects";
 import { containers } from "@lab/database/schema/containers";
 import { containerPorts } from "@lab/database/schema/container-ports";
 import { containerDependencies } from "@lab/database/schema/container-dependencies";
-import { eq, inArray } from "drizzle-orm";
-import { groupBy } from "../shared/collection-utils";
-import { orThrow } from "../shared/errors";
+import { eq } from "drizzle-orm";
+import { InternalError, orThrow } from "../shared/errors";
 
 export async function findAllProjects() {
   return db.select().from(projects);
@@ -21,69 +20,97 @@ type ContainerWithDetails = {
 };
 
 export async function findAllProjectsWithContainers() {
-  // Fetch projects and containers in parallel
-  const [allProjects, allContainers] = await Promise.all([
-    db.select().from(projects),
-    db
-      .select({
-        id: containers.id,
-        projectId: containers.projectId,
-        image: containers.image,
-        hostname: containers.hostname,
-        isWorkspace: containers.isWorkspace,
-      })
-      .from(containers),
-  ]);
+  const rows = await db
+    .select({
+      projectId: projects.id,
+      projectName: projects.name,
+      projectDescription: projects.description,
+      projectSystemPrompt: projects.systemPrompt,
+      projectCreatedAt: projects.createdAt,
+      projectUpdatedAt: projects.updatedAt,
+      containerId: containers.id,
+      containerImage: containers.image,
+      containerHostname: containers.hostname,
+      containerIsWorkspace: containers.isWorkspace,
+      port: containerPorts.port,
+      dependsOnContainerId: containerDependencies.dependsOnContainerId,
+      dependencyCondition: containerDependencies.condition,
+    })
+    .from(projects)
+    .leftJoin(containers, eq(containers.projectId, projects.id))
+    .leftJoin(containerPorts, eq(containerPorts.containerId, containers.id))
+    .leftJoin(containerDependencies, eq(containerDependencies.containerId, containers.id));
 
-  const containerIds = allContainers.map((container) => container.id);
+  const projectsById = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      description: string | null;
+      systemPrompt: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      containers: ContainerWithDetails[];
+    }
+  >();
 
-  // Fetch ports and dependencies in parallel
-  const [allPorts, allDependencies] = await Promise.all([
-    containerIds.length > 0
-      ? db
-          .select({
-            containerId: containerPorts.containerId,
-            port: containerPorts.port,
-          })
-          .from(containerPorts)
-          .where(inArray(containerPorts.containerId, containerIds))
-      : Promise.resolve([]),
-    containerIds.length > 0
-      ? db
-          .select({
-            containerId: containerDependencies.containerId,
-            dependsOnContainerId: containerDependencies.dependsOnContainerId,
-            condition: containerDependencies.condition,
-          })
-          .from(containerDependencies)
-          .where(inArray(containerDependencies.containerId, containerIds))
-      : Promise.resolve([]),
-  ]);
+  const containersById = new Map<string, ContainerWithDetails>();
+  const seenContainerPorts = new Set<string>();
+  const seenContainerDeps = new Set<string>();
 
-  const portsByContainerId = groupBy(allPorts, ({ containerId }) => containerId);
-  const depsByContainerId = groupBy(allDependencies, ({ containerId }) => containerId);
+  for (const row of rows) {
+    if (!projectsById.has(row.projectId)) {
+      projectsById.set(row.projectId, {
+        id: row.projectId,
+        name: row.projectName,
+        description: row.projectDescription,
+        systemPrompt: row.projectSystemPrompt,
+        createdAt: row.projectCreatedAt,
+        updatedAt: row.projectUpdatedAt,
+        containers: [],
+      });
+    }
 
-  const containersByProjectId = groupBy(
-    allContainers.map(
-      (container): ContainerWithDetails => ({
-        id: container.id,
-        image: container.image,
-        hostname: container.hostname,
-        isWorkspace: container.isWorkspace,
-        ports: (portsByContainerId.get(container.id) ?? []).map(({ port }) => port),
-        dependencies: (depsByContainerId.get(container.id) ?? []).map((dep) => ({
-          dependsOnContainerId: dep.dependsOnContainerId,
-          condition: dep.condition,
-        })),
-      }),
-    ),
-    (_detail, index) => allContainers[index]!.projectId,
-  );
+    if (!row.containerId) {
+      continue;
+    }
 
-  return allProjects.map((project) => ({
-    ...project,
-    containers: containersByProjectId.get(project.id) ?? [],
-  }));
+    let container = containersById.get(row.containerId);
+    if (!container) {
+      container = {
+        id: row.containerId,
+        image: row.containerImage!,
+        hostname: row.containerHostname,
+        isWorkspace: row.containerIsWorkspace!,
+        ports: [],
+        dependencies: [],
+      };
+      containersById.set(row.containerId, container);
+      projectsById.get(row.projectId)!.containers.push(container);
+    }
+
+    if (row.port !== null) {
+      const portKey = `${row.containerId}:${row.port}`;
+      if (!seenContainerPorts.has(portKey)) {
+        seenContainerPorts.add(portKey);
+        container.ports.push(row.port);
+      }
+    }
+
+    if (row.dependsOnContainerId) {
+      const condition = row.dependencyCondition ?? "service_healthy";
+      const depKey = `${row.containerId}:${row.dependsOnContainerId}:${condition}`;
+      if (!seenContainerDeps.has(depKey)) {
+        seenContainerDeps.add(depKey);
+        container.dependencies.push({
+          dependsOnContainerId: row.dependsOnContainerId,
+          condition,
+        });
+      }
+    }
+  }
+
+  return Array.from(projectsById.values());
 }
 
 export async function findProjectById(projectId: string) {
@@ -112,7 +139,7 @@ export async function createProject(data: {
       systemPrompt: data.systemPrompt,
     })
     .returning();
-  if (!project) throw new Error("Failed to create project");
+  if (!project) throw new InternalError("Failed to create project", "PROJECT_CREATE_FAILED");
   return project;
 }
 

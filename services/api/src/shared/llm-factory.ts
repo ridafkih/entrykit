@@ -1,6 +1,7 @@
 import type { LanguageModel } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { ConfigurationError } from "./errors";
 
 export interface LlmModelConfig {
   provider: string;
@@ -14,7 +15,7 @@ export function readModelConfig(envPrefix: string): LlmModelConfig {
   const apiKey = process.env[`${envPrefix}_API_KEY`];
 
   if (!provider || !model || !apiKey) {
-    throw new Error(
+    throw new ConfigurationError(
       `Missing model config. Set ${envPrefix}_PROVIDER, ${envPrefix}_NAME, and ${envPrefix}_API_KEY`,
     );
   }
@@ -33,6 +34,6 @@ export function createLanguageModel(config: LlmModelConfig): LanguageModel {
       return openai(config.model);
     }
     default:
-      throw new Error(`Unsupported LLM provider: ${config.provider}`);
+      throw new ConfigurationError(`Unsupported LLM provider: ${config.provider}`);
   }
 }

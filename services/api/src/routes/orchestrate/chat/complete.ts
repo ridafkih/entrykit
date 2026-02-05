@@ -1,9 +1,9 @@
 import { z } from "zod";
-import type { Handler, BrowserContext, SessionContext, InfraContext } from "../../../types/route";
+import type { Handler, RouteContextFor } from "../../../types/route";
 import { chatOrchestrate } from "../../../orchestration/chat-orchestrator";
 import {
   saveOrchestratorMessage,
-  getOrchestratorMessages,
+  getConversationHistory,
 } from "../../../repositories/orchestrator-message.repository";
 import { parseRequestBody } from "../../../shared/validation";
 import { MESSAGE_ROLE } from "../../../types/message";
@@ -14,11 +14,9 @@ const completeRequestSchema = z.object({
   platformChatId: z.string(),
 });
 
-const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
-  request,
-  _params,
-  context,
-) => {
+type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
+
+const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
   const { sessionId, platformOrigin, platformChatId } = await parseRequestBody(
     request,
     completeRequestSchema,
@@ -33,13 +31,11 @@ const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
     sessionId,
   });
 
-  const history = await getOrchestratorMessages({
+  const conversationHistory = await getConversationHistory({
     platform: platformOrigin,
     platformChatId,
     limit: 20,
   });
-
-  const conversationHistory = history.map((msg) => `${msg.role}: ${msg.content}`);
 
   const result = await chatOrchestrate({
     content: `Session ${sessionId} has completed. Check what was accomplished and include a screenshot if appropriate.`,

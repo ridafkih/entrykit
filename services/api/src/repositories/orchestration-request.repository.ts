@@ -8,7 +8,7 @@ import {
   type SummaryStatus,
 } from "@lab/database/schema/orchestration-requests";
 import { eq } from "drizzle-orm";
-import { orThrow } from "../shared/errors";
+import { InternalError, orThrow } from "../shared/errors";
 
 export async function findOrchestrationById(id: string): Promise<OrchestrationRequest | null> {
   const [record] = await db
@@ -63,7 +63,9 @@ export async function createOrchestrationRequest(
     })
     .returning({ id: orchestrationRequests.id });
 
-  if (!record) throw new Error("Failed to create orchestration record");
+  if (!record) {
+    throw new InternalError("Failed to create orchestration record", "ORCHESTRATION_CREATE_FAILED");
+  }
   return record.id;
 }
 

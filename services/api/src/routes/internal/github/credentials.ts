@@ -1,8 +1,8 @@
-import type { Handler } from "../../../types/route";
+import type { Handler, NoRouteContext } from "../../../types/route";
 import { getGitHubCredentials } from "../../../repositories/github-settings.repository";
 import { NotFoundError } from "../../../shared/errors";
 
-const GET: Handler = async () => {
+const GET: Handler<NoRouteContext> = async () => {
   const credentials = await getGitHubCredentials();
 
   if (!credentials?.token) {

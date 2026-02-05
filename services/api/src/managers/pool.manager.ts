@@ -32,6 +32,7 @@ function computeBackoffMs(failures: number, baseMs: number, maxMs: number): numb
  */
 export class PoolManager {
   private readonly reconcileLocks = new Map<string, Promise<void>>();
+  private readonly reconcileStartedAt = new Map<string, number>();
 
   constructor(
     private readonly poolSize: number,
@@ -59,12 +60,19 @@ export class PoolManager {
     const session = await claimFromDb(projectId);
 
     if (session) {
-      this.reconcilePool(projectId).catch((error) =>
-        console.error(`[PoolManager] Failed to reconcile pool for project ${projectId}:`, error),
-      );
+      this.triggerReconcileInBackground(projectId, "claim");
     }
 
     return session;
+  }
+
+  triggerReconcileInBackground(projectId: string, reason: string): void {
+    this.reconcilePool(projectId).catch((error) => {
+      console.error(
+        `[PoolManager] Failed background reconciliation for project ${projectId} (${reason}):`,
+        error,
+      );
+    });
   }
 
   async createPooledSession(projectId: string): Promise<Session | null> {
@@ -111,6 +119,12 @@ export class PoolManager {
   async reconcilePool(projectId: string): Promise<void> {
     const existing = this.reconcileLocks.get(projectId);
     if (existing) {
+      const startedAt = this.reconcileStartedAt.get(projectId);
+      if (startedAt && Date.now() - startedAt > TIMING.POOL_RECONCILIATION_TIMEOUT_MS) {
+        console.warn(
+          `[PoolManager] Waiting on long-running reconciliation lock for project ${projectId}`,
+        );
+      }
       return existing;
     }
 
@@ -122,14 +136,12 @@ export class PoolManager {
           TIMING.POOL_RECONCILIATION_TIMEOUT_MS,
         ),
       ),
-    ])
-      .catch((error) => {
-        console.error(`[PoolManager] Reconciliation failed for project ${projectId}:`, error);
-      })
-      .finally(() => {
-        this.reconcileLocks.delete(projectId);
-      });
+    ]).finally(() => {
+      this.reconcileLocks.delete(projectId);
+      this.reconcileStartedAt.delete(projectId);
+    });
 
+    this.reconcileStartedAt.set(projectId, Date.now());
     this.reconcileLocks.set(projectId, promise);
     return promise;
   }

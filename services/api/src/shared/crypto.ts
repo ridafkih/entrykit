@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { ConfigurationError } from "./errors";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -7,11 +8,11 @@ const AUTH_TAG_LENGTH = 16;
 function getEncryptionKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
-    throw new Error("ENCRYPTION_KEY environment variable is required for encryption");
+    throw new ConfigurationError("ENCRYPTION_KEY environment variable is required for encryption");
   }
   const keyBuffer = Buffer.from(key, "base64");
   if (keyBuffer.length !== 32) {
-    throw new Error("ENCRYPTION_KEY must be a 32-byte key encoded as base64");
+    throw new ConfigurationError("ENCRYPTION_KEY must be a 32-byte key encoded as base64");
   }
   return keyBuffer;
 }

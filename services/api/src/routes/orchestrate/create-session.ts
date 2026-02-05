@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Handler, BrowserContext, SessionContext, InfraContext } from "../../types/route";
+import type { Handler, RouteContextFor } from "../../types/route";
 import { findProjectByIdOrThrow } from "../../repositories/project.repository";
 import { spawnSession } from "../../orchestration/session-spawner";
 import { initiateConversation } from "../../orchestration/conversation-initiator";
@@ -11,11 +11,9 @@ const createSessionRequestSchema = z.object({
   modelId: z.string().optional(),
 });
 
-const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
-  request,
-  _params,
-  context,
-) => {
+type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
+
+const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
   const { projectId, taskSummary, modelId } = await parseRequestBody(
     request,
     createSessionRequestSchema,

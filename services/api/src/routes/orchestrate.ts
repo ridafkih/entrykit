@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Handler, BrowserContext, SessionContext, InfraContext } from "../types/route";
+import type { Handler, RouteContextFor } from "../types/route";
 import { orchestrate } from "../orchestration";
 import { parseRequestBody } from "../shared/validation";
 
@@ -12,11 +12,9 @@ const orchestrationRequestSchema = z.object({
   messagingMode: z.enum(["active", "passive"]).optional(),
 });
 
-const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
-  request,
-  _params,
-  context,
-) => {
+type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
+
+const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
   const body = await parseRequestBody(request, orchestrationRequestSchema);
 
   const result = await orchestrate({

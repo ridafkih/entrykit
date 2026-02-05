@@ -16,6 +16,11 @@ interface GitHubUserResponse {
   email?: string;
 }
 
+function redirectToSettings(frontendUrl: string, params: Record<string, string>): Response {
+  const search = new URLSearchParams({ tab: "github", ...params });
+  return Response.redirect(`${frontendUrl}/settings?${search.toString()}`, 302);
+}
+
 const GET: Handler<GithubContext> = async (request, _params, ctx) => {
   if (!ctx.frontendUrl) {
     return Response.json({ error: "FRONTEND_URL is not configured" }, { status: 500 });
@@ -30,35 +35,19 @@ const GET: Handler<GithubContext> = async (request, _params, ctx) => {
   const frontendUrl = ctx.frontendUrl;
 
   if (error) {
-    const params = new URLSearchParams({
-      tab: "github",
-      error: errorDescription || error,
-    });
-    return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
+    return redirectToSettings(frontendUrl, { error: errorDescription || error });
   }
 
   if (!code || !state) {
-    const params = new URLSearchParams({
-      tab: "github",
-      error: "Missing code or state parameter",
-    });
-    return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
+    return redirectToSettings(frontendUrl, { error: "Missing code or state parameter" });
   }
 
   if (!validateState(state)) {
-    const params = new URLSearchParams({
-      tab: "github",
-      error: "Invalid or expired state parameter",
-    });
-    return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
+    return redirectToSettings(frontendUrl, { error: "Invalid or expired state parameter" });
   }
 
   if (!ctx.githubClientId || !ctx.githubClientSecret) {
-    const params = new URLSearchParams({
-      tab: "github",
-      error: "GitHub OAuth is not configured",
-    });
-    return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
+    return redirectToSettings(frontendUrl, { error: "GitHub OAuth is not configured" });
   }
 
   try {
@@ -78,11 +67,9 @@ const GET: Handler<GithubContext> = async (request, _params, ctx) => {
     const tokenData: GitHubTokenResponse = await tokenResponse.json();
 
     if (tokenData.error || !tokenData.access_token) {
-      const params = new URLSearchParams({
-        tab: "github",
+      return redirectToSettings(frontendUrl, {
         error: tokenData.error_description || tokenData.error || "Failed to get access token",
       });
-      return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
     }
 
     const userResponse = await fetch("https://api.github.com/user", {
@@ -94,11 +81,7 @@ const GET: Handler<GithubContext> = async (request, _params, ctx) => {
     });
 
     if (!userResponse.ok) {
-      const params = new URLSearchParams({
-        tab: "github",
-        error: "Failed to fetch GitHub user info",
-      });
-      return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
+      return redirectToSettings(frontendUrl, { error: "Failed to fetch GitHub user info" });
     }
 
     const userData: GitHubUserResponse = await userResponse.json();
@@ -109,18 +92,10 @@ const GET: Handler<GithubContext> = async (request, _params, ctx) => {
       username: userData.login,
     });
 
-    const params = new URLSearchParams({
-      tab: "github",
-      connected: "true",
-    });
-    return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
+    return redirectToSettings(frontendUrl, { connected: "true" });
   } catch (err) {
     console.error("[GitHubCallback] OAuth callback error:", err);
-    const params = new URLSearchParams({
-      tab: "github",
-      error: "An unexpected error occurred",
-    });
-    return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
+    return redirectToSettings(frontendUrl, { error: "An unexpected error occurred" });
   }
 };
 
