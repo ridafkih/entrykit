@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generateTaskSummary } from "../../../../generators/summary-generator";
+import { generateTaskSummary } from "../../../../generators/summary.generator";
 import {
   findOrchestrationBySessionIdOrThrow,
   updateOrchestrationSummaryStatus,

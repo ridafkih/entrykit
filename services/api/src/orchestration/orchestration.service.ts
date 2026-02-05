@@ -13,7 +13,7 @@ import { sendMessageToSession } from "./message-sender";
 import { findSessionById } from "../repositories/session.repository";
 import type { BrowserServiceManager } from "../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
-import type { PoolManager } from "../services/pool-manager";
+import type { PoolManager } from "../services/pool.manager";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
 
 export interface OrchestrationInput {

@@ -1,0 +1,44 @@
+export type { MessageAttachment } from "../tool-result-handler";
+import type { BrowserServiceManager } from "../../managers/browser-service.manager";
+import type { SessionLifecycleManager } from "../../managers/session-lifecycle.manager";
+import type { PoolManager } from "../../services/pool.manager";
+import type { ImageStore } from "@lab/context";
+import type { OpencodeClient, Publisher } from "../../types/dependencies";
+
+export interface ChatOrchestratorInput {
+  content: string;
+  conversationHistory?: string[];
+  platformOrigin?: string;
+  platformChatId?: string;
+  browserService: BrowserServiceManager;
+  sessionLifecycle: SessionLifecycleManager;
+  poolManager: PoolManager;
+  modelId?: string;
+  timestamp?: string;
+  opencode: OpencodeClient;
+  publisher: Publisher;
+  imageStore?: ImageStore;
+}
+
+export const CHAT_ORCHESTRATOR_ACTION = {
+  RESPONSE: "response",
+  CREATED_SESSION: "created_session",
+  FORWARDED_MESSAGE: "forwarded_message",
+} as const;
+
+export type ChatOrchestratorAction =
+  (typeof CHAT_ORCHESTRATOR_ACTION)[keyof typeof CHAT_ORCHESTRATOR_ACTION];
+
+export interface ChatOrchestratorResult {
+  action: ChatOrchestratorAction;
+  message: string;
+  messages?: string[];
+  sessionId?: string;
+  projectName?: string;
+  attachments?: import("../tool-result-handler").MessageAttachment[];
+}
+
+export interface ChatOrchestratorChunk {
+  type: "chunk";
+  text: string;
+}

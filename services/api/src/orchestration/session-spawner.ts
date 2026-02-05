@@ -7,8 +7,8 @@ import {
 } from "../repositories/container-session.repository";
 import type { BrowserServiceManager } from "../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
-import type { PoolManager } from "../services/pool-manager";
-import { generateSessionTitle } from "../generators/title-generator";
+import type { PoolManager } from "../services/pool.manager";
+import { generateSessionTitle } from "../generators/title.generator";
 import type { Publisher } from "../types/dependencies";
 import { CONTAINER_STATUS, isContainerStatus, type ContainerStatus } from "../types/container";
 
@@ -71,9 +71,15 @@ function scheduleBackgroundWork(
   projectId: string,
   sessionLifecycle: SessionLifecycleManager,
   poolManager: PoolManager,
+  publisher: Publisher,
 ): void {
   sessionLifecycle.initializeSession(sessionId, projectId).catch((error) => {
     console.error(`[Orchestration] Background initialization failed for ${sessionId}:`, error);
+    publisher.publishDelta(
+      "sessionMetadata",
+      { uuid: sessionId },
+      { initializationError: error instanceof Error ? error.message : "Initialization failed" },
+    );
   });
   poolManager.reconcilePool(projectId).catch((error) => {
     console.error(`[Orchestration] Pool reconciliation failed for project ${projectId}:`, error);
@@ -144,7 +150,7 @@ export async function spawnSession(options: SpawnSessionOptions): Promise<SpawnS
   }
 
   const result = await createSessionWithContainers(projectId, publisher);
-  scheduleBackgroundWork(result.session.id, projectId, sessionLifecycle, poolManager);
+  scheduleBackgroundWork(result.session.id, projectId, sessionLifecycle, poolManager, publisher);
   scheduleBackgroundTitleGeneration(result.session.id, taskSummary, publisher);
   return result;
 }

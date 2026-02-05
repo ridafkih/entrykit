@@ -19,9 +19,13 @@ import {
   resolveStartOrder,
   type PreparedContainer,
 } from "./container-preparer";
-import { cleanupSessionResources, type CleanupSessionDeps } from "../services/session-cleanup";
+import {
+  cleanupOrphanedResources,
+  cleanupOnError,
+  type CleanupSessionDeps,
+} from "../services/session-cleanup.service";
 import type { Sandbox, Publisher } from "../types/dependencies";
-import type { ProxyManager } from "../services/proxy";
+import type { ProxyManager } from "../services/proxy.service";
 
 interface ClusterContainer {
   containerId: string;
@@ -232,10 +236,7 @@ async function cleanupOrphanedContainers(
   browserService: BrowserService,
   deps: CleanupSessionDeps,
 ): Promise<void> {
-  await cleanupSessionResources(sessionId, browserService, deps, {
-    dockerIds,
-    unregisterProxy: true,
-  });
+  await cleanupOrphanedResources(sessionId, dockerIds, browserService, deps);
 }
 
 async function handleInitializationError(
@@ -259,11 +260,5 @@ async function handleInitializationError(
     );
   }
 
-  await cleanupSessionResources(sessionId, browserService, deps, {
-    dockerIds,
-    markStatus: "error",
-    deleteFromDb: true,
-    publishEvents: true,
-    projectId,
-  });
+  await cleanupOnError(sessionId, projectId, dockerIds, browserService, deps);
 }

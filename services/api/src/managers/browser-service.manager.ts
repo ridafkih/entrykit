@@ -5,6 +5,7 @@ import {
   type BrowserBootstrapResult,
 } from "../browser/bootstrap";
 import { cleanupOrphanedSessions } from "../browser/state-store";
+import { LIMITS } from "../config/constants";
 import type { BrowserService } from "../browser/browser-service";
 import type { DeferredPublisher } from "../shared/deferred-publisher";
 
@@ -18,6 +19,7 @@ export interface BrowserServiceConfig {
 
 export class BrowserServiceManager {
   private result: BrowserBootstrapResult | null = null;
+  private readonly lastFrameTime = new Map<string, number>();
 
   constructor(
     private readonly config: BrowserServiceConfig,
@@ -58,6 +60,11 @@ export class BrowserServiceManager {
       reconcileIntervalMs,
       maxRetries,
       publishFrame: (sessionId: string, frame: string, timestamp: number) => {
+        const now = Date.now();
+        const last = this.lastFrameTime.get(sessionId) ?? 0;
+        if (now - last < LIMITS.FRAME_MIN_INTERVAL_MS) return;
+        this.lastFrameTime.set(sessionId, now);
+
         this.deferredPublisher
           .get()
           .publishEvent(
@@ -67,6 +74,10 @@ export class BrowserServiceManager {
           );
       },
       publishStateChange: (sessionId: string, state: BrowserSessionState) => {
+        // Clean up frame throttle tracking when browser session stops
+        if (state.currentState === "stopped" || state.currentState === "error") {
+          this.lastFrameTime.delete(sessionId);
+        }
         this.deferredPublisher.get().publishSnapshot(
           "sessionBrowserState",
           { uuid: sessionId },

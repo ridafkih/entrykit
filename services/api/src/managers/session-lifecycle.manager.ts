@@ -1,12 +1,12 @@
 import { initializeSessionContainers } from "../docker/containers";
-import { cleanupSession } from "../services/session-cleanup";
+import { cleanupSessionFull } from "../services/session-cleanup.service";
 import {
   cleanupSessionNetwork,
   cleanupOrphanedNetworks,
   type NetworkContainerNames,
 } from "../docker/network";
 import type { BrowserServiceManager } from "./browser-service.manager";
-import type { ProxyManager } from "../services/proxy";
+import type { ProxyManager } from "../services/proxy.service";
 import type { Sandbox } from "../types/dependencies";
 import type { DeferredPublisher } from "../shared/deferred-publisher";
 
@@ -51,6 +51,6 @@ export class SessionLifecycleManager {
   }
 
   async cleanupSession(sessionId: string): Promise<void> {
-    await cleanupSession(sessionId, this.browserServiceManager.service, this.getDeps());
+    await cleanupSessionFull(sessionId, this.browserServiceManager.service, this.getDeps());
   }
 }

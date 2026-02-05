@@ -65,12 +65,14 @@ export const schema = defineSchema({
         lastMessage: z.string().optional(),
         inferenceStatus: z.enum(["idle", "generating"]),
         participantCount: z.number(),
+        initializationError: z.string().optional(),
       }),
       default: { title: "", inferenceStatus: "idle", participantCount: 0 },
       delta: z.object({
         title: z.string().optional(),
         lastMessage: z.string().optional(),
         inferenceStatus: z.enum(["idle", "generating"]).optional(),
+        initializationError: z.string().optional(),
       }),
     }),
 

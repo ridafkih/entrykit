@@ -6,7 +6,7 @@ import { SERVER } from "../config/constants";
 import { createWebSocketHandlers, type Auth } from "../websocket/websocket-handler";
 import { createOpenCodeProxyHandler } from "../opencode/handler";
 import { createChannelRestHandler } from "../snapshots/rest-handler";
-import type { PoolManager } from "../services/pool-manager";
+import type { PoolManager } from "../services/pool.manager";
 import type { LogMonitor } from "../monitors/log.monitor";
 import { reconcileNetworkConnections, type NetworkContainerNames } from "../docker/network";
 import { isHttpMethod, isRouteModule } from "@lab/router";

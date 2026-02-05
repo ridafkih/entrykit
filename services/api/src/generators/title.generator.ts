@@ -1,43 +1,7 @@
-import { streamText, type LanguageModel } from "ai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
+import { streamText } from "ai";
+import { readModelConfig, createLanguageModel } from "../shared/llm-factory";
 import { updateSessionTitle } from "../repositories/session.repository";
 import type { Publisher } from "../types/dependencies";
-
-interface ModelConfig {
-  provider: string;
-  model: string;
-  apiKey: string;
-}
-
-function getModelConfig(): ModelConfig {
-  const provider = process.env.ORCHESTRATOR_MODEL_PROVIDER;
-  const model = process.env.ORCHESTRATOR_MODEL_NAME;
-  const apiKey = process.env.ORCHESTRATOR_MODEL_API_KEY;
-
-  if (!provider || !model || !apiKey) {
-    throw new Error(
-      "Missing model config for title generation. Set ORCHESTRATOR_MODEL_PROVIDER, ORCHESTRATOR_MODEL_NAME, and ORCHESTRATOR_MODEL_API_KEY",
-    );
-  }
-
-  return { provider, model, apiKey };
-}
-
-function createModel(config: ModelConfig): LanguageModel {
-  switch (config.provider) {
-    case "anthropic": {
-      const anthropic = createAnthropic({ apiKey: config.apiKey });
-      return anthropic(config.model);
-    }
-    case "openai": {
-      const openai = createOpenAI({ apiKey: config.apiKey });
-      return openai(config.model);
-    }
-    default:
-      throw new Error(`Unsupported provider: ${config.provider}`);
-  }
-}
 
 function buildPrompt(userMessage: string): string {
   return `Generate a brief, descriptive title (3-6 words) for a chat session based on the user's initial message. The title should capture the main intent or topic. Do not include quotes or punctuation at the end. Only output the title, nothing else.
@@ -56,8 +20,8 @@ export async function generateSessionTitle(options: GenerateTitleOptions): Promi
   const { sessionId, userMessage, fallbackTitle, publisher } = options;
 
   try {
-    const config = getModelConfig();
-    const model = createModel(config);
+    const config = readModelConfig("ORCHESTRATOR_MODEL");
+    const model = createLanguageModel(config);
     const prompt = buildPrompt(userMessage);
 
     const result = streamText({

@@ -5,7 +5,7 @@ import { spawnSession } from "../session-spawner";
 import { initiateConversation } from "../conversation-initiator";
 import type { BrowserServiceManager } from "../../managers/browser-service.manager";
 import type { SessionLifecycleManager } from "../../managers/session-lifecycle.manager";
-import type { PoolManager } from "../../services/pool-manager";
+import type { PoolManager } from "../../services/pool.manager";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
 
 export interface CreateSessionToolContext {

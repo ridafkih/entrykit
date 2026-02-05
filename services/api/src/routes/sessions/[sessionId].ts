@@ -1,16 +1,25 @@
+import { z } from "zod";
 import { noContentResponse } from "@lab/http-utilities";
 import { findSessionByIdOrThrow, updateSessionFields } from "../../repositories/session.repository";
 import { findSessionContainersBySessionId } from "../../repositories/container-session.repository";
+import { formatProxyUrl } from "../../shared/naming";
+import { parseRequestBody } from "../../shared/validation";
 import { withParams } from "../../shared/route-helpers";
 import type { InfraContext, ProxyContext, SessionContext } from "../../types/route";
+
+const patchSessionSchema = z.object({
+  opencodeSessionId: z.string().optional(),
+  workspaceDirectory: z.string().optional(),
+  title: z.string().optional(),
+});
 
 function buildContainerUrls(
   sessionId: string,
   ports: Record<string, number>,
   proxyBaseDomain: string,
 ): string[] {
-  return Object.keys(ports).map(
-    (containerPort) => `http://${sessionId}--${containerPort}.${proxyBaseDomain}`,
+  return Object.keys(ports).map((containerPort) =>
+    formatProxyUrl(sessionId, parseInt(containerPort, 10), proxyBaseDomain),
   );
 }
 
@@ -39,14 +48,12 @@ const GET = withParams<{ sessionId: string }, InfraContext & ProxyContext>(
 const PATCH = withParams<{ sessionId: string }>(["sessionId"], async ({ sessionId }, request) => {
   await findSessionByIdOrThrow(sessionId);
 
-  const body = await request.json();
+  const body = await parseRequestBody(request, patchSessionSchema);
 
   const updated = await updateSessionFields(sessionId, {
-    opencodeSessionId:
-      typeof body.opencodeSessionId === "string" ? body.opencodeSessionId : undefined,
-    workspaceDirectory:
-      typeof body.workspaceDirectory === "string" ? body.workspaceDirectory : undefined,
-    title: typeof body.title === "string" ? body.title : undefined,
+    opencodeSessionId: body.opencodeSessionId,
+    workspaceDirectory: body.workspaceDirectory,
+    title: body.title,
   });
 
   return Response.json(updated);

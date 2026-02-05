@@ -1,6 +1,6 @@
 import { findSessionById } from "../repositories/session.repository";
 import { getProjectSystemPrompt } from "../repositories/project.repository";
-import type { ProxyManager } from "../services/proxy";
+import type { ProxyManager } from "../services/proxy.service";
 import type { RouteInfo } from "../types/proxy";
 
 export interface SessionData {

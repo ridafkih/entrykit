@@ -1,3 +1,4 @@
+import { formatProxyUrl } from "../shared/naming";
 import type { RouteInfo } from "../types/proxy";
 
 interface ClusterRegistration {
@@ -20,10 +21,9 @@ export class ProxyManager {
     for (const container of containers) {
       for (const portStr of Object.keys(container.ports)) {
         const port = parseInt(portStr, 10);
-        const subdomain = `${clusterId}--${port}`;
         routes.push({
           containerPort: port,
-          url: `http://${subdomain}.${this.proxyBaseDomain}`,
+          url: formatProxyUrl(clusterId, port, this.proxyBaseDomain),
         });
       }
     }
