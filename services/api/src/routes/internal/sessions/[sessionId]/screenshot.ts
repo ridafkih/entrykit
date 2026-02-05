@@ -1,28 +1,27 @@
-import { badRequestResponse, notFoundResponse } from "../../../../shared/http";
-import { findSessionById } from "../../../../utils/repositories/session.repository";
-import type { RouteHandler } from "../../../../utils/handlers/route-handler";
+import { findSessionByIdOrThrow } from "../../../../repositories/session.repository";
+import { NotFoundError } from "../../../../shared/errors";
+import { withParams } from "../../../../shared/route-helpers";
+import type { BrowserContext } from "../../../../types/route";
 
-const GET: RouteHandler = async (_request, params, context) => {
-  const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
-  if (!sessionId) return badRequestResponse("Missing sessionId");
+const GET = withParams<{ sessionId: string }, BrowserContext>(
+  ["sessionId"],
+  async ({ sessionId }, _request, context) => {
+    await findSessionByIdOrThrow(sessionId);
 
-  const session = await findSessionById(sessionId);
-  if (!session) return notFoundResponse("Session not found");
+    const cachedFrame = context.browserService.service.getCachedFrame(sessionId);
 
-  const { browserService } = context;
-  const cachedFrame = browserService.getCachedFrame(sessionId);
+    if (!cachedFrame) {
+      throw new NotFoundError("Browser frame");
+    }
 
-  if (!cachedFrame) {
-    return notFoundResponse("No browser frame available");
-  }
-
-  return Response.json({
-    sessionId,
-    timestamp: Date.now(),
-    format: "png",
-    encoding: "base64",
-    data: cachedFrame,
-  });
-};
+    return Response.json({
+      sessionId,
+      timestamp: Date.now(),
+      format: "png",
+      encoding: "base64",
+      data: cachedFrame,
+    });
+  },
+);
 
 export { GET };

@@ -1,11 +1,12 @@
-import type { RouteHandler } from "../../../utils/handlers/route-handler";
-import { getGitHubCredentials } from "../../../utils/repositories/github-settings.repository";
+import type { Handler } from "../../../types/route";
+import { getGitHubCredentials } from "../../../repositories/github-settings.repository";
+import { NotFoundError } from "../../../shared/errors";
 
-const GET: RouteHandler = async () => {
+const GET: Handler = async () => {
   const credentials = await getGitHubCredentials();
 
   if (!credentials?.token) {
-    return Response.json({ error: "GitHub not configured" }, { status: 404 });
+    throw new NotFoundError("GitHub credentials");
   }
 
   return Response.json({

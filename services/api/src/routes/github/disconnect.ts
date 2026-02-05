@@ -1,7 +1,7 @@
-import type { RouteHandler } from "../../utils/handlers/route-handler";
-import { clearGitHubOAuthToken } from "../../utils/repositories/github-settings.repository";
+import type { Handler } from "../../types/route";
+import { clearGitHubOAuthToken } from "../../repositories/github-settings.repository";
 
-const POST: RouteHandler = async () => {
+const POST: Handler = async () => {
   await clearGitHubOAuthToken();
   return Response.json({ success: true });
 };

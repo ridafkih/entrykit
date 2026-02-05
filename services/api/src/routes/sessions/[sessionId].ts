@@ -1,89 +1,65 @@
-import { docker } from "../../clients/docker";
-import { notFoundResponse, noContentResponse, badRequestResponse } from "../../shared/http";
-import {
-  findSessionById,
-  updateSessionOpencodeId,
-  updateSessionTitle,
-} from "../../utils/repositories/session.repository";
-import { findSessionContainersBySessionId } from "../../utils/repositories/container.repository";
-import { cleanupSession } from "../../utils/session/session-cleanup";
-import { config } from "../../config/environment";
-import type { RouteHandler } from "../../utils/handlers/route-handler";
+import { noContentResponse } from "@lab/http-utilities";
+import { findSessionByIdOrThrow, updateSessionFields } from "../../repositories/session.repository";
+import { findSessionContainersBySessionId } from "../../repositories/container-session.repository";
+import { withParams } from "../../shared/route-helpers";
+import type { InfraContext, ProxyContext, SessionContext } from "../../types/route";
 
-function buildContainerUrls(sessionId: string, ports: Record<string, number>): string[] {
+function buildContainerUrls(
+  sessionId: string,
+  ports: Record<string, number>,
+  proxyBaseDomain: string,
+): string[] {
   return Object.keys(ports).map(
-    (containerPort) => `http://${sessionId}--${containerPort}.${config.proxyBaseDomain}`,
+    (containerPort) => `http://${sessionId}--${containerPort}.${proxyBaseDomain}`,
   );
 }
 
-const GET: RouteHandler = async (_request, params) => {
-  const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
-  if (!sessionId) return badRequestResponse("Missing sessionId");
-
-  try {
-    const session = await findSessionById(sessionId);
-    if (!session) return notFoundResponse();
+const GET = withParams<{ sessionId: string }, InfraContext & ProxyContext>(
+  ["sessionId"],
+  async ({ sessionId }, _request, ctx) => {
+    const session = await findSessionByIdOrThrow(sessionId);
 
     const containers = await findSessionContainersBySessionId(sessionId);
 
     const containersWithStatus = await Promise.all(
       containers.map(async (container) => {
         if (!container.dockerId) return { ...container, info: null, urls: [] };
-        const info = await docker.inspectContainer(container.dockerId);
-        const urls = info?.ports ? buildContainerUrls(sessionId, info.ports) : [];
+        const info = await ctx.sandbox.provider.inspectContainer(container.dockerId);
+        const urls = info?.ports
+          ? buildContainerUrls(sessionId, info.ports, ctx.proxyBaseDomain)
+          : [];
         return { ...container, info, urls };
       }),
     );
 
     return Response.json({ ...session, containers: containersWithStatus });
-  } catch {
-    return notFoundResponse();
-  }
-};
+  },
+);
 
-const PATCH: RouteHandler = async (request, params) => {
-  const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
-  if (!sessionId) return badRequestResponse("Missing sessionId");
+const PATCH = withParams<{ sessionId: string }>(["sessionId"], async ({ sessionId }, request) => {
+  await findSessionByIdOrThrow(sessionId);
 
-  try {
-    let session = await findSessionById(sessionId);
-    if (!session) return notFoundResponse();
+  const body = await request.json();
 
-    const body = await request.json();
+  const updated = await updateSessionFields(sessionId, {
+    opencodeSessionId:
+      typeof body.opencodeSessionId === "string" ? body.opencodeSessionId : undefined,
+    workspaceDirectory:
+      typeof body.workspaceDirectory === "string" ? body.workspaceDirectory : undefined,
+    title: typeof body.title === "string" ? body.title : undefined,
+  });
 
-    if (typeof body.opencodeSessionId === "string") {
-      const workspaceDirectory =
-        typeof body.workspaceDirectory === "string" ? body.workspaceDirectory : undefined;
-      session = await updateSessionOpencodeId(
-        sessionId,
-        body.opencodeSessionId,
-        workspaceDirectory,
-      );
-    }
+  return Response.json(updated);
+});
 
-    if (typeof body.title === "string") {
-      session = await updateSessionTitle(sessionId, body.title);
-    }
+const DELETE = withParams<{ sessionId: string }, SessionContext>(
+  ["sessionId"],
+  async ({ sessionId }, _request, ctx) => {
+    await findSessionByIdOrThrow(sessionId);
 
-    return Response.json(session);
-  } catch {
-    return notFoundResponse();
-  }
-};
-
-const DELETE: RouteHandler = async (_request, params, context) => {
-  const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
-  if (!sessionId) return badRequestResponse("Missing sessionId");
-
-  try {
-    const session = await findSessionById(sessionId);
-    if (!session) return notFoundResponse();
-
-    await cleanupSession(sessionId, context.browserService);
+    await ctx.sessionLifecycle.cleanupSession(sessionId);
     return noContentResponse();
-  } catch {
-    return notFoundResponse();
-  }
-};
+  },
+);
 
 export { DELETE, GET, PATCH };

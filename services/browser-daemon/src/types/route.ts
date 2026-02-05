@@ -1,15 +1,11 @@
+import type { RouteHandler as BaseRouteHandler, RouteModule as BaseRouteModule } from "@lab/router";
 import type { DaemonManager } from "./daemon";
 
-export type HttpMethod = "GET" | "POST" | "DELETE" | "HEAD";
+export type { HttpMethod } from "@lab/router";
 
 export interface RouteContext {
   daemonManager: DaemonManager;
 }
 
-export type RouteHandler = (
-  request: Request,
-  params: Record<string, string>,
-  context: RouteContext,
-) => Response | Promise<Response>;
-
-export type RouteModule = Partial<Record<HttpMethod, RouteHandler>>;
+export type RouteHandler = BaseRouteHandler<RouteContext>;
+export type RouteModule = BaseRouteModule<RouteContext>;

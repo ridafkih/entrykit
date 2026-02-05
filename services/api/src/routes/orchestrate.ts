@@ -1,6 +1,7 @@
 import { z } from "zod";
-import type { RouteHandler } from "../utils/handlers/route-handler";
-import { orchestrate } from "../utils/orchestration";
+import type { Handler, BrowserContext, SessionContext, InfraContext } from "../types/route";
+import { orchestrate } from "../orchestration";
+import { parseRequestBody } from "../shared/validation";
 
 const orchestrationRequestSchema = z.object({
   content: z.string().min(1),
@@ -11,39 +12,28 @@ const orchestrationRequestSchema = z.object({
   messagingMode: z.enum(["active", "passive"]).optional(),
 });
 
-const POST: RouteHandler = async (request, _params, context) => {
-  const rawBody = await request.json().catch(() => null);
-  const parseResult = orchestrationRequestSchema.safeParse(rawBody);
+const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
+  request,
+  _params,
+  context,
+) => {
+  const body = await parseRequestBody(request, orchestrationRequestSchema);
 
-  if (!parseResult.success) {
-    return Response.json(
-      {
-        error:
-          "Invalid request body. Required: { content: string, channelId?: string, modelId?: string, platformOrigin?: string, platformChatId?: string, messagingMode?: 'active' | 'passive' }",
-      },
-      { status: 400 },
-    );
-  }
+  const result = await orchestrate({
+    content: body.content.trim(),
+    channelId: body.channelId,
+    modelId: body.modelId,
+    platformOrigin: body.platformOrigin,
+    platformChatId: body.platformChatId,
+    messagingMode: body.messagingMode,
+    browserService: context.browserService,
+    sessionLifecycle: context.sessionLifecycle,
+    poolManager: context.poolManager,
+    opencode: context.opencode,
+    publisher: context.publisher,
+  });
 
-  const body = parseResult.data;
-
-  try {
-    const result = await orchestrate({
-      content: body.content.trim(),
-      channelId: body.channelId,
-      modelId: body.modelId,
-      platformOrigin: body.platformOrigin,
-      platformChatId: body.platformChatId,
-      messagingMode: body.messagingMode,
-      browserService: context.browserService,
-    });
-
-    return Response.json(result, { status: 201 });
-  } catch (error) {
-    console.error("[Orchestrate] Error:", error);
-    const message = error instanceof Error ? error.message : "Orchestration failed";
-    return Response.json({ error: message }, { status: 500 });
-  }
+  return Response.json(result, { status: 201 });
 };
 
 export { POST };

@@ -1,17 +1,15 @@
+import type { PromptFragment, PromptService } from "@lab/prompts-sdk";
+
+/**
+ * Context for rendering prompts in the API service.
+ */
 export interface PromptContext {
   sessionId: string;
   projectId: string;
   projectSystemPrompt: string | null;
 }
 
-export interface PromptFragment {
-  readonly id: string;
-  readonly name: string;
-  readonly priority?: number;
-  render(context: PromptContext): string | null;
-  shouldInclude?(context: PromptContext): boolean;
-}
+export type { PromptFragment, PromptService };
 
-export interface PromptService {
-  compose(context: PromptContext): { text: string; includedFragments: string[] };
-}
+export type ApiPromptFragment = PromptFragment<PromptContext>;
+export type ApiPromptService = PromptService<PromptContext>;

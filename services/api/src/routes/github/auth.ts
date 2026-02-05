@@ -1,13 +1,12 @@
-import type { RouteHandler } from "../../utils/handlers/route-handler";
-import { config } from "../../config/environment";
+import type { Handler, GithubContext } from "../../types/route";
 import { createHmac, randomBytes } from "node:crypto";
-
-const STATE_EXPIRY_MS = 10 * 60 * 1000;
+import { TIMING } from "../../config/constants";
+import { ConfigurationError } from "../../shared/errors";
 
 function getSigningKey(): string {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
-    throw new Error("ENCRYPTION_KEY is required for OAuth state signing");
+    throw new ConfigurationError("ENCRYPTION_KEY is required for OAuth state signing");
   }
   return key;
 }
@@ -37,21 +36,21 @@ export function validateState(state: string): boolean {
   if (isNaN(stateTime)) return false;
 
   const age = Date.now() - stateTime;
-  if (age > STATE_EXPIRY_MS || age < 0) return false;
+  if (age > TIMING.OAUTH_STATE_EXPIRY_MS || age < 0) return false;
 
   return true;
 }
 
-const GET: RouteHandler = async () => {
-  if (!config.githubClientId || !config.githubCallbackUrl) {
-    return Response.json({ error: "GitHub OAuth is not configured" }, { status: 500 });
+const GET: Handler<GithubContext> = async (_request, _params, ctx) => {
+  if (!ctx.githubClientId || !ctx.githubCallbackUrl) {
+    throw new ConfigurationError("GitHub OAuth is not configured");
   }
 
   const state = createState();
 
   const params = new URLSearchParams({
-    client_id: config.githubClientId,
-    redirect_uri: config.githubCallbackUrl,
+    client_id: ctx.githubClientId,
+    redirect_uri: ctx.githubCallbackUrl,
     scope: "repo",
     state,
   });

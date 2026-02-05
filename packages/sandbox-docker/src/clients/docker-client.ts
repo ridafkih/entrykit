@@ -8,39 +8,33 @@ import type {
   NetworkCreateOptions,
   ExecOptions,
   ExecResult,
+  ImageConfig,
+  NetworkInfo,
+  ContainerEventStream,
+  ContainerEvent,
+  ContainerEventStreamOptions,
 } from "@lab/sandbox-sdk";
-import { SandboxError } from "@lab/sandbox-sdk";
-import type {
-  DockerClientOptions,
-  DockerContainerEvent,
-  DockerContainerEventAction,
-} from "../types";
-import { isNotFoundError, isNotRunningError } from "../utils";
-import { toContainerState } from "../utils";
+import type { DockerClientOptions } from "../types/client";
+import { DockerImageManager } from "../modules/docker-image-manager";
+import { DockerContainerManager } from "../modules/docker-container-manager";
+import { DockerVolumeManager } from "../modules/docker-volume-manager";
+import { NetworkOperations } from "../modules/network-operations";
+import { ExecOperations } from "../modules/exec-operations";
+import { DockerEventStream } from "../modules/docker-event-stream";
 import {
   DEFAULT_SOCKET_PATH,
   DEFAULT_DOCKER_PORT,
   DEFAULT_DOCKER_PROTOCOL,
-  ALPINE_IMAGE,
-  VOLUME_CLONE_COMMAND,
 } from "../constants";
 
-interface Writable {
-  write(chunk: Buffer): void;
-}
-
-interface DockerModem {
-  demuxStream(stream: NodeJS.ReadableStream, stdout: Writable, stderr: Writable): void;
-}
-
-declare module "dockerode" {
-  interface Dockerode {
-    modem: DockerModem;
-  }
-}
-
-export class DockerClient implements SandboxProvider {
-  private docker: Dockerode;
+export class DockerClient implements SandboxProvider, ContainerEventStream {
+  private readonly docker: Dockerode;
+  private readonly imageManager: DockerImageManager;
+  private readonly containerManager: DockerContainerManager;
+  private readonly volumeManager: DockerVolumeManager;
+  private readonly networkOps: NetworkOperations;
+  private readonly execOps: ExecOperations;
+  private readonly eventStream: DockerEventStream;
 
   constructor(options: DockerClientOptions = {}) {
     if (options.host) {
@@ -54,477 +48,132 @@ export class DockerClient implements SandboxProvider {
         socketPath: options.socketPath ?? DEFAULT_SOCKET_PATH,
       });
     }
-  }
 
-  private get modem(): DockerModem {
-    return this.docker.modem;
+    this.imageManager = new DockerImageManager(this.docker);
+    this.containerManager = new DockerContainerManager(this.docker);
+    this.volumeManager = new DockerVolumeManager(this.docker, this.containerManager);
+    this.networkOps = new NetworkOperations(this.docker);
+    this.execOps = new ExecOperations(this.docker);
+    this.eventStream = new DockerEventStream(this.docker);
   }
 
   get raw(): Dockerode {
     return this.docker;
   }
 
-  async pullImage(
-    ref: string,
+  pullImage(
+    imageRef: string,
     onProgress?: (event: { status: string; progress?: string }) => void,
   ): Promise<void> {
-    const stream = await this.docker.pull(ref);
-
-    await new Promise<void>((resolve, reject) => {
-      this.docker.modem.followProgress(
-        stream,
-        (err: Error | null) => {
-          if (err) reject(err);
-          else resolve();
-        },
-        onProgress,
-      );
-    });
+    return this.imageManager.pullImage(imageRef, onProgress);
   }
 
-  async imageExists(ref: string): Promise<boolean> {
-    try {
-      await this.docker.getImage(ref).inspect();
-      return true;
-    } catch {
-      return false;
-    }
+  imageExists(imageRef: string): Promise<boolean> {
+    return this.imageManager.imageExists(imageRef);
   }
 
-  async getImageWorkdir(ref: string): Promise<string> {
-    const info = await this.docker.getImage(ref).inspect();
-    return info.Config.WorkingDir || "/";
+  getImageWorkdir(imageRef: string): Promise<string> {
+    return this.imageManager.getImageWorkdir(imageRef);
   }
 
-  async getImageConfig(ref: string): Promise<{
-    workdir: string;
-    entrypoint: string[] | null;
-    cmd: string[] | null;
-  }> {
-    const info = await this.docker.getImage(ref).inspect();
-    const entrypoint = info.Config.Entrypoint;
-    return {
-      workdir: info.Config.WorkingDir || "/",
-      entrypoint: typeof entrypoint === "string" ? [entrypoint] : entrypoint || null,
-      cmd: info.Config.Cmd || null,
-    };
+  getImageConfig(imageRef: string): Promise<ImageConfig> {
+    return this.imageManager.getImageConfig(imageRef);
   }
 
-  async createContainer(options: ContainerCreateOptions): Promise<string> {
-    const { exposedPorts, portBindings } = this.buildPortConfiguration(options.ports);
-    const binds = this.buildVolumeBinds(options.volumes);
-    const restartPolicy = this.buildRestartPolicy(options.restartPolicy);
-
-    const container = await this.docker.createContainer({
-      name: options.name,
-      Image: options.image,
-      Cmd: options.command,
-      Entrypoint: options.entrypoint,
-      WorkingDir: options.workdir,
-      Hostname: options.hostname,
-      Env: options.env ? Object.entries(options.env).map(([key, value]) => `${key}=${value}`) : undefined,
-      Labels: options.labels,
-      ExposedPorts: Object.keys(exposedPorts).length > 0 ? exposedPorts : undefined,
-      HostConfig: {
-        PortBindings: Object.keys(portBindings).length > 0 ? portBindings : undefined,
-        Binds: binds.length > 0 ? binds : undefined,
-        NetworkMode: options.networkMode,
-        Privileged: options.privileged,
-        RestartPolicy: restartPolicy,
-      },
-    });
-
-    return container.id;
+  createContainer(options: ContainerCreateOptions): Promise<string> {
+    return this.containerManager.createContainer(options);
   }
 
-  private buildPortConfiguration(ports?: ContainerCreateOptions["ports"]): {
-    exposedPorts: Record<string, object>;
-    portBindings: Record<string, { HostPort: string }[]>;
-  } {
-    const exposedPorts: Record<string, object> = {};
-    const portBindings: Record<string, { HostPort: string }[]> = {};
-
-    if (!ports) {
-      return { exposedPorts, portBindings };
-    }
-
-    for (const portMapping of ports) {
-      const protocol = portMapping.protocol ?? "tcp";
-      const portKey = `${portMapping.container}/${protocol}`;
-      exposedPorts[portKey] = {};
-      portBindings[portKey] = [{ HostPort: portMapping.host?.toString() ?? "" }];
-    }
-
-    return { exposedPorts, portBindings };
+  startContainer(containerId: string): Promise<void> {
+    return this.containerManager.startContainer(containerId);
   }
 
-  private buildVolumeBinds(volumes?: ContainerCreateOptions["volumes"]): string[] {
-    if (!volumes) {
-      return [];
-    }
-
-    return volumes.map((volume) => {
-      const mode = volume.readonly ? "ro" : "rw";
-      return `${volume.source}:${volume.target}:${mode}`;
-    });
+  stopContainer(containerId: string, timeoutSeconds?: number): Promise<void> {
+    return this.containerManager.stopContainer(containerId, timeoutSeconds);
   }
 
-  private buildRestartPolicy(restartPolicy?: ContainerCreateOptions["restartPolicy"]): {
-    Name: string;
-    MaximumRetryCount?: number;
-  } | undefined {
-    if (!restartPolicy) {
-      return undefined;
-    }
-
-    return {
-      Name: restartPolicy.name,
-      MaximumRetryCount: restartPolicy.maximumRetryCount,
-    };
+  removeContainer(containerId: string, force?: boolean): Promise<void> {
+    return this.containerManager.removeContainer(containerId, force);
   }
 
-  async startContainer(id: string): Promise<void> {
-    await this.docker.getContainer(id).start();
+  restartContainer(containerId: string, timeoutSeconds?: number): Promise<void> {
+    return this.containerManager.restartContainer(containerId, timeoutSeconds);
   }
 
-  async stopContainer(id: string, timeout = 10): Promise<void> {
-    try {
-      await this.docker.getContainer(id).stop({ t: timeout });
-    } catch (err) {
-      if (!isNotRunningError(err) && !isNotFoundError(err)) throw err;
-    }
+  inspectContainer(containerId: string): Promise<ContainerInfo> {
+    return this.containerManager.inspectContainer(containerId);
   }
 
-  async removeContainer(id: string, force = false): Promise<void> {
-    try {
-      await this.docker.getContainer(id).remove({ force });
-    } catch (err) {
-      if (!isNotFoundError(err)) throw err;
-    }
+  waitContainer(containerId: string): Promise<ExitResult> {
+    return this.containerManager.waitContainer(containerId);
   }
 
-  async restartContainer(id: string, timeout = 10): Promise<void> {
-    await this.docker.getContainer(id).restart({ t: timeout });
+  containerExists(containerId: string): Promise<boolean> {
+    return this.containerManager.containerExists(containerId);
   }
 
-  async inspectContainer(id: string): Promise<ContainerInfo> {
-    const info = await this.docker.getContainer(id).inspect();
-
-    const ports: Record<number, number> = {};
-    const portBindings = info.NetworkSettings.Ports;
-    if (portBindings) {
-      for (const [containerPort, bindings] of Object.entries(portBindings)) {
-        if (!bindings?.[0]?.HostPort) continue;
-        const port = parseInt(containerPort.split("/")[0]!, 10);
-        ports[port] = parseInt(bindings[0].HostPort, 10);
-      }
-    }
-
-    return {
-      id: info.Id,
-      name: info.Name.replace(/^\//, ""),
-      image: info.Config.Image,
-      status: info.State.Status,
-      state: toContainerState(info.State.Status),
-      ports,
-      labels: info.Config.Labels ?? {},
-    };
+  streamLogs(containerId: string, options?: { tail?: number }): AsyncGenerator<LogChunk> {
+    return this.containerManager.streamLogs(containerId, options);
   }
 
-  async waitContainer(id: string): Promise<ExitResult> {
-    const result = await this.docker.getContainer(id).wait();
-    return { exitCode: result.StatusCode };
+  createVolume(name: string, labels?: Record<string, string>): Promise<void> {
+    return this.volumeManager.createVolume(name, labels);
   }
 
-  async containerExists(id: string): Promise<boolean> {
-    try {
-      await this.docker.getContainer(id).inspect();
-      return true;
-    } catch {
-      return false;
-    }
+  removeVolume(name: string): Promise<void> {
+    return this.volumeManager.removeVolume(name);
   }
 
-  async *streamLogs(id: string, options: { tail?: number } = {}): AsyncGenerator<LogChunk> {
-    const stream = (await this.docker.getContainer(id).logs({
-      follow: true,
-      stdout: true,
-      stderr: true,
-      tail: options.tail,
-    })) as NodeJS.ReadableStream;
-
-    let buffer = Buffer.alloc(0);
-    const chunks: LogChunk[] = [];
-    let resolve: (() => void) | null = null;
-    let ended = false;
-    let error: Error | null = null;
-
-    const parseBuffer = () => {
-      while (buffer.length >= 8) {
-        const streamType = buffer[0];
-        const size = buffer.readUInt32BE(4);
-
-        if (buffer.length < 8 + size) break;
-
-        const frameData = buffer.subarray(8, 8 + size);
-        buffer = buffer.subarray(8 + size);
-
-        chunks.push({
-          stream: streamType === 1 ? "stdout" : "stderr",
-          data: new Uint8Array(frameData),
-        });
-      }
-    };
-
-    stream.on("data", (chunk: Buffer | string) => {
-      const chunkBuffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-      buffer = Buffer.concat([buffer, chunkBuffer]);
-      parseBuffer();
-      if (resolve) {
-        resolve();
-        resolve = null;
-      }
-    });
-
-    stream.on("end", () => {
-      ended = true;
-      if (resolve) {
-        resolve();
-        resolve = null;
-      }
-    });
-
-    stream.on("error", (err: Error) => {
-      error = err;
-      ended = true;
-      if (resolve) {
-        resolve();
-        resolve = null;
-      }
-    });
-
-    while (!ended || chunks.length > 0) {
-      if (chunks.length > 0) {
-        yield chunks.shift()!;
-      } else if (!ended) {
-        await new Promise<void>((r) => {
-          resolve = r;
-        });
-      }
-    }
-
-    if (error) {
-      throw error;
-    }
+  volumeExists(name: string): Promise<boolean> {
+    return this.volumeManager.volumeExists(name);
   }
 
-  async createVolume(name: string, labels?: Record<string, string>): Promise<void> {
-    await this.docker.createVolume({
-      Name: name,
-      Labels: labels,
-    });
+  cloneVolume(sourceVolume: string, targetVolume: string): Promise<void> {
+    return this.volumeManager.cloneVolume(sourceVolume, targetVolume);
   }
 
-  async removeVolume(name: string): Promise<void> {
-    try {
-      await this.docker.getVolume(name).remove();
-    } catch (err) {
-      if (!isNotFoundError(err)) throw err;
-    }
+  createNetwork(name: string, options?: NetworkCreateOptions): Promise<void> {
+    return this.networkOps.createNetwork(name, options);
   }
 
-  async volumeExists(name: string): Promise<boolean> {
-    try {
-      await this.docker.getVolume(name).inspect();
-      return true;
-    } catch {
-      return false;
-    }
+  removeNetwork(name: string): Promise<void> {
+    return this.networkOps.removeNetwork(name);
   }
 
-  async cloneVolume(source: string, target: string, timeoutMs = 30000): Promise<void> {
-    await this.createVolume(target);
-
-    const containerId = await this.createContainer({
-      image: ALPINE_IMAGE,
-      command: VOLUME_CLONE_COMMAND,
-      volumes: [
-        { source, target: "/source", readonly: true },
-        { source: target, target: "/target" },
-      ],
-    });
-
-    try {
-      await this.startContainer(containerId);
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Volume clone timed out")), timeoutMs);
-      });
-
-      const waitResult = await Promise.race([this.waitContainer(containerId), timeoutPromise]);
-
-      if (waitResult.exitCode !== 0) {
-        await this.removeVolume(target);
-        throw SandboxError.volumeCloneFailed(source, target, `exit code ${waitResult.exitCode}`);
-      }
-    } catch (error) {
-      await this.removeVolume(target);
-      await this.removeContainer(containerId, true);
-      throw error;
-    }
-
-    await this.removeContainer(containerId, true);
+  networkExists(name: string): Promise<boolean> {
+    return this.networkOps.networkExists(name);
   }
 
-  async createNetwork(name: string, options: NetworkCreateOptions = {}): Promise<void> {
-    await this.docker.createNetwork({
-      Name: name,
-      Driver: options.driver ?? "bridge",
-      Labels: options.labels,
-    });
+  isConnectedToNetwork(
+    containerIdOrName: string,
+    networkName: string,
+  ): Promise<boolean> {
+    return this.networkOps.isConnectedToNetwork(containerIdOrName, networkName);
   }
 
-  async removeNetwork(name: string): Promise<void> {
-    try {
-      await this.docker.getNetwork(name).remove();
-    } catch (err) {
-      if (!isNotFoundError(err)) throw err;
-    }
-  }
-
-  async networkExists(name: string): Promise<boolean> {
-    try {
-      await this.docker.getNetwork(name).inspect();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  async isConnectedToNetwork(containerIdOrName: string, networkName: string): Promise<boolean> {
-    try {
-      const networkInfo = await this.docker.getNetwork(networkName).inspect();
-      const connectedContainers = networkInfo.Containers ?? {};
-
-      return Object.entries(connectedContainers).some(([connectedId, containerInfo]) => {
-        const matchesId = connectedId === containerIdOrName || connectedId.startsWith(containerIdOrName);
-        const matchesName =
-          containerInfo &&
-          typeof containerInfo === "object" &&
-          "Name" in containerInfo &&
-          containerInfo.Name === containerIdOrName;
-        return matchesId || matchesName;
-      });
-    } catch {
-      return false;
-    }
-  }
-
-  async connectToNetwork(
+  connectToNetwork(
     containerId: string,
     networkName: string,
     options?: { aliases?: string[] },
   ): Promise<void> {
-    await this.docker.getNetwork(networkName).connect({
-      Container: containerId,
-      EndpointConfig: options?.aliases ? { Aliases: options.aliases } : undefined,
-    });
+    return this.networkOps.connectToNetwork(containerId, networkName, options);
   }
 
-  async disconnectFromNetwork(containerId: string, networkName: string): Promise<void> {
-    try {
-      await this.docker.getNetwork(networkName).disconnect({ Container: containerId });
-    } catch (err) {
-      if (!isNotFoundError(err)) throw err;
-    }
+  disconnectFromNetwork(containerId: string, networkName: string): Promise<void> {
+    return this.networkOps.disconnectFromNetwork(containerId, networkName);
   }
 
-  async exec(containerId: string, options: ExecOptions): Promise<ExecResult> {
-    const container = this.docker.getContainer(containerId);
-
-    const exec = await container.exec({
-      Cmd: options.command,
-      WorkingDir: options.workdir,
-      Env: options.env ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`) : undefined,
-      Tty: options.tty ?? false,
-      AttachStdout: true,
-      AttachStderr: true,
-    });
-
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-
-    // Use Dockerode's built-in demuxer instead of hijack mode to avoid
-    // docker-modem's 101 status code handling issues
-    const stream = await exec.start({});
-
-    await new Promise<void>((resolve, reject) => {
-      // Use docker-modem's demuxStream to separate stdout/stderr
-      this.modem.demuxStream(
-        stream,
-        { write: (chunk: Buffer) => stdout.push(chunk) },
-        { write: (chunk: Buffer) => stderr.push(chunk) },
-      );
-
-      stream.on("end", resolve);
-      stream.on("error", reject);
-    });
-
-    const inspectResult = await exec.inspect();
-
-    return {
-      exitCode: inspectResult.ExitCode ?? 0,
-      stdout: Buffer.concat(stdout).toString("utf-8"),
-      stderr: Buffer.concat(stderr).toString("utf-8"),
-    };
+  listNetworks(options?: { labels?: string[] }): Promise<NetworkInfo[]> {
+    return this.networkOps.listNetworks(options);
   }
 
-  async *streamContainerEvents(options?: {
-    filters?: { label?: string[]; container?: string[] };
-  }): AsyncGenerator<DockerContainerEvent> {
-    const filters: Record<string, string[]> = {
-      type: ["container"],
-      event: [
-        "start",
-        "stop",
-        "die",
-        "kill",
-        "restart",
-        "pause",
-        "unpause",
-        "oom",
-        "health_status",
-      ],
-    };
+  exec(containerId: string, options: ExecOptions): Promise<ExecResult> {
+    return this.execOps.exec(containerId, options);
+  }
 
-    if (options?.filters?.label) {
-      filters.label = options.filters.label;
-    }
-
-    if (options?.filters?.container) {
-      filters.container = options.filters.container;
-    }
-
-    const stream = await this.docker.getEvents({ filters });
-
-    for await (const chunk of stream) {
-      const data = typeof chunk === "string" ? chunk : chunk.toString("utf-8");
-      for (const line of data.split("\n")) {
-        if (!line.trim()) continue;
-        try {
-          const event = JSON.parse(line);
-          if (event.Type !== "container") continue;
-
-          yield {
-            containerId: event.id ?? event.Actor?.ID,
-            action: event.Action as DockerContainerEventAction,
-            attributes: event.Actor?.Attributes ?? {},
-            time: event.time ?? Math.floor(Date.now() / 1000),
-          };
-        } catch (error) {
-          console.error("Failed to parse Docker event:", error);
-        }
-      }
-    }
+  streamContainerEvents(
+    options?: ContainerEventStreamOptions,
+  ): AsyncGenerator<ContainerEvent> {
+    return this.eventStream.streamContainerEvents(options);
   }
 }

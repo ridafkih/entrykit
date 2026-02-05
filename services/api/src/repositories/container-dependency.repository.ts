@@ -1,0 +1,120 @@
+import { db } from "@lab/database/client";
+import { type Container } from "@lab/database/schema/containers";
+import {
+  containerDependencies,
+  type ContainerDependency,
+} from "@lab/database/schema/container-dependencies";
+import { eq, inArray } from "drizzle-orm";
+import { findContainersByProjectId } from "./container-definition.repository";
+import { groupBy } from "../shared/collection-utils";
+
+export interface ContainerWithDependencies extends Container {
+  dependencies: { dependsOnContainerId: string; condition: string }[];
+}
+
+export async function findDependenciesByContainerId(
+  containerId: string,
+): Promise<ContainerDependency[]> {
+  return db
+    .select()
+    .from(containerDependencies)
+    .where(eq(containerDependencies.containerId, containerId));
+}
+
+async function fetchDependenciesForContainers(
+  containerIds: string[],
+): Promise<ContainerDependency[]> {
+  return db
+    .select()
+    .from(containerDependencies)
+    .where(inArray(containerDependencies.containerId, containerIds));
+}
+
+export async function findContainersWithDependencies(
+  projectId: string,
+): Promise<ContainerWithDependencies[]> {
+  const projectContainers = await findContainersByProjectId(projectId);
+
+  if (projectContainers.length === 0) return [];
+
+  const containerIds = projectContainers.map((container) => container.id);
+  const dependencies = await fetchDependenciesForContainers(containerIds);
+  const dependenciesByContainerId = groupBy(dependencies, ({ containerId }) => containerId);
+
+  return projectContainers.map((container) => ({
+    ...container,
+    dependencies: (dependenciesByContainerId.get(container.id) ?? []).map((dep) => ({
+      dependsOnContainerId: dep.dependsOnContainerId,
+      condition: dep.condition,
+    })),
+  }));
+}
+
+function buildDependencyRecords(
+  containerId: string,
+  dependencies: { dependsOnContainerId: string; condition?: string }[],
+): { containerId: string; dependsOnContainerId: string; condition: string }[] {
+  return dependencies.map((dependency) => ({
+    containerId,
+    dependsOnContainerId: dependency.dependsOnContainerId,
+    condition: dependency.condition || "service_started",
+  }));
+}
+
+export async function createContainerDependencies(
+  containerId: string,
+  dependencies: { dependsOnContainerId: string; condition?: string }[],
+): Promise<void> {
+  if (dependencies.length === 0) return;
+
+  const records = buildDependencyRecords(containerId, dependencies);
+  await db.insert(containerDependencies).values(records);
+}
+
+export async function deleteContainerDependencies(containerId: string): Promise<void> {
+  await db.delete(containerDependencies).where(eq(containerDependencies.containerId, containerId));
+}
+
+function checkSelfDependency(containerId: string, dependsOnIds: string[]): string | null {
+  if (dependsOnIds.includes(containerId)) {
+    return "Container cannot depend on itself";
+  }
+  return null;
+}
+
+function findMissingDependencies(
+  dependsOnIds: string[],
+  projectContainerIds: Set<string>,
+): string[] {
+  const errors: string[] = [];
+  for (const depId of dependsOnIds) {
+    if (!projectContainerIds.has(depId)) {
+      errors.push(`Dependency container ${depId} does not exist in project`);
+    }
+  }
+  return errors;
+}
+
+export async function validateDependencies(
+  projectId: string,
+  containerId: string,
+  dependsOnIds: string[],
+): Promise<{ valid: boolean; errors: string[] }> {
+  const errors: string[] = [];
+
+  const selfDependencyError = checkSelfDependency(containerId, dependsOnIds);
+  if (selfDependencyError) {
+    errors.push(selfDependencyError);
+  }
+
+  if (dependsOnIds.length === 0) {
+    return { valid: errors.length === 0, errors };
+  }
+
+  const projectContainers = await findContainersByProjectId(projectId);
+  const projectContainerIds = new Set(projectContainers.map((container) => container.id));
+  const missingErrors = findMissingDependencies(dependsOnIds, projectContainerIds);
+  errors.push(...missingErrors);
+
+  return { valid: errors.length === 0, errors };
+}

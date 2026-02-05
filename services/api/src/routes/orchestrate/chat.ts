@@ -1,16 +1,18 @@
 import { z } from "zod";
-import type { RouteHandler } from "../../utils/handlers/route-handler";
+import type { Handler, BrowserContext, SessionContext, InfraContext } from "../../types/route";
 import {
   chatOrchestrate,
   chatOrchestrateStream,
   type ChatOrchestratorResult,
-} from "../../utils/orchestration/chat-orchestrator";
+} from "../../orchestration/chat-orchestrator";
 import {
   saveOrchestratorMessage,
   getOrchestratorMessages,
-} from "../../utils/repositories/orchestrator-message.repository";
+} from "../../repositories/orchestrator-message.repository";
 import { getPlatformConfig } from "../../config/platforms";
-import { buildSseResponse } from "../../shared/http";
+import { buildSseResponse } from "@lab/http-utilities";
+import { parseRequestBody } from "../../shared/validation";
+import { MESSAGE_ROLE } from "../../types/message";
 
 const chatRequestSchema = z.object({
   content: z.string().min(1),
@@ -20,94 +22,87 @@ const chatRequestSchema = z.object({
   timestamp: z.string().datetime().optional(),
 });
 
-const POST: RouteHandler = async (request, _params, context) => {
-  const rawBody = await request.json().catch(() => null);
-  const parseResult = chatRequestSchema.safeParse(rawBody);
-
-  if (!parseResult.success) {
-    return Response.json(
-      {
-        error:
-          "Invalid request body. Required: { content: string, platformOrigin: string, platformChatId: string, modelId?: string }",
-      },
-      { status: 400 },
-    );
-  }
-
-  const body = parseResult.data;
+const POST: Handler<BrowserContext & SessionContext & InfraContext> = async (
+  request,
+  _params,
+  context,
+) => {
+  const body = await parseRequestBody(request, chatRequestSchema);
   const content = body.content.trim();
 
-  try {
-    await saveOrchestratorMessage({
-      platform: body.platformOrigin,
-      platformChatId: body.platformChatId,
-      role: "user",
-      content,
-    });
+  await saveOrchestratorMessage({
+    platform: body.platformOrigin,
+    platformChatId: body.platformChatId,
+    role: MESSAGE_ROLE.USER,
+    content,
+  });
 
-    const history = await getOrchestratorMessages({
-      platform: body.platformOrigin,
-      platformChatId: body.platformChatId,
-      limit: 20,
-    });
+  const history = await getOrchestratorMessages({
+    platform: body.platformOrigin,
+    platformChatId: body.platformChatId,
+    limit: 20,
+  });
 
-    const conversationHistory = history.map((msg) => `${msg.role}: ${msg.content}`);
+  const conversationHistory = history.map((msg) => `${msg.role}: ${msg.content}`);
 
-    const platformConfig = getPlatformConfig(body.platformOrigin);
+  const platformConfig = getPlatformConfig(body.platformOrigin);
 
-    if (platformConfig.breakDoubleNewlines) {
-      // Return SSE stream for platforms that support chunked delivery
-      const stream = createSseStream(
-        chatOrchestrateStream({
-          content,
-          conversationHistory,
-          platformOrigin: body.platformOrigin,
+  if (platformConfig.breakDoubleNewlines) {
+    // Return SSE stream for platforms that support chunked delivery
+    const stream = createSseStream(
+      chatOrchestrateStream({
+        content,
+        conversationHistory,
+        platformOrigin: body.platformOrigin,
+        platformChatId: body.platformChatId,
+        browserService: context.browserService,
+        sessionLifecycle: context.sessionLifecycle,
+        poolManager: context.poolManager,
+        modelId: body.modelId,
+        timestamp: body.timestamp,
+        opencode: context.opencode,
+        publisher: context.publisher,
+        imageStore: context.imageStore,
+      }),
+      async (result) => {
+        await saveOrchestratorMessage({
+          platform: body.platformOrigin,
           platformChatId: body.platformChatId,
-          browserService: context.browserService,
-          daemonController: context.daemonController,
-          modelId: body.modelId,
-          timestamp: body.timestamp,
-        }),
-        async (result) => {
-          await saveOrchestratorMessage({
-            platform: body.platformOrigin,
-            platformChatId: body.platformChatId,
-            role: "assistant",
-            content: result.message,
-            sessionId: result.sessionId,
-          });
-        },
-      );
+          role: MESSAGE_ROLE.ASSISTANT,
+          content: result.message,
+          sessionId: result.sessionId,
+        });
+      },
+    );
 
-      return buildSseResponse(stream);
-    }
-
-    // Standard non-streaming response
-    const result = await chatOrchestrate({
-      content,
-      conversationHistory,
-      platformOrigin: body.platformOrigin,
-      platformChatId: body.platformChatId,
-      browserService: context.browserService,
-      daemonController: context.daemonController,
-      modelId: body.modelId,
-      timestamp: body.timestamp,
-    });
-
-    await saveOrchestratorMessage({
-      platform: body.platformOrigin,
-      platformChatId: body.platformChatId,
-      role: "assistant",
-      content: result.message,
-      sessionId: result.sessionId,
-    });
-
-    return Response.json(result, { status: 200 });
-  } catch (error) {
-    console.error("[ChatOrchestrate] Error:", error);
-    const message = error instanceof Error ? error.message : "Chat orchestration failed";
-    return Response.json({ error: message }, { status: 500 });
+    return buildSseResponse(stream);
   }
+
+  // Standard non-streaming response
+  const result = await chatOrchestrate({
+    content,
+    conversationHistory,
+    platformOrigin: body.platformOrigin,
+    platformChatId: body.platformChatId,
+    browserService: context.browserService,
+    sessionLifecycle: context.sessionLifecycle,
+    poolManager: context.poolManager,
+    modelId: body.modelId,
+    timestamp: body.timestamp,
+    opencode: context.opencode,
+    publisher: context.publisher,
+    imageStore: context.imageStore,
+  });
+
+  await saveOrchestratorMessage({
+    platform: body.platformOrigin,
+    platformChatId: body.platformChatId,
+    role: MESSAGE_ROLE.ASSISTANT,
+    content: result.message,
+    sessionId: result.sessionId,
+  });
+
+  return Response.json(result, { status: 200 });
 };
 
 function createSseStream(
@@ -140,7 +135,7 @@ function createSseStream(
 
         controller.close();
       } catch (error) {
-        console.error("[ChatOrchestrate SSE] Stream error:", error);
+        console.error("[ChatOrchestrate] Stream error:", error);
         const errorMessage = error instanceof Error ? error.message : "Stream failed";
         const errorEvent = `event: error\ndata: ${JSON.stringify({ error: errorMessage })}\n\n`;
         controller.enqueue(encoder.encode(errorEvent));

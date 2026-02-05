@@ -123,8 +123,9 @@ export class ImageStore {
 /**
  * Create an ImageStore from environment variables.
  * Expects: RUSTFS_ENDPOINT, RUSTFS_ACCESS_KEY, RUSTFS_SECRET_KEY, RUSTFS_BUCKET, RUSTFS_PUBLIC_URL
+ * Returns undefined if any required variable is missing.
  */
-export function createImageStoreFromEnv(): ImageStore {
+export function createImageStoreFromEnv(): ImageStore | undefined {
   const endpoint = process.env.RUSTFS_ENDPOINT;
   const accessKey = process.env.RUSTFS_ACCESS_KEY;
   const secretKey = process.env.RUSTFS_SECRET_KEY;
@@ -132,9 +133,7 @@ export function createImageStoreFromEnv(): ImageStore {
   const publicUrl = process.env.RUSTFS_PUBLIC_URL;
 
   if (!endpoint || !accessKey || !secretKey || !bucket || !publicUrl) {
-    throw new Error(
-      "Missing RustFS config. Set RUSTFS_ENDPOINT, RUSTFS_ACCESS_KEY, RUSTFS_SECRET_KEY, RUSTFS_BUCKET, RUSTFS_PUBLIC_URL",
-    );
+    return undefined;
   }
 
   return new ImageStore({

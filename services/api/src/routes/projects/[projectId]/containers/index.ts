@@ -1,11 +1,10 @@
+import { createContainerWithDetails } from "../../../../repositories/container-definition.repository";
 import {
   findContainersWithDependencies,
-  createContainer,
-  createContainerPorts,
-  createContainerDependencies,
   validateDependencies,
-} from "../../../../utils/repositories/container.repository";
-import type { RouteHandler } from "../../../../utils/handlers/route-handler";
+} from "../../../../repositories/container-dependency.repository";
+import { ValidationError } from "../../../../shared/errors";
+import { withParams } from "../../../../shared/route-helpers";
 
 interface DependencyInput {
   containerId: string;
@@ -38,41 +37,36 @@ function extractDependsOnIds(
   return dependencies.map((dependency) => dependency.dependsOnContainerId);
 }
 
-const GET: RouteHandler = async (_request, params) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
-
+const GET = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, _request) => {
   const containers = await findContainersWithDependencies(projectId);
   return Response.json(containers);
-};
+});
 
-const POST: RouteHandler = async (request, params) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
-
+const POST = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, request) => {
   const body = await request.json();
-  const container = await createContainer({
-    projectId,
-    image: body.image,
-    hostname: body.hostname,
-  });
-
-  if (body.ports && Array.isArray(body.ports) && body.ports.length > 0) {
-    await createContainerPorts(container.id, body.ports);
-  }
 
   const normalizedDependencies = normalizeDependencies(body.dependsOn);
 
+  // Validate dependencies before the transaction (read-only)
   if (normalizedDependencies.length > 0) {
     const dependsOnIds = extractDependsOnIds(normalizedDependencies);
-    const validation = await validateDependencies(projectId, container.id, dependsOnIds);
-
+    // We need a temporary ID for self-dependency check - use empty string since container doesn't exist yet
+    const validation = await validateDependencies(projectId, "", dependsOnIds);
     if (!validation.valid) {
-      return Response.json({ error: validation.errors.join(", ") }, { status: 400 });
+      throw new ValidationError(validation.errors.join(", "));
     }
-
-    await createContainerDependencies(container.id, normalizedDependencies);
   }
+
+  const ports =
+    body.ports && Array.isArray(body.ports) && body.ports.length > 0 ? body.ports : undefined;
+
+  const container = await createContainerWithDetails({
+    projectId,
+    image: body.image,
+    hostname: body.hostname,
+    ports,
+    dependencies: normalizedDependencies.length > 0 ? normalizedDependencies : undefined,
+  });
 
   return Response.json(
     {
@@ -84,6 +78,6 @@ const POST: RouteHandler = async (request, params) => {
     },
     { status: 201 },
   );
-};
+});
 
 export { GET, POST };

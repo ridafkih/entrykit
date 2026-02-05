@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "@lab/browser-protocol": "workspace:*",
+    "@lab/http-utilities": "workspace:*",
+    "@lab/router": "workspace:*",
     "agent-browser": "^0.8.4",
     "zod": "^4.3.6"
   },

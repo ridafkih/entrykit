@@ -1,11 +1,10 @@
-import type { RouteHandler } from "../utils/handlers/route-handler";
-import { opencode } from "../clients/opencode";
+import type { Handler, InfraContext } from "../types/route";
 
-const GET: RouteHandler = async () => {
-  const response = await opencode.provider.list();
+const GET: Handler<InfraContext> = async (_request, _params, ctx) => {
+  const response = await ctx.opencode.provider.list();
 
   if (response.error || !response.data) {
-    return Response.json({ error: "Failed to fetch providers" }, { status: 500 });
+    throw new Error("Failed to fetch providers");
   }
 
   const { all, connected } = response.data;

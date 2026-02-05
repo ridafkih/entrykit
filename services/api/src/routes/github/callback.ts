@@ -1,7 +1,6 @@
-import type { RouteHandler } from "../../utils/handlers/route-handler";
-import { config } from "../../config/environment";
+import type { Handler, GithubContext } from "../../types/route";
 import { validateState } from "./auth";
-import { saveGitHubOAuthToken } from "../../utils/repositories/github-settings.repository";
+import { saveGitHubOAuthToken } from "../../repositories/github-settings.repository";
 
 interface GitHubTokenResponse {
   access_token?: string;
@@ -17,8 +16,8 @@ interface GitHubUserResponse {
   email?: string;
 }
 
-const GET: RouteHandler = async (request) => {
-  if (!config.frontendUrl) {
+const GET: Handler<GithubContext> = async (request, _params, ctx) => {
+  if (!ctx.frontendUrl) {
     return Response.json({ error: "FRONTEND_URL is not configured" }, { status: 500 });
   }
 
@@ -28,7 +27,7 @@ const GET: RouteHandler = async (request) => {
   const error = url.searchParams.get("error");
   const errorDescription = url.searchParams.get("error_description");
 
-  const frontendUrl = config.frontendUrl;
+  const frontendUrl = ctx.frontendUrl;
 
   if (error) {
     const params = new URLSearchParams({
@@ -54,7 +53,7 @@ const GET: RouteHandler = async (request) => {
     return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
   }
 
-  if (!config.githubClientId || !config.githubClientSecret) {
+  if (!ctx.githubClientId || !ctx.githubClientSecret) {
     const params = new URLSearchParams({
       tab: "github",
       error: "GitHub OAuth is not configured",
@@ -70,8 +69,8 @@ const GET: RouteHandler = async (request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        client_id: config.githubClientId,
-        client_secret: config.githubClientSecret,
+        client_id: ctx.githubClientId,
+        client_secret: ctx.githubClientSecret,
         code,
       }),
     });
@@ -116,7 +115,7 @@ const GET: RouteHandler = async (request) => {
     });
     return Response.redirect(`${frontendUrl}/settings?${params.toString()}`, 302);
   } catch (err) {
-    console.error("GitHub OAuth callback error:", err);
+    console.error("[GitHubCallback] OAuth callback error:", err);
     const params = new URLSearchParams({
       tab: "github",
       error: "An unexpected error occurred",

@@ -1,0 +1,46 @@
+import { type Type } from "arktype";
+import type { MaybePromise } from "bun";
+
+type MaybeCleanupFunction = (() => void) | void;
+
+interface WithSetup<EnvType extends Type, SetupResult> {
+  name: string;
+  env?: EnvType;
+  setup: (options: { env: EnvType["inferOut"] }) => MaybePromise<SetupResult>;
+  main: (options: {
+    env: EnvType["inferOut"];
+    extras: Awaited<SetupResult>;
+  }) => MaybePromise<MaybeCleanupFunction>;
+}
+
+interface WithoutSetup<EnvType extends Type> {
+  name: string;
+  env?: EnvType;
+  main: (options: { env: EnvType["inferOut"] }) => MaybePromise<MaybeCleanupFunction>;
+}
+
+async function entry<EnvType extends Type, SetupResult>(
+  options: WithSetup<EnvType, SetupResult>,
+): Promise<MaybeCleanupFunction>;
+async function entry<EnvType extends Type>(
+  options: WithoutSetup<EnvType>,
+): Promise<MaybeCleanupFunction>;
+async function entry<EnvType extends Type>(
+  options: WithSetup<EnvType, unknown> | WithoutSetup<EnvType>,
+): Promise<MaybeCleanupFunction> {
+  const env = options.env?.assert(process.env);
+
+  if ("setup" in options) {
+    const extras = await options.setup({ env });
+    await options.main({ env, extras });
+    return;
+  }
+
+  const cleanup = await options.main({ env });
+  if (!cleanup) return;
+
+  process.once("SIGTERM", cleanup);
+  process.once("SIGINT", cleanup);
+}
+
+export { entry };

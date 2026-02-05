@@ -1,20 +1,37 @@
-import type { DaemonController } from "@lab/browser-protocol";
-import type { BrowserService } from "../utils/browser/browser-service";
-import type { PromptService } from "./prompt";
+import type { RouteHandler as BaseRouteHandler, RouteModule as BaseRouteModule } from "@lab/router";
+import type {
+  BrowserContext,
+  SessionContext,
+  InfraContext,
+  MonitorContext,
+  GithubContext,
+  ProxyContext,
+  PromptContext,
+} from "./contexts";
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
+export type {
+  BrowserContext,
+  SessionContext,
+  InfraContext,
+  MonitorContext,
+  GithubContext,
+  ProxyContext,
+  PromptContext,
+} from "./contexts";
 
-export interface RouteContext {
-  browserService: BrowserService;
-  daemonController: DaemonController;
-  initializeSessionContainers: (sessionId: string, projectId: string) => Promise<void>;
-  promptService?: PromptService;
-}
+export type { HttpMethod } from "@lab/router";
 
-export type RouteHandler = (
-  request: Request,
-  params: Record<string, string>,
-  context: RouteContext,
-) => Response | Promise<Response>;
+export interface RouteContext
+  extends
+    BrowserContext,
+    SessionContext,
+    InfraContext,
+    MonitorContext,
+    GithubContext,
+    ProxyContext,
+    PromptContext {}
 
-export type RouteModule = Partial<Record<HttpMethod, RouteHandler>>;
+export type Handler<TContext = unknown> = BaseRouteHandler<TContext>;
+/** @deprecated Use Handler<SomeContext & AnotherContext> */
+export type RouteHandler = BaseRouteHandler<RouteContext>;
+export type RouteModule = BaseRouteModule<RouteContext>;

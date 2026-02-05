@@ -1,141 +1,247 @@
-import { type WebSocketData } from "@lab/multiplayer-server";
-import { type BrowserSessionState } from "@lab/browser-protocol";
-import { createWebSocketHandlers, type Auth } from "../utils/handlers/websocket-handler";
-import { createOpenCodeProxyHandler } from "../utils/handlers/opencode-handler";
-import { createChannelRestHandler } from "../utils/handlers/channel-rest-handler";
-import { bootstrapBrowserService, shutdownBrowserService } from "../utils/browser/bootstrap";
-import { initializeSessionContainers } from "../utils/docker/containers";
-import { setPoolBrowserService, initializePool } from "../utils/pool";
-import { ensureProxyInitialized } from "../utils/proxy";
-import { reconcileNetworkConnections } from "../utils/docker/network";
-import { isHttpMethod, isRouteModule, type RouteContext } from "../utils/handlers/route-handler";
-import { publisher } from "./publisher";
+import { createPublisher, type WebSocketData } from "@lab/multiplayer-server";
+import { schema } from "@lab/multiplayer-sdk";
+import type { Server as BunServer } from "bun";
+import type { ImageStore } from "@lab/context";
+import { SERVER } from "../config/constants";
+import { createWebSocketHandlers, type Auth } from "../websocket/websocket-handler";
+import { createOpenCodeProxyHandler } from "../opencode/handler";
+import { createChannelRestHandler } from "../snapshots/rest-handler";
+import type { PoolManager } from "../services/pool-manager";
+import type { LogMonitor } from "../monitors/log.monitor";
+import { reconcileNetworkConnections, type NetworkContainerNames } from "../docker/network";
+import { isHttpMethod, isRouteModule } from "@lab/router";
+import type { RouteContext } from "../types/route";
 import { join } from "node:path";
-import { createDefaultPromptService } from "../utils/prompts/builder";
-import { config } from "../config/environment";
+import type { PromptService } from "../types/prompt";
+import type { Sandbox, OpencodeClient, Publisher, Widelog } from "../types/dependencies";
+import type { BrowserServiceManager } from "../managers/browser-service.manager";
+import type { SessionLifecycleManager } from "../managers/session-lifecycle.manager";
 import {
   withCors,
   optionsResponse,
   notFoundResponse,
   errorResponse,
   methodNotAllowedResponse,
-} from "../shared/http";
+} from "@lab/http-utilities";
 
-const router = new Bun.FileSystemRouter({
-  dir: join(import.meta.dirname, "../routes"),
-  style: "nextjs",
-});
-
-const browserConfig = {
-  browserApiUrl: config.browserApiUrl,
-  browserWsHost: config.browserWsHost,
-  cleanupDelayMs: config.browserCleanupDelayMs,
-  reconcileIntervalMs: config.browserReconcileIntervalMs,
-  maxRetries: config.browserMaxRetries,
-  publishFrame: (sessionId: string, frame: string, timestamp: number) => {
-    publisher.publishEvent(
-      "sessionBrowserFrames",
-      { uuid: sessionId },
-      { type: "frame" as const, data: frame, timestamp },
-    );
-  },
-  publishStateChange: (sessionId: string, state: BrowserSessionState) => {
-    publisher.publishSnapshot(
-      "sessionBrowserState",
-      { uuid: sessionId },
-      {
-        desiredState: state.desiredState,
-        currentState: state.currentState,
-        streamPort: state.streamPort ?? undefined,
-        errorMessage: state.errorMessage ?? undefined,
-      },
-    );
-  },
-};
-
-const bootstrap = async () => {
-  const { browserService, daemonController } = await bootstrapBrowserService(browserConfig);
-  const promptService = createDefaultPromptService();
-  const handleOpenCodeProxy = createOpenCodeProxyHandler(promptService);
-
-  const routeContext: RouteContext = {
-    browserService,
-    daemonController,
-    initializeSessionContainers: (sessionId: string, projectId: string) =>
-      initializeSessionContainers(sessionId, projectId, browserService),
-    promptService,
+export interface ApiServerConfig {
+  containerNames: NetworkContainerNames;
+  proxyBaseDomain: string;
+  opencodeUrl: string;
+  github: {
+    clientId?: string;
+    clientSecret?: string;
+    callbackUrl?: string;
   };
+  frontendUrl?: string;
+}
 
-  const { websocketHandler, upgrade } = createWebSocketHandlers(browserService);
-  const handleChannelRequest = createChannelRestHandler(browserService);
+export interface ApiServerServices {
+  browserService: BrowserServiceManager;
+  sessionLifecycle: SessionLifecycleManager;
+  poolManager: PoolManager;
+  logMonitor: LogMonitor;
+  sandbox: Sandbox;
+  opencode: OpencodeClient;
+  promptService: PromptService;
+  imageStore?: ImageStore;
+  widelog: Widelog;
+}
 
-  const server = Bun.serve<WebSocketData<Auth>>({
-    port: config.apiPort,
-    idleTimeout: 255,
-    websocket: websocketHandler,
-    async fetch(request): Promise<Response | undefined> {
-      if (request.method === "OPTIONS") {
-        return optionsResponse();
-      }
-
-      const url = new URL(request.url);
-
-      if (url.pathname === "/ws") {
-        return upgrade(request, server);
-      }
-
-      if (url.pathname.startsWith("/opencode/")) {
-        return handleOpenCodeProxy(request, url);
-      }
-
-      const [, channel] = url.pathname.match(/^\/channels\/([^/]+)\/snapshot$/) ?? [];
-      if (channel) {
-        return withCors(await handleChannelRequest(channel, url.searchParams));
-      }
-
-      const match = router.match(request);
-
-      if (!match) {
-        return withCors(notFoundResponse());
-      }
-
-      const module: unknown = await import(match.filePath);
-
-      if (!isRouteModule(module)) {
-        return withCors(errorResponse());
-      }
-
-      if (!isHttpMethod(request.method)) {
-        return withCors(methodNotAllowedResponse());
-      }
-
-      const handler = module[request.method];
-
-      if (!handler) {
-        return withCors(methodNotAllowedResponse());
-      }
-
-      const response = await handler(request, match.params, routeContext);
-      return withCors(response);
-    },
+export class ApiServer {
+  private server: BunServer<unknown> | null = null;
+  private publisher: Publisher | null = null;
+  private readonly router = new Bun.FileSystemRouter({
+    dir: join(import.meta.dirname, "../routes"),
+    style: "nextjs",
   });
 
-  browserService.startReconciler();
+  constructor(
+    private readonly config: ApiServerConfig,
+    private readonly services: ApiServerServices,
+  ) {}
 
-  setPoolBrowserService(browserService);
-  initializePool();
+  private getServer(): BunServer<unknown> {
+    if (!this.server) throw new Error("Server not started");
+    return this.server;
+  }
 
-  ensureProxyInitialized().catch((error) =>
-    console.error("[Startup] Failed to initialize proxy:", error),
-  );
+  private getPublisher(): Publisher {
+    if (!this.publisher) throw new Error("Server not started");
+    return this.publisher;
+  }
 
-  reconcileNetworkConnections().catch((error) =>
-    console.error("[Startup] Failed to reconcile network connections:", error),
-  );
+  async start(port: string): Promise<Publisher> {
+    const { containerNames, proxyBaseDomain, opencodeUrl, github, frontendUrl } = this.config;
+    const {
+      browserService,
+      sessionLifecycle,
+      poolManager,
+      logMonitor,
+      sandbox,
+      opencode,
+      promptService,
+      imageStore,
+    } = this.services;
 
-  return { server, browserService };
-};
+    // Create publisher with lazy server access - publisher can be used in handlers
+    // but will only access the server when actually publishing (after server starts)
+    this.publisher = createPublisher(schema, () => this.getServer());
 
-const { server, browserService } = await bootstrap();
+    const handleOpenCodeProxy = createOpenCodeProxyHandler({
+      opencodeUrl,
+      publisher: this.publisher,
+      promptService,
+    });
 
-export { server, browserService, shutdownBrowserService };
+    const routeContext: RouteContext = {
+      browserService,
+      sessionLifecycle,
+      poolManager,
+      promptService,
+      sandbox,
+      opencode,
+      publisher: this.publisher,
+      logMonitor,
+      imageStore,
+      proxyBaseDomain,
+      githubClientId: github.clientId,
+      githubClientSecret: github.clientSecret,
+      githubCallbackUrl: github.callbackUrl,
+      frontendUrl,
+    };
+
+    const { websocketHandler, upgrade } = createWebSocketHandlers({
+      browserService: browserService.service,
+      publisher: this.publisher,
+      opencode,
+      logMonitor,
+      proxyBaseDomain,
+    });
+
+    const handleChannelRequest = createChannelRestHandler({
+      browserService: browserService.service,
+      opencode,
+      logMonitor,
+      proxyBaseDomain,
+    });
+
+    this.server = Bun.serve<WebSocketData<Auth>>({
+      port,
+      idleTimeout: SERVER.IDLE_TIMEOUT_SECONDS,
+      websocket: websocketHandler,
+      fetch: async (request): Promise<Response | undefined> => {
+        if (request.method === "OPTIONS") {
+          return optionsResponse();
+        }
+
+        const url = new URL(request.url);
+
+        if (url.pathname === "/ws") {
+          return upgrade(request, this.getServer());
+        }
+
+        if (url.pathname.startsWith("/opencode/")) {
+          return handleOpenCodeProxy(request, url);
+        }
+
+        const [, channel] = url.pathname.match(/^\/channels\/([^/]+)\/snapshot$/) ?? [];
+        if (channel) {
+          return withCors(await handleChannelRequest(channel, url.searchParams));
+        }
+
+        return this.handleRouteRequest(request, url, routeContext);
+      },
+    });
+
+    reconcileNetworkConnections(containerNames, sandbox).catch(() => {});
+
+    return this.publisher;
+  }
+
+  private async handleRouteRequest(
+    request: Request,
+    url: URL,
+    routeContext: RouteContext,
+  ): Promise<Response> {
+    const { widelog } = this.services;
+    const requestId = crypto.randomUUID();
+
+    return widelog.context(async () => {
+      widelog.set("requestId", requestId);
+      widelog.set("method", request.method);
+      widelog.set("path", url.pathname);
+      widelog.time.start("duration");
+
+      let match: ReturnType<typeof this.router.match> = null;
+
+      try {
+        match = this.router.match(request);
+
+        if (!match) {
+          widelog.set("status", 404);
+          const response = withCors(notFoundResponse());
+          response.headers.set("X-Request-Id", requestId);
+          return response;
+        }
+
+        widelog.set("route", match.name);
+
+        const module: unknown = await import(match.filePath);
+
+        if (!isRouteModule(module)) {
+          widelog.set("status", 500);
+          const response = withCors(errorResponse());
+          response.headers.set("X-Request-Id", requestId);
+          return response;
+        }
+
+        if (!isHttpMethod(request.method)) {
+          widelog.set("status", 405);
+          const response = withCors(methodNotAllowedResponse());
+          response.headers.set("X-Request-Id", requestId);
+          return response;
+        }
+
+        const handler = module[request.method];
+
+        if (!handler) {
+          widelog.set("status", 405);
+          const response = withCors(methodNotAllowedResponse());
+          response.headers.set("X-Request-Id", requestId);
+          return response;
+        }
+
+        const response = await handler(request, match.params, routeContext);
+        widelog.set("status", response.status);
+        const corsResponse = withCors(response);
+        corsResponse.headers.set("X-Request-Id", requestId);
+        return corsResponse;
+      } catch (error) {
+        const hasStatusCode = typeof error === "object" && error !== null && "statusCode" in error;
+        const status =
+          hasStatusCode && typeof (error as any).statusCode === "number"
+            ? (error as any).statusCode
+            : 500;
+        const message =
+          error instanceof Error && status < 500 ? error.message : "Internal server error";
+
+        widelog.set("status", status);
+        widelog.set("error", error instanceof Error ? error.message : "Unknown error");
+
+        if (status >= 500) console.error(`[${match?.name ?? "unknown"}]`, error);
+
+        const response = withCors(Response.json({ error: message, requestId }, { status }));
+        response.headers.set("X-Request-Id", requestId);
+        return response;
+      } finally {
+        widelog.time.stop("duration");
+        widelog.flush();
+      }
+    });
+  }
+
+  shutdown(): void {
+    this.services.browserService.shutdown();
+  }
+}

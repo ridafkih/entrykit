@@ -1,26 +1,25 @@
-import { findSessionsByProjectId } from "../../../utils/repositories/session.repository";
-import { spawnSession } from "../../../utils/orchestration/session-spawner";
-import type { RouteHandler } from "../../../utils/handlers/route-handler";
+import { findSessionsByProjectId } from "../../../repositories/session.repository";
+import { spawnSession } from "../../../orchestration/session-spawner";
+import { withParams } from "../../../shared/route-helpers";
+import type { BrowserContext, SessionContext, InfraContext } from "../../../types/route";
 
-const GET: RouteHandler = async (_request, params) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
-
+const GET = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, _request) => {
   const sessions = await findSessionsByProjectId(projectId);
   return Response.json(sessions);
-};
+});
 
-const POST: RouteHandler = async (request, params, context) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  if (!projectId) return Response.json({ error: "Missing projectId" }, { status: 400 });
+const POST = withParams<{ projectId: string }, BrowserContext & SessionContext & InfraContext>(
+  ["projectId"],
+  async ({ projectId }, request, context) => {
+    const body = await request.json();
 
-  const body = await request.json();
-
-  try {
     const result = await spawnSession({
       projectId,
       taskSummary: body.initialMessage || body.title || "",
       browserService: context.browserService,
+      sessionLifecycle: context.sessionLifecycle,
+      poolManager: context.poolManager,
+      publisher: context.publisher,
     });
 
     return Response.json(
@@ -30,10 +29,7 @@ const POST: RouteHandler = async (request, params, context) => {
       },
       { status: 201 },
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create session";
-    return Response.json({ error: message }, { status: 400 });
-  }
-};
+  },
+);
 
 export { GET, POST };

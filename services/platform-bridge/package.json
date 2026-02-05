@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@lab/database": "workspace:*",
+    "@lab/env-config": "workspace:*",
     "@lab/multiplayer-sdk": "workspace:*",
     "@photon-ai/imessage-kit": "^1.0.0",
     "drizzle-orm": "^0.38.0",

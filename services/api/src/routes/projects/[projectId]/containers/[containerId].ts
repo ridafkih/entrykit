@@ -1,29 +1,27 @@
 import {
   setWorkspaceContainer,
   clearWorkspaceContainer,
-} from "../../../../utils/repositories/container.repository";
-import { badRequestResponse, noContentResponse } from "../../../../shared/http";
-import type { RouteHandler } from "../../../../utils/handlers/route-handler";
+} from "../../../../repositories/container-session.repository";
+import { noContentResponse } from "@lab/http-utilities";
+import { ValidationError } from "../../../../shared/errors";
+import { withParams } from "../../../../shared/route-helpers";
 
-const PATCH: RouteHandler = async (request, params) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  const containerId = Array.isArray(params.containerId)
-    ? params.containerId[0]
-    : params.containerId;
-  if (!projectId || !containerId) return badRequestResponse("Missing required parameters");
+const PATCH = withParams<{ projectId: string; containerId: string }>(
+  ["projectId", "containerId"],
+  async ({ projectId, containerId }, request) => {
+    const body = await request.json();
 
-  const body = await request.json();
-
-  if (typeof body.isWorkspace === "boolean") {
-    if (body.isWorkspace) {
-      await setWorkspaceContainer(projectId, containerId);
-    } else {
-      await clearWorkspaceContainer(projectId);
+    if (typeof body.isWorkspace === "boolean") {
+      if (body.isWorkspace) {
+        await setWorkspaceContainer(projectId, containerId);
+      } else {
+        await clearWorkspaceContainer(projectId);
+      }
+      return noContentResponse();
     }
-    return noContentResponse();
-  }
 
-  return badRequestResponse("Invalid request body");
-};
+    throw new ValidationError("Invalid request body");
+  },
+);
 
 export { PATCH };

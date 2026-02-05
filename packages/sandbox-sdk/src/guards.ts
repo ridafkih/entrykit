@@ -1,11 +1,13 @@
-import type { ContainerState } from "./types";
+import type { ContainerState } from "./types/container";
 import { VALID_CONTAINER_STATES } from "./constants";
 import { SandboxError } from "./error";
 
-export function isContainerState(value: unknown): value is ContainerState {
+export function isContainerState(value: string): value is ContainerState {
+  const validContainerStates: readonly string[] = VALID_CONTAINER_STATES;
+
   return (
     typeof value === "string" &&
-    (VALID_CONTAINER_STATES as readonly string[]).includes(value)
+    validContainerStates.includes(value)
   );
 }
 

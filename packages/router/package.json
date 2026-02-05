@@ -1,0 +1,29 @@
+{
+  "name": "@lab/router",
+  "version": "0.1.0",
+  "type": "module",
+  "typesVersions": {
+    "*": {
+      "*": ["src/*"]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lab/http-utilities": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

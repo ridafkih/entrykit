@@ -1,14 +1,12 @@
-export { createDockerClient, createPortAllocator } from "./factories";
-
 export type {
   DockerClientOptions,
   DockerContainerEvent,
   DockerContainerEventAction,
-} from "./types";
+} from "./types/client";
 export {
   DockerClientOptionsSchema,
   DockerContainerEventActionSchema,
-} from "./types";
+} from "./types/client";
 
 export { DockerClient } from "./clients/docker-client";
 export { PortAllocator } from "./clients/port-allocator";
@@ -26,5 +24,14 @@ export {
   isNotFoundError,
   isNotRunningError,
   wrapDockerError,
-  toContainerState,
-} from "./utils";
+} from "./utils/error-handling";
+export { toContainerState } from "./utils/container-state";
+
+export { DockerWorkspaceManager } from "./modules/docker-workspace-manager";
+export { DockerNetworkManager } from "./modules/docker-network-manager";
+export { DockerImageManager } from "./modules/docker-image-manager";
+export { DockerContainerManager } from "./modules/docker-container-manager";
+export { DockerVolumeManager } from "./modules/docker-volume-manager";
+export { NetworkOperations } from "./modules/network-operations";
+export { ExecOperations } from "./modules/exec-operations";
+export { DockerEventStream } from "./modules/docker-event-stream";

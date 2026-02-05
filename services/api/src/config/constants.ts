@@ -1,3 +1,6 @@
+// Re-export HTTP_STATUS from shared package for backward compatibility
+export { HTTP_STATUS } from "@lab/http-utilities";
+
 export const LABELS = {
   SESSION: "lab.session",
   PROJECT: "lab.project",
@@ -13,20 +16,31 @@ export const VOLUMES = {
   BROWSER_SOCKET_DIR: "/tmp/agent-browser-socket",
 } as const;
 
-export const HTTP_STATUS = {
-  OK: 200,
-  CREATED: 201,
-  NO_CONTENT: 204,
-  BAD_REQUEST: 400,
-  NOT_FOUND: 404,
-  METHOD_NOT_ALLOWED: 405,
-  INTERNAL_SERVER_ERROR: 500,
-} as const;
-
 export const TIMING = {
   CONTAINER_MONITOR_RETRY_MS: 5000,
   OPENCODE_MONITOR_RETRY_MS: 5000,
   OPENCODE_SYNC_INTERVAL_MS: 30000,
+  CONTAINER_MONITOR_INITIAL_RETRY_MS: 1000,
+  CONTAINER_MONITOR_MAX_RETRY_MS: 60_000,
+  COMPLETION_DEBOUNCE_MS: 5000,
+  SERVICE_WAIT_TIMEOUT_MS: 30_000,
+  SERVICE_WAIT_INTERVAL_MS: 250,
+  POOL_RECONCILIATION_TIMEOUT_MS: 120_000,
+  POOL_BACKOFF_BASE_MS: 1000,
+  POOL_BACKOFF_MAX_MS: 30_000,
+  OAUTH_STATE_EXPIRY_MS: 600_000,
+} as const;
+
+export const LIMITS = {
+  LOG_BUFFER_SIZE: 500,
+  LOG_LINES_PER_SECOND: 100,
+  RATE_LIMITER_WINDOW_MS: 1000,
+  SUMMARY_FALLBACK_LENGTH: 200,
+} as const;
+
+export const SERVER = {
+  IDLE_TIMEOUT_SECONDS: 255,
+  PROXY_PORT: 8080,
 } as const;
 
 export const SESSION_TITLE_LENGTH = 8;

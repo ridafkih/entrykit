@@ -91,11 +91,37 @@
         "typescript": "^5",
       },
     },
+    "packages/entry-point": {
+      "name": "@lab/entry-point",
+      "version": "0.1.0",
+      "dependencies": {
+        "arktype": "^2.1.29",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.8",
+        "typescript": "^5",
+      },
+    },
+    "packages/env-config": {
+      "name": "@lab/env-config",
+      "version": "0.1.0",
+      "devDependencies": {
+        "bun-types": "^1.2.11",
+        "typescript": "^5",
+      },
+    },
     "packages/ffmpeg": {
       "name": "@lab/ffmpeg",
       "version": "0.1.0",
       "devDependencies": {
         "bun-types": "^1.2.11",
+        "typescript": "^5",
+      },
+    },
+    "packages/http-utilities": {
+      "name": "@lab/http-utilities",
+      "version": "0.1.0",
+      "devDependencies": {
         "typescript": "^5",
       },
     },
@@ -147,6 +173,23 @@
       },
       "peerDependencies": {
         "bun-types": "*",
+      },
+    },
+    "packages/prompts-sdk": {
+      "name": "@lab/prompts-sdk",
+      "version": "0.1.0",
+      "devDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/router": {
+      "name": "@lab/router",
+      "version": "0.1.0",
+      "dependencies": {
+        "@lab/http-utilities": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5",
       },
     },
     "packages/sandbox-docker": {
@@ -210,6 +253,17 @@
         "react-dom": "^19",
       },
     },
+    "packages/widelogger": {
+      "name": "@lab/widelogger",
+      "version": "0.1.0",
+      "dependencies": {
+        "arktype": "^2.1.29",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.8",
+        "typescript": "^5",
+      },
+    },
     "services/api": {
       "name": "@lab/api",
       "version": "0.1.0",
@@ -219,12 +273,19 @@
         "@lab/browser-protocol": "workspace:*",
         "@lab/context": "workspace:*",
         "@lab/database": "workspace:*",
+        "@lab/entry-point": "workspace:*",
+        "@lab/http-utilities": "workspace:*",
         "@lab/multiplayer-sdk": "workspace:*",
         "@lab/multiplayer-server": "workspace:*",
+        "@lab/prompts-sdk": "workspace:*",
+        "@lab/router": "workspace:*",
         "@lab/sandbox-docker": "workspace:*",
+        "@lab/sandbox-sdk": "workspace:*",
         "@lab/subagents": "workspace:*",
+        "@lab/widelogger": "workspace:*",
         "@opencode-ai/sdk": "^1.1.41",
         "ai": "^6.0.67",
+        "arktype": "^2.1.29",
         "drizzle-orm": "^0.38.0",
         "sodium-native": "^5.0.10",
         "zod": "^4.3.6",
@@ -242,6 +303,8 @@
       "version": "0.1.0",
       "dependencies": {
         "@lab/browser-protocol": "workspace:*",
+        "@lab/http-utilities": "workspace:*",
+        "@lab/router": "workspace:*",
         "agent-browser": "^0.8.4",
         "zod": "^4.3.6",
       },
@@ -274,6 +337,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@lab/database": "workspace:*",
+        "@lab/env-config": "workspace:*",
         "@lab/multiplayer-sdk": "workspace:*",
         "@photon-ai/imessage-kit": "^1.0.0",
         "drizzle-orm": "^0.38.0",
@@ -316,6 +380,10 @@
     "@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@4.0.13", "", { "dependencies": { "@ai-sdk/provider": "3.0.7", "@standard-schema/spec": "^1.1.0", "eventsource-parser": "^3.0.6" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-HHG72BN4d+OWTcq2NwTxOm/2qvk1duYsnhCDtsbYwn/h/4zeqURu1S0+Cn0nY2Ysq9a9HGKvrYuMn9bgFhR2Og=="],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
+
+    "@ark/schema": ["@ark/schema@0.56.0", "", { "dependencies": { "@ark/util": "0.56.0" } }, "sha512-ECg3hox/6Z/nLajxXqNhgPtNdHWC9zNsDyskwO28WinoFEnWow4IsERNz9AnXRhTZJnYIlAJ4uGn3nlLk65vZA=="],
+
+    "@ark/util": ["@ark/util@0.56.0", "", {}, "sha512-BghfRC8b9pNs3vBoDJhcta0/c1J1rsoS1+HgVUreMFPdhz/CRAKReAu57YEllNaSy98rWAdY1gE+gFup7OXpgA=="],
 
     "@aws-crypto/crc32": ["@aws-crypto/crc32@5.2.0", "", { "dependencies": { "@aws-crypto/util": "^5.2.0", "@aws-sdk/types": "^3.222.0", "tslib": "^2.6.2" } }, "sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg=="],
 
@@ -601,7 +669,13 @@
 
     "@lab/database": ["@lab/database@workspace:packages/database"],
 
+    "@lab/entry-point": ["@lab/entry-point@workspace:packages/entry-point"],
+
+    "@lab/env-config": ["@lab/env-config@workspace:packages/env-config"],
+
     "@lab/ffmpeg": ["@lab/ffmpeg@workspace:packages/ffmpeg"],
+
+    "@lab/http-utilities": ["@lab/http-utilities@workspace:packages/http-utilities"],
 
     "@lab/mcp": ["@lab/mcp@workspace:services/mcp"],
 
@@ -613,7 +687,11 @@
 
     "@lab/platform-bridge": ["@lab/platform-bridge@workspace:services/platform-bridge"],
 
+    "@lab/prompts-sdk": ["@lab/prompts-sdk@workspace:packages/prompts-sdk"],
+
     "@lab/proxy": ["@lab/proxy@workspace:services/proxy"],
+
+    "@lab/router": ["@lab/router@workspace:packages/router"],
 
     "@lab/sandbox-docker": ["@lab/sandbox-docker@workspace:packages/sandbox-docker"],
 
@@ -622,6 +700,8 @@
     "@lab/subagents": ["@lab/subagents@workspace:packages/subagents"],
 
     "@lab/ui": ["@lab/ui@workspace:packages/ui"],
+
+    "@lab/widelogger": ["@lab/widelogger@workspace:packages/widelogger"],
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.25.3", "", { "dependencies": { "@hono/node-server": "^1.19.9", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.0.1", "express-rate-limit": "^7.5.0", "jose": "^6.1.1", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.0" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-vsAMBMERybvYgKbg/l4L1rhS7VXV1c0CtyJg72vwxONVX0l4ZfKVAnZEWTQixJGTzKnELjQ59e4NbdFDALRiAQ=="],
 
@@ -1034,6 +1114,10 @@
     "argparse": ["argparse@2.0.1", "", {}, "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="],
 
     "aria-query": ["aria-query@5.3.2", "", {}, "sha512-COROpnaoap1E2F000S62r6A60uHZnmlvomhfyT2DlTcrY1OrBKn2UhH7qn5wTC9zMvD0AY7csdPSNwKP+7WiQw=="],
+
+    "arkregex": ["arkregex@0.0.5", "", { "dependencies": { "@ark/util": "0.56.0" } }, "sha512-ncYjBdLlh5/QnVsAA8De16Tc9EqmYM7y/WU9j+236KcyYNUXogpz3sC4ATIZYzzLxwI+0sEOaQLEmLmRleaEXw=="],
+
+    "arktype": ["arktype@2.1.29", "", { "dependencies": { "@ark/schema": "0.56.0", "@ark/util": "0.56.0", "arkregex": "0.0.5" } }, "sha512-jyfKk4xIOzvYNayqnD8ZJQqOwcrTOUbIU4293yrzAjA3O1dWh61j71ArMQ6tS/u4pD7vabSPe7nG3RCyoXW6RQ=="],
 
     "array-buffer-byte-length": ["array-buffer-byte-length@1.0.2", "", { "dependencies": { "call-bound": "^1.0.3", "is-array-buffer": "^3.0.5" } }, "sha512-LHE+8BuR7RYGDKvnrmcuSq3tDcKv9OFEXQt/HpbZhY7V6h0zlUXutnAD82GiFx9rdieCMjkvtcsPqBwgUl1Iiw=="],
 

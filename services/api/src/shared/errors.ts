@@ -49,3 +49,15 @@ export class NetworkError extends AppError {
     this.name = "NetworkError";
   }
 }
+
+export function orThrow<T>(value: T | null | undefined, resource: string, id?: string): T {
+  if (value == null) throw new NotFoundError(resource, id);
+  return value;
+}
+
+/**
+ * Safely extracts error message from an unknown value.
+ */
+export function getErrorMessage(error: unknown, fallback = "An error occurred"): string {
+  return error instanceof Error ? error.message : fallback;
+}

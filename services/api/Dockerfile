@@ -37,6 +37,11 @@ COPY --from=build /app/packages/browser-protocol/src ./packages/browser-protocol
 COPY --from=build /app/packages/subagents/src ./packages/subagents/src
 COPY --from=build /app/packages/ffmpeg/src ./packages/ffmpeg/src
 COPY --from=build /app/packages/context/src ./packages/context/src
+COPY --from=build /app/packages/entry-point/src ./packages/entry-point/src
+COPY --from=build /app/packages/http-utilities/src ./packages/http-utilities/src
+COPY --from=build /app/packages/router/src ./packages/router/src
+COPY --from=build /app/packages/widelogger/src ./packages/widelogger/src
+COPY --from=build /app/packages/prompts-sdk/src ./packages/prompts-sdk/src
 
 ENV NODE_ENV=production
 EXPOSE 4000

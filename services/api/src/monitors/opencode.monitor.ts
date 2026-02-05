@@ -1,0 +1,251 @@
+import { TIMING } from "../config/constants";
+import { findRunningSessions, findSessionById } from "../repositories/session.repository";
+import { resolveWorkspacePathBySession } from "../shared/path-resolver";
+import { parseEvent, extractTextFromParts, type OpenCodeEvent } from "../opencode/event-parser";
+import {
+  updateInferenceGenerating,
+  updateInferenceIdle,
+  updateLastMessage,
+  clearSessionState,
+} from "../opencode/state-manager";
+import {
+  publishSessionDiff,
+  publishInferenceStatus,
+  publishSessionCompletion,
+} from "../opencode/publisher-adapter";
+import { INFERENCE_STATUS } from "../state/inference-status-store";
+import type { OpencodeClient, Publisher } from "../types/dependencies";
+import type { DeferredPublisher } from "../shared/deferred-publisher";
+
+class CompletionTimerManager {
+  private readonly timers = new Map<string, NodeJS.Timeout>();
+  private readonly completedSessions = new Set<string>();
+
+  constructor(private readonly getPublisher: () => Publisher) {}
+
+  scheduleCompletion(sessionId: string): void {
+    if (this.completedSessions.has(sessionId)) {
+      return;
+    }
+
+    this.cancelCompletion(sessionId);
+
+    const timer = setTimeout(() => {
+      this.timers.delete(sessionId);
+      this.completedSessions.add(sessionId);
+      console.log(
+        `[OpencodeMonitor] Session ${sessionId} completed after ${TIMING.COMPLETION_DEBOUNCE_MS}ms idle`,
+      );
+      publishSessionCompletion(this.getPublisher(), sessionId);
+    }, TIMING.COMPLETION_DEBOUNCE_MS);
+
+    this.timers.set(sessionId, timer);
+  }
+
+  cancelCompletion(sessionId: string): void {
+    const existing = this.timers.get(sessionId);
+    if (existing) {
+      clearTimeout(existing);
+      this.timers.delete(sessionId);
+    }
+  }
+
+  clearSession(sessionId: string): void {
+    this.cancelCompletion(sessionId);
+    this.completedSessions.delete(sessionId);
+  }
+}
+
+class SessionTracker {
+  private readonly abortController = new AbortController();
+
+  constructor(
+    readonly labSessionId: string,
+    private readonly opencode: OpencodeClient,
+    private readonly getPublisher: () => Publisher,
+    private readonly completionTimerManager: CompletionTimerManager,
+  ) {
+    this.monitor();
+  }
+
+  stop(): void {
+    this.abortController.abort();
+    clearSessionState(this.labSessionId);
+    this.completionTimerManager.clearSession(this.labSessionId);
+  }
+
+  get isActive(): boolean {
+    return !this.abortController.signal.aborted;
+  }
+
+  private async syncInitialStatus(directory: string): Promise<void> {
+    try {
+      const session = await findSessionById(this.labSessionId);
+      if (!session?.opencodeSessionId) return;
+
+      const result = await this.opencode.session.status({ directory });
+      if (!result.data) return;
+
+      const status = result.data[session.opencodeSessionId];
+      const inferenceStatus =
+        status?.type === "busy" ? INFERENCE_STATUS.GENERATING : INFERENCE_STATUS.IDLE;
+
+      if (inferenceStatus === INFERENCE_STATUS.GENERATING) {
+        updateInferenceGenerating(this.labSessionId);
+      } else {
+        updateInferenceIdle(this.labSessionId);
+      }
+      publishInferenceStatus(this.getPublisher(), this.labSessionId, inferenceStatus);
+    } catch (error) {
+      console.error(
+        `[OpencodeMonitor] Failed to sync initial status for ${this.labSessionId}:`,
+        error,
+      );
+    }
+  }
+
+  private async monitor(): Promise<void> {
+    const directory = await resolveWorkspacePathBySession(this.labSessionId);
+
+    while (this.isActive) {
+      await this.syncInitialStatus(directory);
+
+      try {
+        const { stream } = await this.opencode.event.subscribe(
+          { directory },
+          { signal: this.abortController.signal },
+        );
+        if (!stream) return;
+
+        for await (const event of stream) {
+          if (!this.isActive) break;
+          this.processEvent(event);
+        }
+      } catch (error) {
+        if (!this.isActive) return;
+        console.error(`[OpencodeMonitor] Error for ${this.labSessionId}:`, error);
+        await new Promise((resolve) => setTimeout(resolve, TIMING.OPENCODE_MONITOR_RETRY_MS));
+      }
+    }
+  }
+
+  private processEvent(rawEvent: unknown): void {
+    const event = parseEvent(rawEvent);
+    if (!event) return;
+
+    switch (event.type) {
+      case "session.diff":
+        publishSessionDiff(this.getPublisher(), this.labSessionId, event);
+        break;
+
+      case "message.updated":
+        this.handleMessageUpdate(extractTextFromParts(event.properties.parts));
+        break;
+
+      case "message.part.updated":
+        if (event.properties.part.type === "text" && event.properties.part.text) {
+          this.handleMessageUpdate(event.properties.part.text);
+        }
+        break;
+
+      case "session.idle":
+      case "session.error":
+        this.handleSessionInactive();
+        break;
+    }
+  }
+
+  private handleMessageUpdate(text: string | null): void {
+    this.completionTimerManager.cancelCompletion(this.labSessionId);
+    updateInferenceGenerating(this.labSessionId);
+    if (text) {
+      updateLastMessage(this.labSessionId, text);
+    }
+    publishInferenceStatus(
+      this.getPublisher(),
+      this.labSessionId,
+      INFERENCE_STATUS.GENERATING,
+      text ?? undefined,
+    );
+  }
+
+  private handleSessionInactive(): void {
+    updateInferenceIdle(this.labSessionId);
+    publishInferenceStatus(this.getPublisher(), this.labSessionId, INFERENCE_STATUS.IDLE);
+    this.completionTimerManager.scheduleCompletion(this.labSessionId);
+  }
+}
+
+export class OpenCodeMonitor {
+  private readonly trackers = new Map<string, SessionTracker>();
+  private readonly abortController = new AbortController();
+  private readonly completionTimerManager = new CompletionTimerManager(() =>
+    this.deferredPublisher.get(),
+  );
+
+  constructor(
+    private readonly opencode: OpencodeClient,
+    private readonly deferredPublisher: DeferredPublisher,
+  ) {}
+
+  async start(): Promise<void> {
+    console.log("[OpencodeMonitor] Starting...");
+
+    try {
+      await this.syncSessions();
+    } catch (error) {
+      console.error("[OpencodeMonitor] Initial sync failed:", error);
+    }
+
+    this.runSyncLoop();
+  }
+
+  stop(): void {
+    console.log("[OpencodeMonitor] Stopping...");
+    this.abortController.abort();
+
+    for (const tracker of this.trackers.values()) {
+      tracker.stop();
+    }
+    this.trackers.clear();
+  }
+
+  private async runSyncLoop(): Promise<void> {
+    while (!this.abortController.signal.aborted) {
+      await new Promise((resolve) => setTimeout(resolve, TIMING.OPENCODE_SYNC_INTERVAL_MS));
+      if (this.abortController.signal.aborted) return;
+
+      try {
+        await this.syncSessions();
+      } catch (error) {
+        console.error("[OpencodeMonitor] Sync failed:", error);
+      }
+    }
+  }
+
+  private async syncSessions(): Promise<void> {
+    const active = await findRunningSessions();
+    const activeIds = new Set(active.map((session) => session.id));
+
+    for (const [id, tracker] of this.trackers) {
+      if (!activeIds.has(id)) {
+        tracker.stop();
+        this.trackers.delete(id);
+      }
+    }
+
+    for (const { id } of active) {
+      if (!this.trackers.has(id)) {
+        this.trackers.set(
+          id,
+          new SessionTracker(
+            id,
+            this.opencode,
+            () => this.deferredPublisher.get(),
+            this.completionTimerManager,
+          ),
+        );
+      }
+    }
+  }
+}

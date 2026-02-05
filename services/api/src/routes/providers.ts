@@ -1,8 +1,7 @@
-import { opencode } from "../clients/opencode";
-import type { RouteHandler } from "../utils/handlers/route-handler";
+import type { Handler, InfraContext } from "../types/route";
 
-const GET: RouteHandler = async () => {
-  const { data } = await opencode.provider.list();
+const GET: Handler<InfraContext> = async (_request, _params, ctx) => {
+  const { data } = await ctx.opencode.provider.list();
   return Response.json(data);
 };
 

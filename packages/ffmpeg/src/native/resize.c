@@ -266,6 +266,10 @@ cleanup:
     return ret;
 }
 
+void* deref_ptr(void **p) {
+    return *p;
+}
+
 void free_buffer(void *buf) {
     free(buf);
 }

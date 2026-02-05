@@ -1,8 +1,8 @@
-import { cc, ptr, toArrayBuffer, type Pointer } from "bun:ffi";
+import { cc, ptr, toArrayBuffer } from "bun:ffi";
 import source from "./native/resize.c" with { type: "file" };
 
 const {
-  symbols: { resize_image, free_buffer },
+  symbols: { resize_image, free_buffer, deref_ptr },
 } = cc({
   source,
   library: ["avcodec", "avformat", "avutil", "swscale"],
@@ -10,6 +10,10 @@ const {
     resize_image: {
       returns: "int",
       args: ["ptr", "usize", "int", "ptr", "ptr", "ptr", "ptr"],
+    },
+    deref_ptr: {
+      returns: "ptr",
+      args: ["ptr"],
     },
     free_buffer: {
       returns: "void",
@@ -55,12 +59,12 @@ export function resizeImage(input: Buffer, maxDimension = MAX_DIMENSION): Resize
     throw new Error(`FFmpeg resize failed with code ${result}`);
   }
 
-  const outPtr = Number(outputPtr[0]) as Pointer;
-  const len = Number(outputLen[0]);
+  const outPtr = deref_ptr(ptr(outputPtr));
+  if (!outPtr) {
+    throw new Error("FFmpeg resize returned a null output buffer");
+  }
 
-  console.log("Raw BigInt pointer:", outputPtr[0]);
-  console.log("As Number:", Number(outputPtr[0]));
-  console.log("Safe?:", outputPtr[0] <= BigInt(Number.MAX_SAFE_INTEGER));
+  const len = Number(outputLen[0]);
 
   const view = toArrayBuffer(outPtr, 0, len);
   const outputBuffer = Buffer.alloc(len);

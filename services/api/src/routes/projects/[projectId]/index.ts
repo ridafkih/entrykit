@@ -1,39 +1,37 @@
 import {
-  findProjectById,
+  findProjectByIdOrThrow,
   deleteProject,
   updateProject,
-} from "../../../utils/repositories/project.repository";
-import { notFoundResponse, noContentResponse, badRequestResponse } from "../../../shared/http";
-import type { RouteHandler } from "../../../utils/handlers/route-handler";
+} from "../../../repositories/project.repository";
+import { noContentResponse } from "@lab/http-utilities";
+import { parseRequestBody } from "../../../shared/validation";
+import { withParams } from "../../../shared/route-helpers";
+import { z } from "zod";
 
-const GET: RouteHandler = async (_request, params) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  if (!projectId) return badRequestResponse("Missing projectId");
+const updateProjectSchema = z.object({
+  description: z.string().optional(),
+  systemPrompt: z.string().optional(),
+});
 
-  const project = await findProjectById(projectId);
-  if (!project) return notFoundResponse();
+const GET = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, _request) => {
+  const project = await findProjectByIdOrThrow(projectId);
   return Response.json(project);
-};
+});
 
-const PATCH: RouteHandler = async (request, params) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  if (!projectId) return badRequestResponse("Missing projectId");
+const PATCH = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, request) => {
+  const body = await parseRequestBody(request, updateProjectSchema);
 
-  const body = await request.json();
+  await findProjectByIdOrThrow(projectId);
   const project = await updateProject(projectId, {
     description: body.description,
     systemPrompt: body.systemPrompt,
   });
-  if (!project) return notFoundResponse();
   return Response.json(project);
-};
+});
 
-const DELETE: RouteHandler = async (_request, params) => {
-  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  if (!projectId) return badRequestResponse("Missing projectId");
-
+const DELETE = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, _request) => {
   await deleteProject(projectId);
   return noContentResponse();
-};
+});
 
 export { DELETE, GET, PATCH };

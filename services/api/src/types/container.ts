@@ -1,7 +1,12 @@
-export type ContainerStatus = "running" | "stopped" | "starting" | "error";
+export const CONTAINER_STATUS = {
+  RUNNING: "running",
+  STOPPED: "stopped",
+  STARTING: "starting",
+  ERROR: "error",
+} as const;
+
+export type ContainerStatus = (typeof CONTAINER_STATUS)[keyof typeof CONTAINER_STATUS];
 
 export function isContainerStatus(status: string): status is ContainerStatus {
-  return (
-    status === "running" || status === "stopped" || status === "starting" || status === "error"
-  );
+  return Object.values(CONTAINER_STATUS).includes(status as ContainerStatus);
 }
