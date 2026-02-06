@@ -14,6 +14,7 @@ import { generateSessionTitle } from "../generators/title.generator";
 import type { Publisher } from "../types/dependencies";
 import { CONTAINER_STATUS, isContainerStatus, type ContainerStatus } from "../types/container";
 import { InternalError, ValidationError } from "../shared/errors";
+import { logger } from "../logging";
 
 export interface SpawnSessionOptions {
   projectId: string;
@@ -97,7 +98,12 @@ function scheduleBackgroundWork(
   publisher: Publisher,
 ): void {
   sessionLifecycle.scheduleInitializeSession(sessionId, projectId).catch((error) => {
-    console.error(`[Orchestration] Background initialization failed for ${sessionId}:`, error);
+    logger.error({
+      event_name: "orchestration.session_spawner.background_initialization_failed",
+      session_id: sessionId,
+      project_id: projectId,
+      error,
+    });
     publisher.publishDelta(
       "sessionMetadata",
       { uuid: sessionId },
@@ -214,6 +220,10 @@ function scheduleBackgroundTitleGeneration(
     fallbackTitle: userMessage.slice(0, 50).trim(),
     publisher,
   }).catch((error) => {
-    console.error(`[SessionSpawner] Title generation failed for ${sessionId}:`, error);
+    logger.error({
+      event_name: "orchestration.session_spawner.title_generation_failed",
+      session_id: sessionId,
+      error,
+    });
   });
 }

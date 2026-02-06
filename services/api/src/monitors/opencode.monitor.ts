@@ -10,6 +10,7 @@ import {
 import { INFERENCE_STATUS, type SessionStateStore } from "../state/session-state-store";
 import type { OpencodeClient, Publisher } from "../types/dependencies";
 import type { DeferredPublisher } from "../shared/deferred-publisher";
+import { logger } from "../logging";
 
 class CompletionTimerManager {
   private readonly timers = new Map<string, NodeJS.Timeout>();
@@ -27,9 +28,11 @@ class CompletionTimerManager {
     const timer = setTimeout(() => {
       this.timers.delete(sessionId);
       this.completedSessions.add(sessionId);
-      console.log(
-        `[OpencodeMonitor] Session ${sessionId} completed after ${TIMING.COMPLETION_DEBOUNCE_MS}ms idle`,
-      );
+      logger.info({
+        event_name: "opencode_monitor.session_completion_scheduled",
+        session_id: sessionId,
+        debounce_ms: TIMING.COMPLETION_DEBOUNCE_MS,
+      });
       publishSessionCompletion(this.getPublisher(), sessionId);
     }, TIMING.COMPLETION_DEBOUNCE_MS);
 
@@ -88,10 +91,11 @@ class SessionTracker {
       await this.sessionStateStore.setInferenceStatus(this.labSessionId, inferenceStatus);
       publishInferenceStatus(this.getPublisher(), this.labSessionId, inferenceStatus);
     } catch (error) {
-      console.error(
-        `[OpencodeMonitor] Failed to sync initial status for ${this.labSessionId}:`,
+      logger.error({
+        event_name: "opencode_monitor.sync_initial_status_failed",
+        session_id: this.labSessionId,
         error,
-      );
+      });
     }
   }
 
@@ -114,7 +118,11 @@ class SessionTracker {
         }
       } catch (error) {
         if (!this.isActive) return;
-        console.error(`[OpencodeMonitor] Error for ${this.labSessionId}:`, error);
+        logger.error({
+          event_name: "opencode_monitor.session_tracker_error",
+          session_id: this.labSessionId,
+          error,
+        });
         await new Promise((resolve) => setTimeout(resolve, TIMING.OPENCODE_MONITOR_RETRY_MS));
       }
     }
@@ -181,19 +189,26 @@ export class OpenCodeMonitor {
   ) {}
 
   async start(): Promise<void> {
-    console.log("[OpencodeMonitor] Starting...");
+    logger.info({
+      event_name: "opencode_monitor.start",
+    });
 
     try {
       await this.syncSessions();
     } catch (error) {
-      console.error("[OpencodeMonitor] Initial sync failed:", error);
+      logger.error({
+        event_name: "opencode_monitor.initial_sync_failed",
+        error,
+      });
     }
 
     this.runSyncLoop();
   }
 
   stop(): void {
-    console.log("[OpencodeMonitor] Stopping...");
+    logger.info({
+      event_name: "opencode_monitor.stop",
+    });
     this.abortController.abort();
 
     for (const tracker of this.trackers.values()) {
@@ -210,7 +225,10 @@ export class OpenCodeMonitor {
       try {
         await this.syncSessions();
       } catch (error) {
-        console.error("[OpencodeMonitor] Sync failed:", error);
+        logger.error({
+          event_name: "opencode_monitor.sync_failed",
+          error,
+        });
       }
     }
   }

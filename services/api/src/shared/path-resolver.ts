@@ -23,13 +23,6 @@ export async function resolveWorkspacePathBySession(sessionId: string): Promise<
   const storedDirectory = await getSessionWorkspaceDirectory(sessionId);
   const computedDirectory = await computeWorkspaceDirectory(sessionId);
 
-  console.log("[resolve-path]", {
-    sessionId,
-    storedDirectory,
-    computedDirectory,
-    using: storedDirectory ?? computedDirectory,
-  });
-
   if (storedDirectory) {
     return storedDirectory;
   }

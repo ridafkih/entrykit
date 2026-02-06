@@ -2,6 +2,7 @@ import { streamText } from "ai";
 import { readModelConfig, createLanguageModel } from "../shared/llm-factory";
 import { updateSessionTitle } from "../repositories/session.repository";
 import type { Publisher } from "../types/dependencies";
+import { logger } from "../logging";
 
 function buildPrompt(userMessage: string): string {
   return `Generate a brief, descriptive title (3-6 words) for a chat session based on the user's initial message. The title should capture the main intent or topic. Do not include quotes or punctuation at the end. Only output the title, nothing else.
@@ -58,7 +59,11 @@ export async function generateSessionTitle(options: GenerateTitleOptions): Promi
 
     return finalTitle;
   } catch (error) {
-    console.error(`[TitleGenerator] Failed to generate title for ${sessionId}:`, error);
+    logger.error({
+      event_name: "title_generator.failed",
+      session_id: sessionId,
+      error,
+    });
 
     const fallback = fallbackTitle || userMessage.slice(0, 50).trim() || "New Session";
     const updatedSession = await updateSessionTitle(sessionId, fallback);

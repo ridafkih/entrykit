@@ -1,6 +1,7 @@
 import { formatProxyUrl } from "../shared/naming";
 import type { RouteInfo } from "../types/proxy";
 import type { RedisClient } from "bun";
+import { logger } from "../logging";
 
 interface ClusterRegistration {
   routes: RouteInfo[];
@@ -31,14 +32,21 @@ export class ProxyManager {
     const registration: ClusterRegistration = { routes };
     await this.redis.set(`proxy:cluster:${clusterId}`, JSON.stringify(registration));
     await this.redis.sadd("proxy:clusters", clusterId);
-    console.log(`[Proxy] Registered cluster ${clusterId} with ${routes.length} routes`);
+    logger.info({
+      event_name: "proxy.cluster.registered",
+      cluster_id: clusterId,
+      route_count: routes.length,
+    });
     return routes;
   }
 
   async unregisterCluster(clusterId: string): Promise<void> {
     await this.redis.del(`proxy:cluster:${clusterId}`);
     await this.redis.srem("proxy:clusters", clusterId);
-    console.log(`[Proxy] Unregistered cluster ${clusterId}`);
+    logger.info({
+      event_name: "proxy.cluster.unregistered",
+      cluster_id: clusterId,
+    });
   }
 
   async getUrls(clusterId: string): Promise<RouteInfo[]> {

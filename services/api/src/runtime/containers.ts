@@ -24,6 +24,7 @@ import type { SessionCleanupService } from "../services/session-cleanup.service"
 import type { Sandbox, Publisher } from "../types/dependencies";
 import type { ProxyManager } from "../services/proxy.service";
 import { InternalError } from "../shared/errors";
+import { logger } from "../logging";
 
 interface ClusterContainer {
   containerId: string;
@@ -56,7 +57,13 @@ async function createAndStartContainer(
     ports,
   );
 
-  console.log(`[Container] Creating ${containerDefinition.image} for session ${sessionId}`);
+  logger.info({
+    event_name: "runtime.container.create_started",
+    session_id: sessionId,
+    project_id: projectId,
+    container_id: containerDefinition.id,
+    image: containerDefinition.image,
+  });
   const { runtimeId } = await sandbox.runtime.startContainer({
     sessionId,
     projectId,
@@ -69,7 +76,13 @@ async function createAndStartContainer(
     ports: ports.map(({ port }) => port),
     aliases: networkAliases,
   });
-  console.log(`[Container] Created and started ${runtimeId}`);
+  logger.info({
+    event_name: "runtime.container.create_completed",
+    session_id: sessionId,
+    project_id: projectId,
+    runtime_id: runtimeId,
+    container_id: containerDefinition.id,
+  });
 
   await updateSessionContainerRuntimeId(sessionId, containerDefinition.id, runtimeId);
   const sessionContainer = await findSessionContainerByRuntimeId(runtimeId);
@@ -172,15 +185,27 @@ export async function initializeSessionContainers(
 
     const session = await findSessionById(sessionId);
     if (!session || session.status === SESSION_STATUS.DELETING) {
-      console.log(`Session ${sessionId} was deleted during initialization, cleaning up`);
+      logger.info({
+        event_name: "runtime.session_initialization.session_deleted_during_setup",
+        session_id: sessionId,
+      });
       await cleanupService.cleanupOrphanedResources(sessionId, runtimeIds, browserService);
       return;
     }
   } catch (error) {
     if (error instanceof CircularDependencyError) {
-      console.error(`Circular dependency in project ${projectId}: ${error.cycle.join(" -> ")}`);
+      logger.error({
+        event_name: "runtime.session_initialization.circular_dependency",
+        project_id: projectId,
+        cycle: error.cycle,
+      });
     }
-    console.error(`Failed to initialize session ${sessionId}:`, error);
+    logger.error({
+      event_name: "runtime.session_initialization.failed",
+      session_id: sessionId,
+      project_id: projectId,
+      error,
+    });
     await handleInitializationError(sessionId, projectId, runtimeIds, browserService, deps);
   }
 }

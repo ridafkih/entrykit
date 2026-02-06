@@ -3,6 +3,7 @@ import { githubSettings, type GitHubSettings } from "@lab/database/schema/github
 import { eq } from "drizzle-orm";
 import { encrypt, decrypt } from "../shared/crypto";
 import { InternalError } from "../shared/errors";
+import { widelog } from "../logging";
 
 function toSettingsOutput(settings: GitHubSettings): GitHubSettingsOutput {
   return {
@@ -70,16 +71,18 @@ export async function getGitHubCredentials(): Promise<GitHubCredentials | null> 
   if (settings.accessTokenEncrypted && settings.accessTokenNonce) {
     try {
       token = decrypt(settings.accessTokenEncrypted, settings.accessTokenNonce);
-    } catch {
-      console.error("[GitHubSettings] Failed to decrypt GitHub OAuth token");
+    } catch (error) {
+      widelog.set("github.oauth_token_decrypt_failed", true);
+      widelog.errorFields(error, { prefix: "github.oauth_token_decrypt_error", includeStack: false });
     }
   }
 
   if (!token && settings.patEncrypted && settings.patNonce) {
     try {
       token = decrypt(settings.patEncrypted, settings.patNonce);
-    } catch {
-      console.error("[GitHubSettings] Failed to decrypt GitHub PAT");
+    } catch (error) {
+      widelog.set("github.pat_decrypt_failed", true);
+      widelog.errorFields(error, { prefix: "github.pat_decrypt_error", includeStack: false });
     }
   }
 

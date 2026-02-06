@@ -5,6 +5,7 @@ import type { DaemonController } from "@lab/browser-protocol";
 import { executeBrowserTask, type BrowserAgentContext } from "@lab/subagents/browser";
 import { ImageStore } from "@lab/context";
 import { getErrorMessage } from "../../shared/errors";
+import { widelog } from "../../logging";
 
 export interface RunBrowserTaskToolContext {
   daemonController: DaemonController;
@@ -64,7 +65,11 @@ export function createRunBrowserTaskTool(toolContext: RunBrowserTaskToolContext)
               trace: result.trace,
             };
           } catch (uploadError) {
-            console.warn("[RunBrowserTask] Failed to upload screenshot:", uploadError);
+            widelog.set("orchestration.tool.run_browser_task.screenshot_upload_failed", true);
+            widelog.errorFields(uploadError, {
+              prefix: "orchestration.tool.run_browser_task.screenshot_upload_error",
+              includeStack: false,
+            });
             // Fall back to base64
           }
         }
@@ -82,7 +87,7 @@ export function createRunBrowserTaskTool(toolContext: RunBrowserTaskToolContext)
           trace: result.trace,
         };
       } catch (error) {
-        console.error("[RunBrowserTask] Operation failed:", error);
+        widelog.errorFields(error, { prefix: "orchestration.tool.run_browser_task.error" });
         return {
           success: false,
           error: `Browser task failed: ${getErrorMessage(error)}`,

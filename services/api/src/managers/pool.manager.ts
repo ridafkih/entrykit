@@ -12,6 +12,7 @@ import { createSessionContainer } from "../repositories/container-session.reposi
 import type { BrowserServiceManager } from "./browser-service.manager";
 import type { SessionLifecycleManager } from "./session-lifecycle.manager";
 import type { Session } from "@lab/database/schema/sessions";
+import { logger } from "../logging";
 
 interface PoolStats {
   available: number;
@@ -68,10 +69,12 @@ export class PoolManager {
 
   triggerReconcileInBackground(projectId: string, reason: string): void {
     this.reconcilePool(projectId).catch((error) => {
-      console.error(
-        `[PoolManager] Failed background reconciliation for project ${projectId} (${reason}):`,
+      logger.error({
+        event_name: "pool_manager.reconcile_background_failed",
+        project_id: projectId,
+        reason,
         error,
-      );
+      });
     });
   }
 
@@ -99,19 +102,33 @@ export class PoolManager {
 
       try {
         await this.browserService.service.warmUpBrowser(session.id);
-        console.log(
-          `[PoolManager] Created and warmed up pooled session ${session.id} for project ${projectId}`,
-        );
+        logger.info({
+          event_name: "pool_manager.pooled_session_created_and_warmed",
+          project_id: projectId,
+          session_id: session.id,
+        });
       } catch (error) {
-        console.warn(`[PoolManager] Failed to warm up browser for session ${session.id}:`, error);
-        console.log(
-          `[PoolManager] Created pooled session ${session.id} for project ${projectId} (browser will start on first subscriber)`,
-        );
+        logger.error({
+          event_name: "pool_manager.warmup_failed",
+          project_id: projectId,
+          session_id: session.id,
+          error,
+        });
+        logger.info({
+          event_name: "pool_manager.pooled_session_created_without_warmup",
+          project_id: projectId,
+          session_id: session.id,
+        });
       }
 
       return session;
     } catch (error) {
-      console.error(`[PoolManager] Failed to initialize pooled session ${session.id}:`, error);
+      logger.error({
+        event_name: "pool_manager.initialize_pooled_session_failed",
+        project_id: projectId,
+        session_id: session.id,
+        error,
+      });
       return null;
     }
   }
@@ -121,9 +138,11 @@ export class PoolManager {
     if (existing) {
       const startedAt = this.reconcileStartedAt.get(projectId);
       if (startedAt && Date.now() - startedAt > TIMING.POOL_RECONCILIATION_TIMEOUT_MS) {
-        console.warn(
-          `[PoolManager] Waiting on long-running reconciliation lock for project ${projectId}`,
-        );
+        logger.info({
+          event_name: "pool_manager.reconcile_waiting_on_long_running_lock",
+          project_id: projectId,
+          lock_age_ms: Date.now() - startedAt,
+        });
       }
       return existing;
     }
@@ -153,15 +172,25 @@ export class PoolManager {
       try {
         await this.reconcilePool(project.id);
       } catch (error) {
-        console.error(`[PoolManager] Failed to reconcile pool for project ${project.id}:`, error);
+        logger.error({
+          event_name: "pool_manager.reconcile_project_failed",
+          project_id: project.id,
+          error,
+        });
       }
     }
   }
 
   initialize(): void {
-    console.log(`[PoolManager] Initializing with target size ${this.getTargetPoolSize()}`);
+    logger.info({
+      event_name: "pool_manager.initialize",
+      target_size: this.getTargetPoolSize(),
+    });
     this.reconcileAllPools().catch((error) =>
-      console.error("[PoolManager] Initial reconciliation failed:", error),
+      logger.error({
+        event_name: "pool_manager.initial_reconciliation_failed",
+        error,
+      }),
     );
   }
 
@@ -178,9 +207,12 @@ export class PoolManager {
         TIMING.POOL_BACKOFF_BASE_MS,
         TIMING.POOL_BACKOFF_MAX_MS,
       );
-      console.warn(
-        `[PoolManager] Creation failed for project ${projectId}, attempt ${failures}, backing off ${delay}ms`,
-      );
+      logger.error({
+        event_name: "pool_manager.fill_creation_failed",
+        project_id: projectId,
+        attempt: failures,
+        backoff_ms: delay,
+      });
       await new Promise((resolve) => setTimeout(resolve, delay));
       return failures;
     }
@@ -191,12 +223,20 @@ export class PoolManager {
    * Removes excess pooled sessions beyond the target size.
    */
   private async drainExcess(projectId: string, excess: number): Promise<void> {
-    console.log(`[PoolManager] Removing ${excess} session(s) for project ${projectId}`);
+    logger.info({
+      event_name: "pool_manager.drain_excess_start",
+      project_id: projectId,
+      excess_count: excess,
+    });
 
     const sessionsToRemove = await findPooledSessions(projectId, excess);
     for (const session of sessionsToRemove) {
       await this.sessionLifecycle.cleanupSession(session.id);
-      console.log(`[PoolManager] Removed pooled session ${session.id}`);
+      logger.info({
+        event_name: "pool_manager.drain_excess_removed_session",
+        project_id: projectId,
+        session_id: session.id,
+      });
     }
   }
 
@@ -220,9 +260,12 @@ export class PoolManager {
       }
 
       if (currentCount < targetSize) {
-        console.log(
-          `[PoolManager] Adding session for project ${projectId} (current: ${currentCount}, target: ${targetSize})`,
-        );
+        logger.info({
+          event_name: "pool_manager.fill_needed",
+          project_id: projectId,
+          current_count: currentCount,
+          target_size: targetSize,
+        });
         consecutiveFailures = await this.fillOne(projectId, consecutiveFailures);
       } else {
         await this.drainExcess(projectId, currentCount - targetSize);
@@ -230,9 +273,11 @@ export class PoolManager {
     }
 
     if (!settled) {
-      console.warn(
-        `[PoolManager] Reconciliation for project ${projectId} hit iteration limit (${maxIterations})`,
-      );
+      logger.error({
+        event_name: "pool_manager.reconcile_iteration_limit_hit",
+        project_id: projectId,
+        max_iterations: maxIterations,
+      });
     }
   }
 }

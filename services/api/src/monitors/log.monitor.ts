@@ -4,6 +4,7 @@ import { CircularBuffer } from "../shared/circular-buffer";
 import { RateLimiter } from "../shared/rate-limiter";
 import type { Sandbox, Publisher } from "../types/dependencies";
 import type { DeferredPublisher } from "../shared/deferred-publisher";
+import { logger } from "../logging";
 
 type LogChunk = {
   stream: "stdout" | "stderr";
@@ -49,7 +50,13 @@ class LogStreamTracker {
     this.isStreaming = true;
 
     this.runStreamLoop().catch((error) => {
-      console.error(`[LogMonitor] Stream error for ${this.containerId}:`, error);
+      logger.error({
+        event_name: "log_monitor.stream_error",
+        container_id: this.containerId,
+        session_id: this.sessionId,
+        runtime_id: this.runtimeId,
+        error,
+      });
     });
   }
 
@@ -155,11 +162,16 @@ export class LogMonitor {
   ) {}
 
   async start(): Promise<void> {
-    console.log("[LogMonitor] Starting and scanning for running containers...");
+    logger.info({
+      event_name: "log_monitor.start",
+    });
 
     try {
       const runningContainers = await findAllRunningSessionContainers();
-      console.log(`[LogMonitor] Found ${runningContainers.length} running container(s)`);
+      logger.info({
+        event_name: "log_monitor.running_containers_scanned",
+        running_container_count: runningContainers.length,
+      });
 
       for (const container of runningContainers) {
         this.onContainerStarted({
@@ -170,7 +182,10 @@ export class LogMonitor {
         });
       }
     } catch (error) {
-      console.error("[LogMonitor] Failed to scan for running containers:", error);
+      logger.error({
+        event_name: "log_monitor.running_containers_scan_failed",
+        error,
+      });
     }
   }
 
@@ -179,7 +194,6 @@ export class LogMonitor {
     const key = `${sessionId}:${containerId}`;
 
     if (this.trackers.has(key)) {
-      console.log(`[LogMonitor] Tracker already exists for ${containerId}`);
       return;
     }
 
@@ -208,9 +222,12 @@ export class LogMonitor {
     );
 
     tracker.start();
-    console.log(
-      `[LogMonitor] Started tracking logs for container ${containerId} in session ${sessionId}`,
-    );
+    logger.info({
+      event_name: "log_monitor.tracker_started",
+      container_id: containerId,
+      session_id: sessionId,
+      runtime_id: runtimeId,
+    });
   }
 
   onContainerStopped(event: ContainerStoppedEvent): void {
@@ -219,7 +236,6 @@ export class LogMonitor {
 
     const tracker = this.trackers.get(key);
     if (!tracker) {
-      console.log(`[LogMonitor] No tracker found for ${containerId}`);
       return;
     }
 
@@ -243,8 +259,11 @@ export class LogMonitor {
         status: "stopped",
       },
     );
-
-    console.log(`[LogMonitor] Stopped tracking logs for container ${containerId}`);
+    logger.info({
+      event_name: "log_monitor.tracker_stopped",
+      container_id: containerId,
+      session_id: sessionId,
+    });
   }
 
   getSessionSnapshot(sessionId: string): {
@@ -283,7 +302,10 @@ export class LogMonitor {
     }
 
     this.sessionTrackers.delete(sessionId);
-    console.log(`[LogMonitor] Cleaned up all trackers for session ${sessionId}`);
+    logger.info({
+      event_name: "log_monitor.session_cleanup",
+      session_id: sessionId,
+    });
   }
 
   stop(): void {
@@ -292,6 +314,8 @@ export class LogMonitor {
     }
     this.trackers.clear();
     this.sessionTrackers.clear();
-    console.log("[LogMonitor] Stopped all trackers");
+    logger.info({
+      event_name: "log_monitor.stop",
+    });
   }
 }

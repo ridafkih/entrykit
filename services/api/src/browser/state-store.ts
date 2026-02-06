@@ -9,6 +9,7 @@ import {
   CurrentState,
   BrowserError,
 } from "@lab/browser-protocol";
+import { logger } from "../logging";
 
 const mapDbToState = (session: typeof browserSessions.$inferSelect): BrowserSessionState => ({
   sessionId: session.sessionId,
@@ -208,7 +209,10 @@ export const cleanupOrphanedSessions = async (): Promise<number> => {
 
   if (orphanedIds.length > 0) {
     await db.delete(browserSessions).where(inArray(browserSessions.sessionId, orphanedIds));
-    console.log(`[StateStore] Cleaned up ${orphanedIds.length} orphaned browser session(s)`);
+    logger.info({
+      event_name: "browser.state_store.orphaned_sessions_cleaned",
+      orphaned_count: orphanedIds.length,
+    });
   }
 
   return orphanedIds.length;

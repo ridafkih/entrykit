@@ -19,6 +19,7 @@ import {
 } from "../snapshots/snapshot-loaders";
 import { MESSAGE_ROLE } from "../types/message";
 import { ValidationError } from "../shared/errors";
+import { logger } from "../logging";
 
 export { type Auth } from "../types/websocket";
 
@@ -101,7 +102,11 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
 
         subscribers.add(ws);
         browserService.subscribeBrowser(sessionId).catch((error) => {
-          console.warn(`[WebSocket] Failed to subscribe to browser ${sessionId}:`, error);
+          logger.error({
+            event_name: "websocket.subscribe_browser.failed",
+            session_id: sessionId,
+            error,
+          });
         });
       },
       onUnsubscribe: ({ params, ws }) => {
@@ -119,7 +124,11 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
         }
 
         browserService.unsubscribeBrowser(sessionId).catch((error) => {
-          console.warn(`[WebSocket] Failed to unsubscribe from browser ${sessionId}:`, error);
+          logger.error({
+            event_name: "websocket.unsubscribe_browser.failed",
+            session_id: sessionId,
+            error,
+          });
         });
       },
     },

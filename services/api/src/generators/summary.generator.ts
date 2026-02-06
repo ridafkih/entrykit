@@ -9,6 +9,7 @@ import { findSessionById } from "../repositories/session.repository";
 import { resolveWorkspacePathBySession } from "../shared/path-resolver";
 import type { OpencodeClient } from "../types/dependencies";
 import { MESSAGE_ROLE } from "../types/message";
+import { widelog } from "../logging";
 
 export interface TaskSummary {
   success: boolean;
@@ -122,7 +123,7 @@ Only output the JSON, no other text.`;
       };
     }
   } catch (error) {
-    console.error("[SummaryGenerator] Error generating summary:", error);
+    widelog.errorFields(error, { prefix: "summary_generator.error" });
     return {
       success: false,
       outcome: "Error generating summary",

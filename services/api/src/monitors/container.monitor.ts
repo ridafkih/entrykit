@@ -10,6 +10,7 @@ import {
 import type { Sandbox } from "../types/dependencies";
 import type { DeferredPublisher } from "../shared/deferred-publisher";
 import type { LogMonitor } from "./log.monitor";
+import { logger } from "../logging";
 
 function mapEventToStatus(event: ContainerEvent): ContainerStatus | null {
   switch (event.action) {
@@ -50,7 +51,9 @@ export class ContainerMonitor {
 
   async start(logMonitor: LogMonitor): Promise<void> {
     this.logMonitor = logMonitor;
-    console.log("[ContainerMonitor] Starting...");
+    logger.info({
+      event_name: "container_monitor.start",
+    });
     await this.syncContainerStatuses();
     this.runMonitorLoop();
   }
@@ -77,12 +80,17 @@ export class ContainerMonitor {
         }
       }
     } catch (error) {
-      console.error("[ContainerMonitor] Failed to sync container statuses:", error);
+      logger.error({
+        event_name: "container_monitor.sync_statuses_failed",
+        error,
+      });
     }
   }
 
   stop(): void {
-    console.log("[ContainerMonitor] Stopping...");
+    logger.info({
+      event_name: "container_monitor.stop",
+    });
     this.abortController.abort();
   }
 
@@ -102,7 +110,11 @@ export class ContainerMonitor {
       } catch (error) {
         if (this.abortController.signal.aborted) return;
 
-        console.error(`[ContainerMonitor] Error, retrying in ${retryDelay}ms:`, error);
+        logger.error({
+          event_name: "container_monitor.event_stream_error",
+          retry_delay_ms: retryDelay,
+          error,
+        });
         await sleep(retryDelay);
         retryDelay = calculateNextRetryDelay(retryDelay);
       }

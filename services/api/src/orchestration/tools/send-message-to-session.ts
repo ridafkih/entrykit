@@ -5,6 +5,7 @@ import { sendMessageToSession } from "../message-sender";
 import { getErrorMessage } from "../../shared/errors";
 import type { OpencodeClient, Publisher } from "../../types/dependencies";
 import type { SessionStateStore } from "../../state/session-state-store";
+import { widelog } from "../../logging";
 
 const inputSchema = z.object({
   sessionId: z.string().describe("The session ID to send the message to"),
@@ -47,7 +48,7 @@ export function createSendMessageToSessionTool(context: SendMessageToolContext) 
 
         return { success: true, sessionId };
       } catch (error) {
-        console.error("[SendMessageToSession] Operation failed:", error);
+        widelog.errorFields(error, { prefix: "orchestration.tool.send_message_to_session.error" });
         return { success: false, error: getErrorMessage(error) };
       }
     },

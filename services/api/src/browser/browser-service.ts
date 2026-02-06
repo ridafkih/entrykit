@@ -9,6 +9,7 @@ import {
   createFrameReceiver,
   createDaemonEventSubscriber,
 } from "@lab/browser-protocol";
+import { logger } from "../logging";
 
 export interface BrowserServiceConfig {
   browserWsHost: string;
@@ -60,7 +61,10 @@ export const createBrowserService = async (
 
     const status = await daemonController.getStatus(sessionId);
     if (!status?.running) {
-      console.warn(`[FrameReceiver] Daemon not running for ${sessionId}, resetting state`);
+      logger.info({
+        event_name: "browser.frame_receiver.daemon_not_running",
+        session_id: sessionId,
+      });
       await stateStore.setCurrentState(sessionId, "stopped", { streamPort: null });
       return;
     }
@@ -99,7 +103,11 @@ export const createBrowserService = async (
 
     if (state.currentState === "running" && state.streamPort) {
       connectFrameReceiver(sessionId, state.streamPort, orchestrator).catch((error) =>
-        console.error("[FrameReceiver] Failed to connect:", error),
+        logger.error({
+          event_name: "browser.frame_receiver.connect_failed",
+          session_id: sessionId,
+          error,
+        }),
       );
     } else {
       disconnectFrameReceiver(sessionId);
@@ -107,12 +115,18 @@ export const createBrowserService = async (
   });
 
   orchestrator.onError((error: unknown) => {
-    console.error("[BrowserOrchestrator] Reconciliation error:", error);
+    logger.error({
+      event_name: "browser.orchestrator.reconciliation_error",
+      error,
+    });
   });
 
   eventSubscriber.onEvent((event) => {
     orchestrator.handleDaemonEvent(event).catch((error) => {
-      console.error("[BrowserOrchestrator] Failed to handle daemon event:", error);
+      logger.error({
+        event_name: "browser.orchestrator.handle_daemon_event_failed",
+        error,
+      });
     });
   });
 

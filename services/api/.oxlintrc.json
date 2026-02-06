@@ -1,5 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "rules": {
+    "no-console": "error"
+  },
   "overrides": [
     {
       "files": ["src/routes/**/*.ts"],

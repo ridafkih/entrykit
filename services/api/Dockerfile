@@ -18,12 +18,12 @@ FROM base AS runtime
 
 # Install FFmpeg development libraries and C headers for native image resizing
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libc6-dev \
-    libavcodec-dev \
-    libavformat-dev \
-    libavutil-dev \
-    libswscale-dev \
-    && rm -rf /var/lib/apt/lists/*
+  libc6-dev \
+  libavcodec-dev \
+  libavformat-dev \
+  libavutil-dev \
+  libswscale-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=prune /app/out/json/ .
 RUN bun install --ignore-scripts
@@ -46,4 +46,4 @@ COPY --from=build /app/packages/prompts-sdk/src ./packages/prompts-sdk/src
 ENV NODE_ENV=production
 EXPOSE 4000
 
-CMD ["bun", "run", "--cwd", "services/api", "start"]
+CMD ["/bin/sh", "-c", "bun run --cwd services/api start | pino-pretty"]

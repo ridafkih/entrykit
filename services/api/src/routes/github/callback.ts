@@ -1,6 +1,7 @@
 import type { Handler, GithubContext } from "../../types/route";
 import { validateState } from "./auth";
 import { saveGitHubOAuthToken } from "../../repositories/github-settings.repository";
+import { widelog } from "../../logging";
 
 interface GitHubTokenResponse {
   access_token?: string;
@@ -94,7 +95,8 @@ const GET: Handler<GithubContext> = async (request, _params, ctx) => {
 
     return redirectToSettings(frontendUrl, { connected: "true" });
   } catch (err) {
-    console.error("[GitHubCallback] OAuth callback error:", err);
+    widelog.errorFields(err, { prefix: "github.oauth_callback_error" });
+    widelog.set("github.oauth_callback_outcome", "error");
     return redirectToSettings(frontendUrl, { error: "An unexpected error occurred" });
   }
 };

@@ -9,6 +9,7 @@ import type { SessionStateStore } from "../state/session-state-store";
 import type { BrowserService } from "../browser/browser-service";
 import type { Sandbox, Publisher } from "../types/dependencies";
 import type { ProxyManager } from "./proxy.service";
+import { logger } from "../logging";
 
 interface ContainerCleanupResult {
   runtimeId: string;
@@ -54,16 +55,21 @@ export class SessionCleanupService {
     try {
       await proxyManager.unregisterCluster(sessionId);
     } catch (error) {
-      console.warn(
-        `[SessionCleanup] Failed to unregister proxy cluster sessionId=${sessionId}:`,
+      logger.error({
+        event_name: "session_cleanup.unregister_proxy_cluster_failed",
+        session_id: sessionId,
         error,
-      );
+      });
     }
 
     try {
       await cleanupSessionNetwork(sessionId);
     } catch (error) {
-      console.error(`[SessionCleanup] Failed to cleanup network sessionId=${sessionId}:`, error);
+      logger.error({
+        event_name: "session_cleanup.network_cleanup_failed",
+        session_id: sessionId,
+        error,
+      });
     }
 
     await deleteSession(sessionId);
@@ -83,16 +89,21 @@ export class SessionCleanupService {
     try {
       await proxyManager.unregisterCluster(sessionId);
     } catch (error) {
-      console.warn(
-        `[SessionCleanup] Failed to unregister proxy cluster sessionId=${sessionId}:`,
+      logger.error({
+        event_name: "session_cleanup.orphaned.unregister_proxy_cluster_failed",
+        session_id: sessionId,
         error,
-      );
+      });
     }
 
     try {
       await cleanupSessionNetwork(sessionId);
     } catch (error) {
-      console.error(`[SessionCleanup] Failed to cleanup network sessionId=${sessionId}:`, error);
+      logger.error({
+        event_name: "session_cleanup.orphaned.network_cleanup_failed",
+        session_id: sessionId,
+        error,
+      });
     }
   }
 
@@ -117,7 +128,11 @@ export class SessionCleanupService {
     try {
       await cleanupSessionNetwork(sessionId);
     } catch (error) {
-      console.error(`[SessionCleanup] Failed to cleanup network sessionId=${sessionId}:`, error);
+      logger.error({
+        event_name: "session_cleanup.error_path.network_cleanup_failed",
+        session_id: sessionId,
+        error,
+      });
     }
 
     await deleteSession(sessionId);
@@ -156,14 +171,18 @@ export class SessionCleanupService {
 
     for (const failure of failures) {
       if (failure.error) {
-        console.error(
-          `[SessionCleanup] Failed to cleanup container runtimeId=${failure.runtimeId} sessionId=${sessionId}:`,
-          failure.error,
-        );
+        logger.error({
+          event_name: "session_cleanup.container_cleanup_failed",
+          session_id: sessionId,
+          runtime_id: failure.runtimeId,
+          error: failure.error,
+        });
       } else if (failure.stillExists) {
-        console.error(
-          `[SessionCleanup] Container runtimeId=${failure.runtimeId} still exists after cleanup sessionId=${sessionId}`,
-        );
+        logger.error({
+          event_name: "session_cleanup.container_still_exists_after_cleanup",
+          session_id: sessionId,
+          runtime_id: failure.runtimeId,
+        });
       }
     }
   }

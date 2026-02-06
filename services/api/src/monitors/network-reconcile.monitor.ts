@@ -2,6 +2,7 @@ import type { ContainerEvent } from "@lab/sandbox-sdk";
 import { TIMING } from "../config/constants";
 import { ensureSharedContainerConnectedToActiveSessions } from "../runtime/network";
 import type { Sandbox } from "../types/dependencies";
+import { logger } from "../logging";
 
 function calculateNextRetryDelay(currentDelay: number): number {
   return Math.min(currentDelay * 2, TIMING.CONTAINER_MONITOR_MAX_RETRY_MS);
@@ -26,9 +27,10 @@ export class NetworkReconcileMonitor {
   }
 
   async start(): Promise<void> {
-    console.log(
-      `[NetworkReconcileMonitor] Starting for: ${Array.from(this.watchedContainerNames).join(", ")}`,
-    );
+    logger.info({
+      event_name: "network_reconcile_monitor.start",
+      watched_containers: Array.from(this.watchedContainerNames),
+    });
 
     await this.ensureAllWatchedContainersConnected();
     this.runMonitorLoop();
@@ -61,10 +63,11 @@ export class NetworkReconcileMonitor {
         if (this.abortController.signal.aborted) {
           return;
         }
-        console.error(
-          `[NetworkReconcileMonitor] Event stream error, retrying in ${retryDelay}ms:`,
+        logger.error({
+          event_name: "network_reconcile_monitor.event_stream_error",
+          retry_delay_ms: retryDelay,
           error,
-        );
+        });
         await sleep(retryDelay);
         retryDelay = calculateNextRetryDelay(retryDelay);
       }
@@ -90,14 +93,21 @@ export class NetworkReconcileMonitor {
   ): Promise<void> {
     try {
       const result = await ensureSharedContainerConnectedToActiveSessions(containerName, this.sandbox);
-      console.log(
-        `[NetworkReconcileMonitor] ${containerName} (${reason}) checked=${result.checked} connected=${result.connected} missing_networks=${result.missingNetworks}`,
-      );
+      logger.info({
+        event_name: "network_reconcile_monitor.container_connectivity_checked",
+        container_name: containerName,
+        reason,
+        checked_count: result.checked,
+        connected_count: result.connected,
+        missing_networks: result.missingNetworks,
+      });
     } catch (error) {
-      console.warn(
-        `[NetworkReconcileMonitor] Failed to ensure connectivity for ${containerName} (${reason}):`,
+      logger.error({
+        event_name: "network_reconcile_monitor.ensure_connectivity_failed",
+        container_name: containerName,
+        reason,
         error,
-      );
+      });
     }
   }
 }
