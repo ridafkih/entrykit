@@ -85,10 +85,13 @@ async function proxyRequest(
 
   try {
     const response = await fetch(proxyReq);
+    const headers = new Headers(response.headers);
+    headers.delete("content-encoding");
+    headers.delete("content-length");
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers,
+      headers,
     });
   } catch (error) {
     if (retries > 0) {
