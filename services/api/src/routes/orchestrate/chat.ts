@@ -25,7 +25,7 @@ const chatRequestSchema = z.object({
 
 type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
 
-const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
+const POST: Handler<OrchestrationContext> = async ({ request, context }) => {
   const body = await parseRequestBody(request, chatRequestSchema);
   const content = body.content.trim();
 

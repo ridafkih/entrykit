@@ -27,7 +27,7 @@ const GET: Handler<NoRouteContext> = async () => {
   return Response.json({ configured: true, ...settings });
 };
 
-const POST: Handler<NoRouteContext> = async (request) => {
+const POST: Handler<NoRouteContext> = async ({ request }) => {
   widelog.set("github.action", "save_settings");
   const body = await parseRequestBody(request, settingsSchema);
 

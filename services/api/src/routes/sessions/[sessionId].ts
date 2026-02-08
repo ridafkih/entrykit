@@ -29,7 +29,7 @@ type SessionCleanupContext = RouteContextFor<"session">;
 
 const GET = withParams<{ sessionId: string }, SessionReadContext>(
   ["sessionId"],
-  async ({ sessionId }, _request, ctx) => {
+  async ({ params: { sessionId }, context: ctx }) => {
     widelog.set("session.id", sessionId);
     const session = await findSessionByIdOrThrow(sessionId);
 
@@ -51,30 +51,33 @@ const GET = withParams<{ sessionId: string }, SessionReadContext>(
   },
 );
 
-const PATCH = withParams<{ sessionId: string }>(["sessionId"], async ({ sessionId }, request) => {
-  widelog.set("session.id", sessionId);
-  await findSessionByIdOrThrow(sessionId);
+const PATCH = withParams<{ sessionId: string }>(
+  ["sessionId"],
+  async ({ params: { sessionId }, request }) => {
+    widelog.set("session.id", sessionId);
+    await findSessionByIdOrThrow(sessionId);
 
-  const body = await parseRequestBody(request, patchSessionSchema);
-  widelog.set(
-    "session.updated_fields",
-    Object.keys(body)
-      .filter((k) => body[k as keyof typeof body] !== undefined)
-      .join(","),
-  );
+    const body = await parseRequestBody(request, patchSessionSchema);
+    widelog.set(
+      "session.updated_fields",
+      Object.keys(body)
+        .filter((k) => body[k as keyof typeof body] !== undefined)
+        .join(","),
+    );
 
-  const updated = await updateSessionFields(sessionId, {
-    opencodeSessionId: body.opencodeSessionId,
-    workspaceDirectory: body.workspaceDirectory,
-    title: body.title,
-  });
+    const updated = await updateSessionFields(sessionId, {
+      opencodeSessionId: body.opencodeSessionId,
+      workspaceDirectory: body.workspaceDirectory,
+      title: body.title,
+    });
 
-  return Response.json(updated);
-});
+    return Response.json(updated);
+  },
+);
 
 const DELETE = withParams<{ sessionId: string }, SessionCleanupContext>(
   ["sessionId"],
-  async ({ sessionId }, _request, ctx) => {
+  async ({ params: { sessionId }, context: ctx }) => {
     widelog.set("session.id", sessionId);
     await findSessionByIdOrThrow(sessionId);
 

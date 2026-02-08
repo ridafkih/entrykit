@@ -4,7 +4,7 @@ import { NotFoundError } from "../../../../shared/errors";
 import { withParams } from "../../../../shared/route-helpers";
 import { widelog } from "../../../../logging";
 
-const GET = withParams<{ sessionId: string }>(["sessionId"], async ({ sessionId }, _request) => {
+const GET = withParams<{ sessionId: string }>(["sessionId"], async ({ params: { sessionId } }) => {
   widelog.set("session.id", sessionId);
   const result = await getWorkspaceContainerRuntimeId(sessionId);
   widelog.set("container.found", !!result);

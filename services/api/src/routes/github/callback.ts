@@ -22,7 +22,7 @@ function redirectToSettings(frontendUrl: string, params: Record<string, string>)
   return Response.redirect(`${frontendUrl}/settings?${search.toString()}`, 302);
 }
 
-const GET: Handler<GithubContext> = async (request, _params, ctx) => {
+const GET: Handler<GithubContext> = async ({ request, context: ctx }) => {
   widelog.set("github.action", "oauth_callback");
 
   if (!ctx.frontendUrl) {

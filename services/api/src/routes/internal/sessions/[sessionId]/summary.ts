@@ -16,7 +16,7 @@ const summaryRequestSchema = z.object({
 
 const POST = withParams<{ sessionId: string }, InfraContext>(
   ["sessionId"],
-  async ({ sessionId }, request, ctx) => {
+  async ({ params: { sessionId }, request, context: ctx }) => {
     widelog.set("session.id", sessionId);
     const { originalTask } = await parseRequestBody(request, summaryRequestSchema);
 

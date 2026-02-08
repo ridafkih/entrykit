@@ -2,7 +2,7 @@ import type { Handler, InfraContext } from "../types/route";
 import { ExternalServiceError } from "../shared/errors";
 import { widelog } from "../logging";
 
-const GET: Handler<InfraContext> = async (_request, _params, ctx) => {
+const GET: Handler<InfraContext> = async ({ context: ctx }) => {
   const response = await ctx.opencode.provider.list();
 
   if (response.error || !response.data) {

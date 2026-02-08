@@ -14,7 +14,7 @@ const setWorkspaceSchema = z.object({
 
 const PATCH = withParams<{ projectId: string; containerId: string }>(
   ["projectId", "containerId"],
-  async ({ projectId, containerId }, request) => {
+  async ({ params: { projectId, containerId }, request }) => {
     widelog.set("project.id", projectId);
     widelog.set("container.id", containerId);
     const body = await parseRequestBody(request, setWorkspaceSchema);

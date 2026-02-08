@@ -14,7 +14,7 @@ const createSessionRequestSchema = z.object({
 
 type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
 
-const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
+const POST: Handler<OrchestrationContext> = async ({ request, context }) => {
   const { projectId, taskSummary, modelId } = await parseRequestBody(
     request,
     createSessionRequestSchema,

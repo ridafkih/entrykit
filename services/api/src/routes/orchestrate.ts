@@ -15,7 +15,7 @@ const orchestrationRequestSchema = z.object({
 
 type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
 
-const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
+const POST: Handler<OrchestrationContext> = async ({ request, context }) => {
   const body = await parseRequestBody(request, orchestrationRequestSchema);
 
   if (body.platformOrigin) widelog.set("orchestration.platform_origin", body.platformOrigin);

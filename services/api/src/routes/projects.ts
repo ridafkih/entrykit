@@ -16,7 +16,7 @@ const GET: Handler<NoRouteContext> = async () => {
   return Response.json(projects);
 };
 
-const POST: Handler<InfraContext> = async (request, _params, ctx) => {
+const POST: Handler<InfraContext> = async ({ request, context: ctx }) => {
   const body = await parseRequestBody(request, createProjectSchema);
   const project = await createProject({
     name: body.name,

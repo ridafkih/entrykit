@@ -27,11 +27,11 @@ export function isHttpMethod(method: string): method is HttpMethod {
  * Generic route handler function type.
  * Services should extend this with their own context type.
  */
-export type RouteHandler<TContext = unknown> = (
-  request: Request,
-  params: Record<string, string>,
-  context: TContext,
-) => Response | Promise<Response>;
+export type RouteHandler<TContext = unknown> = (args: {
+  request: Request;
+  params: Record<string, string>;
+  context: TContext;
+}) => Response | Promise<Response>;
 
 /**
  * A route module is a partial record of HTTP methods to handlers.

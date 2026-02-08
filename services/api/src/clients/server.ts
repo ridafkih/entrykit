@@ -229,7 +229,7 @@ export class ApiServer {
         return withCors(methodNotAllowedResponse());
       }
 
-      return withCors(await handler(request, match.params, routeContext));
+      return withCors(await handler({ request, params: match.params, context: routeContext }));
     });
   }
 

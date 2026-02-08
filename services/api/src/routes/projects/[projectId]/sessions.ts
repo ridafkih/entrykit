@@ -11,7 +11,7 @@ const createProjectSessionSchema = z.object({
   title: z.string().optional(),
 });
 
-const GET = withParams<{ projectId: string }>(["projectId"], async ({ projectId }, _request) => {
+const GET = withParams<{ projectId: string }>(["projectId"], async ({ params: { projectId } }) => {
   widelog.set("project.id", projectId);
   const sessions = await findSessionsByProjectId(projectId);
   widelog.set("session.count", sessions.length);
@@ -22,7 +22,7 @@ type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra" | "p
 
 const POST = withParams<{ projectId: string }, OrchestrationContext>(
   ["projectId"],
-  async ({ projectId }, request, context) => {
+  async ({ params: { projectId }, request, context }) => {
     widelog.set("project.id", projectId);
     const body = await parseRequestBody(request, createProjectSessionSchema);
 

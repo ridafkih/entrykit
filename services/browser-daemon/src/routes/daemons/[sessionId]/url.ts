@@ -2,7 +2,7 @@ import type { UrlResponse } from "@lab/browser-protocol";
 import { NotFoundError } from "../../../shared/errors";
 import type { RouteHandler } from "../../../types/route";
 
-export const GET: RouteHandler = (_request, params, { daemonManager, widelog }) => {
+export const GET: RouteHandler = ({ params, context: { daemonManager, widelog } }) => {
   const sessionId = params.sessionId!;
   widelog.set("session.id", sessionId);
 

@@ -3,7 +3,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { ConfigurationError } from "./errors";
 
-export interface LlmModelConfig {
+interface LlmModelConfig {
   provider: string;
   model: string;
   apiKey: string;

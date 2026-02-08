@@ -2,7 +2,7 @@ import { buildSseHeaders } from "@lab/http-utilities";
 import { TIMING } from "../config/constants";
 import type { RouteHandler } from "../types/route";
 
-export const GET: RouteHandler = (_request, _params, { daemonManager }) => {
+export const GET: RouteHandler = ({ context: { daemonManager } }) => {
   const state = { unsubscribe: null as (() => void) | null, pingInterval: null as Timer | null };
 
   const stream = new ReadableStream({

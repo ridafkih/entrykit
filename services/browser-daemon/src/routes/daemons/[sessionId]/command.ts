@@ -64,7 +64,11 @@ async function transformRecordingResponse(response: {
   }
 }
 
-export const POST: RouteHandler = async (request, params, { daemonManager, widelog }) => {
+export const POST: RouteHandler = async ({
+  request,
+  params,
+  context: { daemonManager, widelog },
+}) => {
   const sessionId = params.sessionId!;
   widelog.set("session.id", sessionId);
 

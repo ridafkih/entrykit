@@ -17,7 +17,7 @@ const completeRequestSchema = z.object({
 
 type OrchestrationContext = RouteContextFor<"browser" | "session" | "infra">;
 
-const POST: Handler<OrchestrationContext> = async (request, _params, context) => {
+const POST: Handler<OrchestrationContext> = async ({ request, context }) => {
   const { sessionId, platformOrigin, platformChatId } = await parseRequestBody(
     request,
     completeRequestSchema,

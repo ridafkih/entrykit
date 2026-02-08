@@ -6,7 +6,7 @@ import { widelog } from "../../../../logging";
 
 const GET = withParams<{ sessionId: string }, ProxyContext>(
   ["sessionId"],
-  async ({ sessionId }, _request, ctx) => {
+  async ({ params: { sessionId }, context: ctx }) => {
     widelog.set("session.id", sessionId);
     await findSessionByIdOrThrow(sessionId);
 
