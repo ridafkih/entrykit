@@ -1,0 +1,49 @@
+import { runMigrations } from "@lab/database/migrate";
+import type { setup } from "./setup";
+import type { env } from "./env";
+
+type MainOptions = {
+  env: typeof env.inferOut;
+  extras: ReturnType<typeof setup>;
+}
+
+type MainFunction = (options: MainOptions) => unknown;
+
+export const main = (async ({ env, extras }) => {
+  const {
+    server,
+    redis,
+    deferredPublisher,
+    browserService,
+    sessionLifecycle,
+    poolManager,
+    logMonitor,
+    containerMonitor,
+    openCodeMonitor,
+    networkReconcileMonitor,
+  } = extras;
+
+  await runMigrations();
+
+  await browserService.initialize();
+  await sessionLifecycle.initialize();
+
+  const publisher = await server.start(env.API_PORT);
+  deferredPublisher.resolve(publisher);
+
+  browserService.startReconciler();
+  await networkReconcileMonitor.start();
+  poolManager.initialize();
+  logMonitor.start();
+  containerMonitor.start(logMonitor);
+  openCodeMonitor.start();
+
+  return () => {
+    containerMonitor.stop();
+    openCodeMonitor.stop();
+    logMonitor.stop();
+    networkReconcileMonitor.stop();
+    server.shutdown();
+    redis.close();
+  };
+}) satisfies MainFunction;

@@ -1,4 +1,4 @@
-import { type Type } from "arktype";
+import type { Type } from "arktype";
 import type { MaybePromise } from "bun";
 
 type MaybeCleanupFunction = (() => void) | void;

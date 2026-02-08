@@ -7,6 +7,10 @@
       "types": "./src/client.ts",
       "default": "./src/client.ts"
     },
+    "./migrate": {
+      "types": "./src/client.ts",
+      "default": "./src/client.ts"
+    },
     "./schema/projects": {
       "types": "./src/schema/projects.ts",
       "default": "./src/schema/projects.ts"

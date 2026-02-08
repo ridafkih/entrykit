@@ -40,4 +40,3 @@ export {
 export { NetworkOperations } from "./modules/network-operations";
 export { ExecOperations } from "./modules/exec-operations";
 export { DockerEventStream } from "./modules/docker-event-stream";
-export { createSandboxFromEnv, type DockerSandboxFactoryEnv } from "./provider";
