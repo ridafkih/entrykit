@@ -1,4 +1,4 @@
-import type { RouteHandler } from "../utils/route-handler";
+import type { RouteHandler } from "../types/route";
 
 export const GET: RouteHandler = () => {
   return Response.json({ status: "ok" });

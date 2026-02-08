@@ -2,6 +2,9 @@ import { cleanupSocket, getSocketDir, getPidFile } from "agent-browser";
 import type { Command, Response } from "agent-browser/dist/types.js";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { logger } from "../logging";
+import { getErrorMessage } from "../shared/errors";
+import { TIMING } from "../config/constants";
 
 export interface SpawnOptions {
   sessionId: string;
@@ -97,13 +100,21 @@ export function spawnDaemon(options: SpawnOptions): DaemonWorkerHandle {
       try {
         handler(event.data);
       } catch (error) {
-        console.error(`[DaemonProcess] Message handler error:`, error);
+        logger.error({
+          event_name: "daemon.message_handler_error",
+          session_id: sessionId,
+          error_message: getErrorMessage(error),
+        });
       }
     }
   };
 
   worker.onerror = (error) => {
-    console.error(`[DaemonProcess] Worker error for ${sessionId}:`, error);
+    logger.error({
+      event_name: "daemon.worker_error",
+      session_id: sessionId,
+      error_message: getErrorMessage(error),
+    });
   };
 
   worker.addEventListener("close", (event: Event) => {
@@ -112,7 +123,11 @@ export function spawnDaemon(options: SpawnOptions): DaemonWorkerHandle {
       try {
         handler(code);
       } catch (error) {
-        console.error(`[DaemonProcess] Close handler error:`, error);
+        logger.error({
+          event_name: "daemon.close_handler_error",
+          session_id: sessionId,
+          error_message: getErrorMessage(error),
+        });
       }
     }
   });
@@ -134,7 +149,7 @@ export function spawnDaemon(options: SpawnOptions): DaemonWorkerHandle {
             pendingCommands.delete(requestId);
             reject(new Error(`Command timeout: ${command.action}`));
           }
-        }, 30000);
+        }, TIMING.COMMAND_TIMEOUT_MS);
       });
     },
     terminate: () => {
@@ -162,9 +177,7 @@ export function killByPidFile(sessionId: string): boolean {
     if (isNaN(pid)) return false;
 
     if (pid === process.pid || pid === process.ppid) {
-      console.warn(
-        `[DaemonProcess] Refusing to kill own process (PID ${pid}) for session ${sessionId}`,
-      );
+      logger.warn({ event_name: "daemon.refused_self_kill", session_id: sessionId, pid });
       cleanupSocket(sessionId);
       return false;
     }
@@ -180,7 +193,11 @@ export function killByPidFile(sessionId: string): boolean {
     cleanupSocket(sessionId);
     return true;
   } catch (error) {
-    console.warn(`[DaemonProcess] Failed to kill process for ${sessionId}:`, error);
+    logger.warn({
+      event_name: "daemon.kill_failed",
+      session_id: sessionId,
+      error_message: getErrorMessage(error),
+    });
     return false;
   }
 }

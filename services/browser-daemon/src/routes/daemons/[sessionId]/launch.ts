@@ -1,15 +1,17 @@
-import type { RouteHandler } from "../../../utils/route-handler";
-import { notFoundResponse, badRequestResponse } from "../../../shared/http";
+import { NotFoundError, ValidationError } from "../../../shared/errors";
+import type { RouteHandler } from "../../../types/route";
 
-export const POST: RouteHandler = (_request, params, { daemonManager }) => {
+export const POST: RouteHandler = (_request, params, { daemonManager, widelog }) => {
   const sessionId = params.sessionId;
   if (!sessionId) {
-    return badRequestResponse("Session ID required");
+    throw new ValidationError("Session ID required");
   }
+
+  widelog.set("session.id", sessionId);
 
   const session = daemonManager.getOrRecoverSession(sessionId);
   if (!session) {
-    return notFoundResponse("Session not found");
+    throw new NotFoundError("Daemon session", sessionId);
   }
 
   const url = daemonManager.getCurrentUrl(sessionId);

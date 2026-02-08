@@ -1,6 +1,8 @@
 import { isDaemonRunning, cleanupSocket, getSocketDir, getStreamPortFile } from "agent-browser";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import type { DaemonSession } from "../types/daemon";
+import { logger } from "../logging";
+import { getErrorMessage } from "../shared/errors";
 
 export interface RecoveryCallbacks {
   onRecover: (sessionId: string, streamPort: number, cdpPort?: number) => void;
@@ -17,13 +19,21 @@ export function recoverSession(
   try {
     const streamPortPath = getStreamPortFile(sessionId);
     if (!existsSync(streamPortPath)) {
-      console.debug(`[DaemonRecovery] Cannot recover ${sessionId}: no stream port file`);
+      logger.debug({
+        event_name: "daemon.recovery_skipped",
+        session_id: sessionId,
+        reason: "no stream port file",
+      });
       return null;
     }
 
     const streamPort = parseInt(readFileSync(streamPortPath, "utf-8").trim(), 10);
     if (isNaN(streamPort)) {
-      console.debug(`[DaemonRecovery] Cannot recover ${sessionId}: invalid port in file`);
+      logger.debug({
+        event_name: "daemon.recovery_skipped",
+        session_id: sessionId,
+        reason: "invalid port in file",
+      });
       return null;
     }
 
@@ -37,15 +47,22 @@ export function recoverSession(
     }
 
     if (!isDaemonRunning(sessionId)) {
-      console.debug(`[DaemonRecovery] Cannot recover ${sessionId}: daemon not running`);
+      logger.debug({
+        event_name: "daemon.recovery_skipped",
+        session_id: sessionId,
+        reason: "daemon not running",
+      });
       cleanupSocket(sessionId);
       return null;
     }
 
     callbacks.onRecover(sessionId, streamPort, cdpPort);
-    console.log(
-      `[DaemonRecovery] Recovered: ${sessionId} on stream port ${streamPort}, CDP port ${cdpPort ?? "unknown"}`,
-    );
+    logger.info({
+      event_name: "daemon.session_recovered",
+      session_id: sessionId,
+      stream_port: streamPort,
+      cdp_port: cdpPort,
+    });
     return {
       sessionId,
       port: streamPort,
@@ -53,7 +70,11 @@ export function recoverSession(
       ready: isDaemonRunning(sessionId),
     };
   } catch (error) {
-    console.warn(`[DaemonRecovery] Failed to recover ${sessionId}:`, error);
+    logger.warn({
+      event_name: "daemon.recovery_failed",
+      session_id: sessionId,
+      error_message: getErrorMessage(error),
+    });
     return null;
   }
 }

@@ -1,7 +1,8 @@
-import type { RouteHandler } from "../utils/route-handler";
+import { buildSseHeaders } from "@lab/http-utilities";
+import { TIMING } from "../config/constants";
+import type { RouteHandler } from "../types/route";
 
-export const GET: RouteHandler = (_request, _params, context) => {
-  const { daemonManager } = context;
+export const GET: RouteHandler = (_request, _params, { daemonManager }) => {
   const state = { unsubscribe: null as (() => void) | null, pingInterval: null as Timer | null };
 
   const stream = new ReadableStream({
@@ -19,7 +20,7 @@ export const GET: RouteHandler = (_request, _params, context) => {
 
       state.pingInterval = setInterval(() => {
         send(JSON.stringify({ type: "ping", timestamp: Date.now() }));
-      }, 5000);
+      }, TIMING.SSE_PING_INTERVAL_MS);
 
       send(JSON.stringify({ type: "connected", timestamp: Date.now() }));
     },
@@ -29,11 +30,5 @@ export const GET: RouteHandler = (_request, _params, context) => {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
+  return new Response(stream, { headers: buildSseHeaders() });
 };

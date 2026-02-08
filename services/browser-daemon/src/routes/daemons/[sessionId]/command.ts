@@ -1,11 +1,16 @@
 import * as fs from "node:fs/promises";
 import type { Command } from "agent-browser/dist/types.js";
-import type { RouteHandler } from "../../../utils/route-handler";
-import {
-  notFoundResponse,
-  badRequestResponse,
-  serviceUnavailableResponse,
-} from "../../../shared/http";
+import { z } from "zod";
+import { NotFoundError, ServiceUnavailableError } from "../../../shared/errors";
+import { parseRequestBody } from "../../../shared/validation";
+import type { RouteHandler } from "../../../types/route";
+
+const commandBody = z
+  .object({
+    id: z.string(),
+    action: z.string(),
+  })
+  .passthrough();
 
 async function transformScreenshotResponse(response: {
   id: string;
@@ -59,32 +64,23 @@ async function transformRecordingResponse(response: {
   }
 }
 
-export const POST: RouteHandler = async (request, params, { daemonManager }) => {
+export const POST: RouteHandler = async (request, params, { daemonManager, widelog }) => {
   const sessionId = params.sessionId!;
+  widelog.set("session.id", sessionId);
 
   const session = daemonManager.getSession(sessionId);
   if (!session) {
-    return notFoundResponse("Session not found");
+    throw new NotFoundError("Daemon session", sessionId);
   }
 
   if (!daemonManager.isReady(sessionId)) {
-    return serviceUnavailableResponse("Session not ready");
+    throw new ServiceUnavailableError("Daemon not ready", "DAEMON_NOT_READY");
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequestResponse("Invalid JSON body");
-  }
+  const body = await parseRequestBody(request, commandBody);
+  const command = body as unknown as Command;
+  widelog.set("command.action", command.action);
 
-  if (typeof body !== "object" || body === null || !("id" in body) || !("action" in body)) {
-    return badRequestResponse("Command must have 'id' and 'action' fields");
-  }
-
-  const command = body as Command;
-
-  console.log(`[Command] ${sessionId} -> ${command.action}`);
   const response = await daemonManager.executeCommand(sessionId, command);
 
   if (command.action === "screenshot") {

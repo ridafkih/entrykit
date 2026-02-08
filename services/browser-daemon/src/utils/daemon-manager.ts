@@ -8,6 +8,8 @@ import type {
   StopResult,
 } from "../types/daemon";
 import type { DaemonEvent, DaemonEventHandler } from "../types/events";
+import { logger } from "../logging";
+import { getErrorMessage } from "../shared/errors";
 import { spawnDaemon, killByPidFile, type DaemonWorkerHandle } from "./daemon-process";
 import { recoverSession, discoverExistingSessions } from "./daemon-recovery";
 
@@ -43,7 +45,10 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
       try {
         handler(event);
       } catch (error) {
-        console.error("[DaemonManager] Event handler error:", error);
+        logger.error({
+          event_name: "daemon.event_handler_error",
+          error_message: getErrorMessage(error),
+        });
       }
     }
   };
@@ -101,11 +106,11 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
       handle.onMessage((message) => {
         switch (message.type) {
           case "daemon:started":
-            console.log(`[DaemonManager] Browser started: ${sessionId}`);
+            logger.info({ event_name: "daemon.browser_started", session_id: sessionId });
             break;
 
           case "daemon:ready":
-            console.log(`[DaemonManager] Browser ready: ${sessionId}`);
+            logger.info({ event_name: "daemon.browser_ready", session_id: sessionId });
             emit({
               type: "daemon:ready",
               sessionId,
@@ -115,7 +120,11 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
             break;
 
           case "daemon:error":
-            console.error(`[DaemonManager] Browser error: ${sessionId}`, message.error);
+            logger.error({
+              event_name: "daemon.browser_error",
+              session_id: sessionId,
+              error_message: message.error,
+            });
             daemonWorkers.delete(sessionId);
             activeSessions.delete(sessionId);
             emit({
@@ -137,7 +146,7 @@ export function createDaemonManager(config: DaemonManagerConfig): DaemonManager 
       });
 
       handle.onClose((code) => {
-        console.log(`[DaemonManager] Worker closed: ${sessionId} (code ${code})`);
+        logger.info({ event_name: "daemon.worker_closed", session_id: sessionId, exit_code: code });
         daemonWorkers.delete(sessionId);
         activeSessions.delete(sessionId);
         sessionUrls.delete(sessionId);

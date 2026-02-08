@@ -1,8 +1,9 @@
-import type { RouteHandler } from "../../utils/route-handler";
-import { notFoundResponse } from "../../shared/http";
+import { NotFoundError } from "../../shared/errors";
+import type { RouteHandler } from "../../types/route";
 
-export const GET: RouteHandler = (_request, params, { daemonManager }) => {
+export const GET: RouteHandler = (_request, params, { daemonManager, widelog }) => {
   const sessionId = params.sessionId!;
+  widelog.set("session.id", sessionId);
 
   const session = daemonManager.getSession(sessionId);
 
@@ -16,20 +17,22 @@ export const GET: RouteHandler = (_request, params, { daemonManager }) => {
   });
 };
 
-export const POST: RouteHandler = async (_request, params, { daemonManager }) => {
+export const POST: RouteHandler = async (_request, params, { daemonManager, widelog }) => {
   const sessionId = params.sessionId!;
+  widelog.set("session.id", sessionId);
 
   const result = await daemonManager.start(sessionId);
   return Response.json(result);
 };
 
-export const DELETE: RouteHandler = (_request, params, { daemonManager }) => {
+export const DELETE: RouteHandler = (_request, params, { daemonManager, widelog }) => {
   const sessionId = params.sessionId!;
+  widelog.set("session.id", sessionId);
 
   const result = daemonManager.stop(sessionId);
 
   if (result.type === "not_found") {
-    return notFoundResponse(`Session ${sessionId} not found`);
+    throw new NotFoundError("Daemon session", sessionId);
   }
 
   return Response.json(result);

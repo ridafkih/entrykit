@@ -1,43 +1,28 @@
 import { z } from "zod";
-import type { RouteHandler } from "../../../utils/route-handler";
-import {
-  notFoundResponse,
-  badRequestResponse,
-  serviceUnavailableResponse,
-} from "../../../shared/http";
+import { NotFoundError, ServiceUnavailableError } from "../../../shared/errors";
+import { parseRequestBody } from "../../../shared/validation";
+import type { RouteHandler } from "../../../types/route";
 
-const NavigateBody = z.object({
+const navigateBody = z.object({
   url: z.string().url(),
 });
 
-export const POST: RouteHandler = async (request, params, { daemonManager }) => {
+export const POST: RouteHandler = async (request, params, { daemonManager, widelog }) => {
   const sessionId = params.sessionId!;
+  widelog.set("session.id", sessionId);
 
   const session = daemonManager.getSession(sessionId);
   if (!session) {
-    return notFoundResponse("Session not found");
+    throw new NotFoundError("Daemon session", sessionId);
   }
 
   if (!daemonManager.isReady(sessionId)) {
-    return serviceUnavailableResponse("Session not ready");
+    throw new ServiceUnavailableError("Daemon not ready", "DAEMON_NOT_READY");
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequestResponse("Invalid JSON body");
-  }
+  const { url } = await parseRequestBody(request, navigateBody);
+  widelog.set("navigation.url", url);
 
-  const parsed = NavigateBody.safeParse(body);
-  if (!parsed.success) {
-    return badRequestResponse("URL required");
-  }
-
-  const { url } = parsed.data;
-
-  console.log(`[Navigate] ${sessionId} -> ${url}`);
   daemonManager.navigate(sessionId, url);
-  console.log(`[Navigate] ${sessionId} complete`);
   return Response.json({ sessionId, navigated: true });
 };
