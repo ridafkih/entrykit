@@ -1,3 +1,4 @@
+import { logger } from "../logging";
 import { apiClient } from "../clients/api";
 import { sessionTracker } from "./session-tracker";
 import { responseSubscriber } from "./response-subscriber";
@@ -8,7 +9,11 @@ export class MessageRouter {
   async handleIncomingMessage(message: IncomingPlatformMessage): Promise<void> {
     const { platform, chatId, userId, messageId, content, timestamp } = message;
 
-    console.log(`[MessageRouter] Received message from ${platform}:${chatId}`);
+    logger.info({
+      event_name: "message_router.message_received",
+      platform,
+      chat_id: chatId,
+    });
 
     await this.routeToChatOrchestrator(platform, chatId, userId, messageId, content, timestamp);
   }
@@ -35,9 +40,12 @@ export class MessageRouter {
       async (chunkText) => {
         // Send each chunk to the platform immediately
         if (adapter) {
-          console.log(
-            `[MessageRouter] Sending chunk to ${platform}:${chatId}: "${chunkText.slice(0, 50)}..."`,
-          );
+          logger.info({
+            event_name: "message_router.sending_chunk",
+            platform,
+            chat_id: chatId,
+            chunk_preview: chunkText.slice(0, 50),
+          });
           await adapter.sendMessage({
             platform,
             chatId,
@@ -58,21 +66,30 @@ export class MessageRouter {
         messagingMode,
       );
 
-      console.log(
-        `[MessageRouter] Created session ${result.sessionId} for project ${result.projectName ?? "unknown"} (mode: ${messagingMode})`,
-      );
+      logger.info({
+        event_name: "message_router.session_created",
+        session_id: result.sessionId,
+        project_name: result.projectName ?? "unknown",
+        messaging_mode: messagingMode,
+      });
     }
 
     if (result.action === "forwarded_message" && result.sessionId) {
       await sessionTracker.touchMapping(platform, chatId);
-      console.log(`[MessageRouter] Forwarded message to session ${result.sessionId}`);
+      logger.info({
+        event_name: "message_router.message_forwarded",
+        session_id: result.sessionId,
+      });
     }
 
     // Handle attachments from the final result (send separately after all chunks)
     if (adapter && result.attachments?.length) {
-      console.log(
-        `[MessageRouter] Sending ${result.attachments.length} attachment(s) to ${platform}:${chatId}`,
-      );
+      logger.info({
+        event_name: "message_router.sending_attachments",
+        platform,
+        chat_id: chatId,
+        count: result.attachments.length,
+      });
       await adapter.sendMessage({
         platform,
         chatId,

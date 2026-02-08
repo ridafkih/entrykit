@@ -13,6 +13,7 @@
     "@lab/browser-protocol": "workspace:*",
     "@lab/entry-point": "workspace:*",
     "@lab/sandbox-docker": "workspace:*",
+    "@lab/widelogger": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.25.0",
     "@types/shell-quote": "^1.7.5",
     "arktype": "^2.1.29",

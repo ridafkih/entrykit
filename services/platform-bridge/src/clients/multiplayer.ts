@@ -1,3 +1,4 @@
+import { logger } from "../logging";
 import type { WireClientMessage, WireServerMessage } from "@lab/multiplayer-sdk";
 import { config } from "../config/environment";
 import type { SessionMessage } from "../types/messages";
@@ -74,7 +75,10 @@ export class MultiplayerClient {
     if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) return;
 
     this.isConnecting = true;
-    console.log("[Multiplayer] Connecting to", this.url);
+    logger.info({
+      event_name: "multiplayer.connecting",
+      url: this.url,
+    });
 
     try {
       this.ws = new WebSocket(this.url);
@@ -83,7 +87,10 @@ export class MultiplayerClient {
       this.ws.addEventListener("error", this.handleError.bind(this));
       this.ws.addEventListener("message", this.handleMessage.bind(this));
     } catch (error) {
-      console.error("[Multiplayer] Connection error:", error);
+      logger.error({
+        event_name: "multiplayer.connection_error",
+        error: error instanceof Error ? error.message : String(error),
+      });
       this.isConnecting = false;
       this.scheduleReconnect();
     }
@@ -151,7 +158,7 @@ export class MultiplayerClient {
   }
 
   private handleOpen(): void {
-    console.log("[Multiplayer] Connected");
+    logger.info({ event_name: "multiplayer.connected" });
     this.isConnecting = false;
     this.reconnectAttempt = 0;
     this.flushQueue();
@@ -160,7 +167,7 @@ export class MultiplayerClient {
   }
 
   private handleClose(): void {
-    console.log("[Multiplayer] Disconnected");
+    logger.info({ event_name: "multiplayer.disconnected" });
     this.isConnecting = false;
     this.clearHeartbeat();
     this.ws = null;
@@ -168,7 +175,9 @@ export class MultiplayerClient {
   }
 
   private handleError(event: Event): void {
-    console.error("[Multiplayer] WebSocket error:", event);
+    logger.error({
+      event_name: "multiplayer.websocket_error",
+    });
   }
 
   private handleMessage(event: MessageEvent): void {
@@ -201,7 +210,10 @@ export class MultiplayerClient {
         }
       }
     } catch (error) {
-      console.warn("[Multiplayer] Malformed message:", error);
+      logger.warn({
+        event_name: "multiplayer.malformed_message",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -225,13 +237,17 @@ export class MultiplayerClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempt >= this.maxReconnectAttempts) {
-      console.error("[Multiplayer] Max reconnection attempts reached");
+      logger.error({ event_name: "multiplayer.max_reconnect_attempts" });
       return;
     }
 
     this.reconnectAttempt++;
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempt - 1), 30000);
-    console.log(`[Multiplayer] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempt})`);
+    logger.info({
+      event_name: "multiplayer.reconnecting",
+      delay_ms: delay,
+      attempt: this.reconnectAttempt,
+    });
     this.reconnectTimeout = setTimeout(() => this.connect(), delay);
   }
 

@@ -43,7 +43,6 @@ COPY --from=build /app/packages/router/src ./packages/router/src
 COPY --from=build /app/packages/widelogger/src ./packages/widelogger/src
 COPY --from=build /app/packages/prompts-sdk/src ./packages/prompts-sdk/src
 
-ENV NODE_ENV=production
 EXPOSE 4000
 
-CMD ["bun", "run", "--cwd", "services/api", "start:pretty"]
+CMD ["bun", "run", "--cwd", "services/api", "start"]

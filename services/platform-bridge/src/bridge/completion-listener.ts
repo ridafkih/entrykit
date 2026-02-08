@@ -1,3 +1,4 @@
+import { logger } from "../logging";
 import { multiplayerClient } from "../clients/multiplayer";
 import { apiClient } from "../clients/api";
 import { getAdapter } from "../platforms";
@@ -22,7 +23,10 @@ class CompletionListener {
     });
 
     this.unsubscribers.set(sessionId, unsubscribe);
-    console.log(`[CompletionListener] Subscribed to completion for session ${sessionId}`);
+    logger.info({
+      event_name: "completion_listener.subscribed",
+      session_id: sessionId,
+    });
   }
 
   unsubscribeFromSession(sessionId: string): void {
@@ -30,7 +34,10 @@ class CompletionListener {
     if (unsubscribe) {
       unsubscribe();
       this.unsubscribers.delete(sessionId);
-      console.log(`[CompletionListener] Unsubscribed from completion for session ${sessionId}`);
+      logger.info({
+        event_name: "completion_listener.unsubscribed",
+        session_id: sessionId,
+      });
     }
   }
 
@@ -38,20 +45,29 @@ class CompletionListener {
     const { sessionId } = event;
 
     if (this.processingSet.has(sessionId)) {
-      console.log(`[CompletionListener] Already processing session ${sessionId}, skipping`);
+      logger.info({
+        event_name: "completion_listener.already_processing",
+        session_id: sessionId,
+      });
       return;
     }
 
     this.processingSet.add(sessionId);
 
     try {
-      console.log(`[CompletionListener] Processing completion for session ${sessionId}`);
+      logger.info({
+        event_name: "completion_listener.processing",
+        session_id: sessionId,
+      });
 
       const subscriptions = responseSubscriber.getActiveSubscriptions();
       const subscription = subscriptions.get(sessionId);
 
       if (!subscription) {
-        console.log(`[CompletionListener] No subscription found for session ${sessionId}`);
+        logger.info({
+          event_name: "completion_listener.no_subscription",
+          session_id: sessionId,
+        });
         return;
       }
 
@@ -65,7 +81,10 @@ class CompletionListener {
 
       const adapter = getAdapter(platform);
       if (!adapter) {
-        console.warn(`[CompletionListener] No adapter for platform ${platform}`);
+        logger.warn({
+          event_name: "completion_listener.no_adapter",
+          platform,
+        });
         return;
       }
 
@@ -74,7 +93,7 @@ class CompletionListener {
       const messagesToSend = [result.message];
 
       for (let i = 0; i < messagesToSend.length; i++) {
-        const content = messagesToSend[i];
+        const content = messagesToSend[i]!;
         // Only include attachments on the last message
         const isLastMessage = i === messagesToSend.length - 1;
 
@@ -87,12 +106,19 @@ class CompletionListener {
         });
       }
 
-      console.log(
-        `[CompletionListener] Sent ${messagesToSend.length} message(s) to ${platform}:${chatId}` +
-          (result.attachments?.length ? ` with ${result.attachments.length} attachment(s)` : ""),
-      );
+      logger.info({
+        event_name: "completion_listener.messages_sent",
+        platform,
+        chat_id: chatId,
+        message_count: messagesToSend.length,
+        attachment_count: result.attachments?.length ?? 0,
+      });
     } catch (error) {
-      console.error(`[CompletionListener] Error processing completion for ${sessionId}:`, error);
+      logger.error({
+        event_name: "completion_listener.processing_error",
+        session_id: sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       this.processingSet.delete(sessionId);
     }

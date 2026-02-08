@@ -33,11 +33,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   opencode:
-    build:
-      context: .
-      dockerfile: services/opencode/Dockerfile
+    image: ghcr.io/anomalyco/opencode
     container_name: lab-opencode
-    pid: "service:browser"
     command:
       [
         "serve",
@@ -60,18 +57,12 @@ services:
     volumes:
       - ./opencode.json:/root/.config/opencode/opencode.json:ro
       - session_workspaces:/workspaces
-      - browser_sockets:/tmp/agent-browser-socket
       - opencode_data:/root/.local/share/opencode
-    environment:
-      AGENT_BROWSER_SOCKET_DIR: /tmp/agent-browser-socket
-      BROWSER_DAEMON_HOST: browser
     depends_on:
       postgres:
         condition: service_started
       mcp:
         condition: service_started
-      browser:
-        condition: service_healthy
     develop:
       watch:
         - action: rebuild
@@ -319,5 +310,4 @@ volumes:
   browser_sockets:
   browser_profiles:
   opencode_data:
-  opencode_auth:
   rustfs_data:

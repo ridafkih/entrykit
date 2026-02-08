@@ -1,3 +1,4 @@
+import { logger } from "../logging";
 import { multiplayerClient } from "../clients/multiplayer";
 import { completionListener } from "./completion-listener";
 import { getAdapter } from "../platforms";
@@ -39,9 +40,14 @@ export class ResponseSubscriber {
       completionListener.subscribeToSession(sessionId);
     }
 
-    console.log(
-      `[ResponseSubscriber] Subscribed to session ${sessionId} for ${platform}:${chatId} (mode: ${messagingMode}, thread: ${threadId ?? "none"})`,
-    );
+    logger.info({
+      event_name: "response_subscriber.subscribed",
+      session_id: sessionId,
+      platform,
+      chat_id: chatId,
+      messaging_mode: messagingMode,
+      thread_id: threadId ?? "none",
+    });
   }
 
   unsubscribeFromSession(sessionId: string): void {
@@ -52,7 +58,10 @@ export class ResponseSubscriber {
         completionListener.unsubscribeFromSession(sessionId);
       }
       this.subscriptions.delete(sessionId);
-      console.log(`[ResponseSubscriber] Unsubscribed from session ${sessionId}`);
+      logger.info({
+        event_name: "response_subscriber.unsubscribed",
+        session_id: sessionId,
+      });
     }
   }
 
@@ -63,15 +72,19 @@ export class ResponseSubscriber {
     if (!subscription) return;
 
     if (subscription.messagingMode === "passive") {
-      console.log(
-        `[ResponseSubscriber] Skipping message for passive session ${sessionId} - will send summary on completion`,
-      );
+      logger.info({
+        event_name: "response_subscriber.skipping_passive",
+        session_id: sessionId,
+      });
       return;
     }
 
     const adapter = getAdapter(subscription.platform);
     if (!adapter) {
-      console.warn(`[ResponseSubscriber] No adapter for platform ${subscription.platform}`);
+      logger.warn({
+        event_name: "response_subscriber.no_adapter",
+        platform: subscription.platform,
+      });
       return;
     }
 
@@ -82,11 +95,16 @@ export class ResponseSubscriber {
         content: message.content,
         threadId: subscription.threadId,
       });
-      console.log(
-        `[ResponseSubscriber] Sent response to ${subscription.platform}:${subscription.chatId}`,
-      );
+      logger.info({
+        event_name: "response_subscriber.response_sent",
+        platform: subscription.platform,
+        chat_id: subscription.chatId,
+      });
     } catch (error) {
-      console.error(`[ResponseSubscriber] Failed to send response:`, error);
+      logger.error({
+        event_name: "response_subscriber.send_failed",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -107,7 +125,7 @@ export class ResponseSubscriber {
       subscription.unsubscribe();
     }
     this.subscriptions.clear();
-    console.log("[ResponseSubscriber] Unsubscribed from all sessions");
+    logger.info({ event_name: "response_subscriber.unsubscribed_all" });
   }
 }
 

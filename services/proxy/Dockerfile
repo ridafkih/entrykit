@@ -20,6 +20,8 @@ COPY --from=prune /app/out/json/ .
 RUN bun install --ignore-scripts
 COPY --from=build /app/services/proxy/src ./services/proxy/src
 COPY --from=build /app/packages/database/src ./packages/database/src
+COPY --from=build /app/packages/entry-point/src ./packages/entry-point/src
+COPY --from=build /app/packages/widelogger/src ./packages/widelogger/src
 
 ENV NODE_ENV=production
 EXPOSE 8080

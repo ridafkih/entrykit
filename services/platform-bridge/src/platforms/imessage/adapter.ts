@@ -1,3 +1,4 @@
+import { logger } from "../../logging";
 import { IMessageSDK, type Message } from "@photon-ai/imessage-kit";
 import { writeFile, unlink, mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -20,17 +21,17 @@ export class IMessageAdapter implements PlatformAdapter {
 
   async initialize(): Promise<void> {
     if (!config.imessageEnabled) {
-      console.log("[iMessage] Adapter disabled via config");
+      logger.info({ event_name: "imessage.adapter_disabled" });
       return;
     }
 
     this.sdk = new IMessageSDK();
-    console.log("[iMessage] Adapter initialized (direct SDK)");
+    logger.info({ event_name: "imessage.adapter_initialized" });
   }
 
   async startListening(handler: MessageHandler): Promise<void> {
     if (!this.sdk) {
-      console.warn("[iMessage] Cannot start listening - adapter not initialized");
+      logger.warn({ event_name: "imessage.start_listening_failed_not_initialized" });
       return;
     }
 
@@ -38,7 +39,11 @@ export class IMessageAdapter implements PlatformAdapter {
 
     await this.sdk.startWatching({
       onNewMessage: async (message: Message) => {
-        console.log("[iMessage] Received message:", message.guid, message.text?.slice(0, 50));
+        logger.info({
+          event_name: "imessage.message_received",
+          guid: message.guid,
+          text_preview: message.text?.slice(0, 50),
+        });
 
         if (message.isFromMe) return;
         if (!this.shouldMonitor(message.chatId)) return;
@@ -62,7 +67,11 @@ export class IMessageAdapter implements PlatformAdapter {
         });
       },
       onGroupMessage: async (message: Message) => {
-        console.log("[iMessage] Received group message:", message.guid, message.text?.slice(0, 50));
+        logger.info({
+          event_name: "imessage.group_message_received",
+          guid: message.guid,
+          text_preview: message.text?.slice(0, 50),
+        });
 
         if (message.isFromMe) return;
         if (!this.shouldMonitor(message.chatId)) return;
@@ -86,13 +95,19 @@ export class IMessageAdapter implements PlatformAdapter {
         });
       },
       onError: (error: Error) => {
-        console.error("[iMessage] SDK error:", error);
+        logger.error({
+          event_name: "imessage.sdk_error",
+          error: error.message,
+        });
       },
     });
 
-    console.log("[iMessage] Started listening for messages");
+    logger.info({ event_name: "imessage.started_listening" });
     if (this.watchedContacts.size > 0) {
-      console.log("[iMessage] Filtering to contacts:", Array.from(this.watchedContacts));
+      logger.info({
+        event_name: "imessage.filtering_contacts",
+        contacts: Array.from(this.watchedContacts),
+      });
     }
   }
 
@@ -100,7 +115,7 @@ export class IMessageAdapter implements PlatformAdapter {
     if (this.sdk) {
       this.sdk.stopWatching();
       await this.sdk.close();
-      console.log("[iMessage] Stopped listening");
+      logger.info({ event_name: "imessage.stopped_listening" });
     }
     this.handler = null;
   }
@@ -129,13 +144,19 @@ export class IMessageAdapter implements PlatformAdapter {
         await this.sdk.send(message.chatId, message.content);
       }
 
-      console.log(`[iMessage] Sent message to ${message.chatId}`);
+      logger.info({
+        event_name: "imessage.message_sent",
+        chat_id: message.chatId,
+      });
     } finally {
       for (const filePath of attachmentPaths) {
         try {
           await unlink(filePath);
         } catch {
-          console.warn(`[iMessage] Failed to clean up temp file: ${filePath}`);
+          logger.warn({
+            event_name: "imessage.temp_file_cleanup_failed",
+            file_path: filePath,
+          });
         }
       }
     }

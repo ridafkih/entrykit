@@ -21,8 +21,9 @@ COPY --from=build /app/services/mcp/src ./services/mcp/src
 COPY --from=build /app/packages/sandbox-sdk/src ./packages/sandbox-sdk/src
 COPY --from=build /app/packages/sandbox-docker/src ./packages/sandbox-docker/src
 COPY --from=build /app/packages/browser-protocol/src ./packages/browser-protocol/src
+COPY --from=build /app/packages/entry-point/src ./packages/entry-point/src
+COPY --from=build /app/packages/widelogger/src ./packages/widelogger/src
 
-ENV NODE_ENV=production
 ENV MCP_PORT=3000
 EXPOSE 3000
 

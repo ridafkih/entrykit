@@ -1,21 +1,32 @@
-import {
-  getRequiredEnv,
-  getOptionalEnvInt,
-  getOptionalEnvBool,
-  getOptionalEnvList,
-} from "@lab/env-config";
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function optionalInt(name: string, defaultValue: number): number {
+  const value = process.env[name];
+  return value ? parseInt(value, 10) : defaultValue;
+}
+
+function optionalBool(name: string, defaultValue: boolean): boolean {
+  const value = process.env[name];
+  if (!value) return defaultValue;
+  return value === "true" || value === "1";
+}
+
+function optionalList(name: string): string[] {
+  const value = process.env[name];
+  return value ? value.split(",").filter(Boolean) : [];
+}
 
 export const config = {
-  port: getOptionalEnvInt("PORT", 3040),
-  apiUrl: getRequiredEnv("API_URL"),
-  apiWsUrl: getRequiredEnv("API_WS_URL"),
-  databaseUrl: getRequiredEnv("DATABASE_URL"),
-
-  imessageEnabled: getOptionalEnvBool("IMESSAGE_ENABLED", true),
-  imessageWatchedContacts: getOptionalEnvList("IMESSAGE_WATCHED_CONTACTS"),
-  imessageContextMessages: getOptionalEnvInt("IMESSAGE_CONTEXT_MESSAGES", 20),
-
-  staleSessionThresholdMs: getOptionalEnvInt("STALE_SESSION_THRESHOLD_MS", 86400000),
+  apiUrl: required("API_URL"),
+  apiWsUrl: required("API_WS_URL"),
+  imessageEnabled: optionalBool("IMESSAGE_ENABLED", true),
+  imessageWatchedContacts: optionalList("IMESSAGE_WATCHED_CONTACTS"),
+  imessageContextMessages: optionalInt("IMESSAGE_CONTEXT_MESSAGES", 20),
+  staleSessionThresholdMs: optionalInt("STALE_SESSION_THRESHOLD_MS", 86400000),
 };
 
 export type Config = typeof config;

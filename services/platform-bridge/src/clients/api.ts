@@ -1,3 +1,4 @@
+import { logger } from "../logging";
 import { config } from "../config/environment";
 import type {
   OrchestrationRequest,
@@ -158,7 +159,10 @@ export class ApiClient {
             }
           } catch (parseError) {
             if (parseError instanceof SyntaxError) {
-              console.error("[ApiClient] Failed to parse SSE data:", data);
+              logger.error({
+                event_name: "api_client.sse_parse_error",
+                data,
+              });
             } else {
               throw parseError;
             }
