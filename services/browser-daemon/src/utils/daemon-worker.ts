@@ -12,6 +12,17 @@ import type { DaemonWorkerConfig } from "./daemon-process";
 
 declare let self: Worker;
 
+const isPidRunning = (pid: number): boolean => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (reason) {
+    return (
+      reason instanceof Error && "code" in reason && reason.code === "EPERM"
+    );
+  }
+};
+
 function isDaemonWorkerConfig(value: unknown): value is DaemonWorkerConfig {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -420,9 +431,21 @@ const startWorker = async (config: DaemonWorkerConfig) => {
         session_id: sessionId,
       },
     });
+
     state.socketServer?.close();
     state.streamServer?.stop();
-    state.browser?.close();
+
+    const browser = state.browser?.getBrowser();
+    if (
+      browser &&
+      "process" in browser &&
+      typeof browser.process === "function"
+    ) {
+      const browserPid = browser.process()?.pid;
+      if (browserPid && isPidRunning(browserPid)) {
+        process.kill(browserPid, "SIGKILL");
+      }
+    }
 
     const filesToClean = [socketPath, pidFile, streamPortFile, cdpPortFile];
     try {
