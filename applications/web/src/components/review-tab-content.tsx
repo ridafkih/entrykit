@@ -43,7 +43,13 @@ function FileBrowserProvider({
   }, [fileParam, expandParam, browser.state.rootLoading, browser.actions]);
 
   return (
-    <Review.Provider browser={browser} files={[]} onDismiss={() => {}}>
+    <Review.Provider
+      browser={browser}
+      files={[]}
+      onDismiss={() => {
+        /* noop */
+      }}
+    >
       {children}
     </Review.Provider>
   );

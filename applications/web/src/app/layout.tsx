@@ -30,6 +30,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme script injection */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="bg-bg font-sans text-[0.75rem] text-text antialiased">

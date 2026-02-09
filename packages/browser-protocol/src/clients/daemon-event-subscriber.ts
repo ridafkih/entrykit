@@ -59,6 +59,7 @@ export const createDaemonEventSubscriber = (
     }
   };
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
   const connect = async () => {
     if (state.abortController) {
       return;

@@ -51,7 +51,7 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
       getSnapshot: loadSessions,
     },
     sessionMetadata: {
-      getSnapshot: async ({ params }) => {
+      getSnapshot: ({ params }) => {
         if (!params.uuid) {
           throw new ValidationError("Missing uuid parameter");
         }
@@ -59,7 +59,7 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
       },
     },
     sessionContainers: {
-      getSnapshot: async ({ params }) => {
+      getSnapshot: ({ params }) => {
         if (!params.uuid) {
           throw new ValidationError("Missing uuid parameter");
         }
@@ -67,13 +67,13 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
       },
     },
     sessionTyping: {
-      getSnapshot: async () => [],
+      getSnapshot: () => Promise.resolve([]),
     },
     sessionPromptEngineers: {
-      getSnapshot: async () => [],
+      getSnapshot: () => Promise.resolve([]),
     },
     sessionChangedFiles: {
-      getSnapshot: async ({ params }) => {
+      getSnapshot: ({ params }) => {
         if (!params.uuid) {
           throw new ValidationError("Missing uuid parameter");
         }
@@ -81,24 +81,24 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
       },
     },
     sessionBranches: {
-      getSnapshot: async () => [],
+      getSnapshot: () => Promise.resolve([]),
     },
     sessionLinks: {
-      getSnapshot: async () => [],
+      getSnapshot: () => Promise.resolve([]),
     },
     sessionLogs: {
-      getSnapshot: async ({ params }) => {
+      getSnapshot: ({ params }) => {
         if (!params.uuid) {
-          return { sources: [], recentLogs: {} };
+          return Promise.resolve({ sources: [], recentLogs: {} });
         }
         return loadSessionLogs(params.uuid, logMonitor);
       },
     },
     sessionMessages: {
-      getSnapshot: async () => [],
+      getSnapshot: () => Promise.resolve([]),
     },
     sessionBrowserState: {
-      getSnapshot: async ({ params }) => {
+      getSnapshot: ({ params }) => {
         if (!params.uuid) {
           throw new ValidationError("Missing uuid parameter");
         }
@@ -184,36 +184,37 @@ export function createWebSocketHandlers(deps: WebSocketHandlerDeps) {
       },
     },
     sessionBrowserFrames: {
-      getSnapshot: async ({ params }) => {
+      getSnapshot: ({ params }) => {
         if (!params.uuid) {
-          return { lastFrame: null, timestamp: null };
+          return Promise.resolve({ lastFrame: null, timestamp: null });
         }
         const frame = browserService.getCachedFrame(params.uuid);
         if (!frame) {
-          return { lastFrame: null, timestamp: null };
+          return Promise.resolve({ lastFrame: null, timestamp: null });
         }
-        return { lastFrame: frame, timestamp: Date.now() };
+        return Promise.resolve({ lastFrame: frame, timestamp: Date.now() });
       },
     },
     sessionBrowserInput: {
-      getSnapshot: async () => ({}),
+      getSnapshot: () => Promise.resolve({}),
     },
     orchestrationStatus: {
-      getSnapshot: async () => ({
-        status: "pending",
-        projectName: null,
-        sessionId: null,
-        errorMessage: null,
-      }),
+      getSnapshot: () =>
+        Promise.resolve({
+          status: "pending",
+          projectName: null,
+          sessionId: null,
+          errorMessage: null,
+        }),
     },
     sessionComplete: {
-      getSnapshot: async () => ({ completed: false }),
+      getSnapshot: () => Promise.resolve({ completed: false }),
     },
   };
 
   const options: HandlerOptions<AppSchema, Auth> = {
-    authenticate: async (token) => ({ userId: token ?? "anonymous" }),
-    onMessage: async (context, message) => {
+    authenticate: (token) => Promise.resolve({ userId: token ?? "anonymous" }),
+    onMessage: (context, message) => {
       if (message.type === "send_message") {
         publisher.publishEvent(
           "sessionMessages",

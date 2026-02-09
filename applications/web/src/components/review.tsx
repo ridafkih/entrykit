@@ -192,10 +192,18 @@ function ReviewProvider({
   };
 
   const defaultBrowserActions: BrowserActions = {
-    toggleDirectory: () => {},
-    selectFile: () => {},
-    clearFileSelection: () => {},
-    expandToFile: async () => {},
+    toggleDirectory: () => {
+      /* no-op */
+    },
+    selectFile: () => {
+      /* no-op */
+    },
+    clearFileSelection: () => {
+      /* no-op */
+    },
+    expandToFile: async () => {
+      /* no-op */
+    },
   };
 
   const view = browser?.state.selectedPath ? "preview" : "diff";
@@ -604,7 +612,7 @@ function reconstructOldContent(newContent: string, patch: Patch): string {
 
   for (const hunk of patch.hunks) {
     while (newLineIndex < hunk.newStart - 1) {
-      oldLines.push(newLines[newLineIndex]!);
+      oldLines.push(newLines[newLineIndex] ?? "");
       newLineIndex++;
     }
 
@@ -615,8 +623,9 @@ function reconstructOldContent(newContent: string, patch: Patch): string {
       if (prefix === "-") {
         oldLines.push(content);
       } else if (prefix === "+") {
+        // skip added lines
       } else {
-        oldLines.push(newLines[newLineIndex]);
+        oldLines.push(newLines[newLineIndex] ?? "");
       }
 
       if (prefix !== "-") {
@@ -626,7 +635,7 @@ function reconstructOldContent(newContent: string, patch: Patch): string {
   }
 
   while (newLineIndex < newLines.length) {
-    oldLines.push(newLines[newLineIndex]!);
+    oldLines.push(newLines[newLineIndex] ?? "");
     newLineIndex++;
   }
 
@@ -682,8 +691,11 @@ function ReviewPreviewContent() {
             overflow: "scroll",
             disableFileHeader: true,
             enableLineSelection: true,
-            onLineSelected: (range) =>
-              actions.selectLines(state.browser.selectedPath!, range),
+            onLineSelected: (range) => {
+              if (state.browser.selectedPath) {
+                actions.selectLines(state.browser.selectedPath, range);
+              }
+            },
             unsafeCSS: DIFF_CSS,
           }}
           selectedLines={shouldClearSelection ? null : undefined}
@@ -713,8 +725,11 @@ function ReviewPreviewContent() {
           overflow: "scroll",
           disableFileHeader: true,
           enableLineSelection: true,
-          onLineSelected: (range) =>
-            actions.selectLines(state.browser.selectedPath!, range),
+          onLineSelected: (range) => {
+            if (state.browser.selectedPath) {
+              actions.selectLines(state.browser.selectedPath, range);
+            }
+          },
           unsafeCSS: DIFF_CSS,
         }}
         selectedLines={shouldClearSelection ? null : undefined}
@@ -835,12 +850,16 @@ function TreeNodes({ nodes, depth }: { nodes: FileNode[]; depth: number }) {
           }
         };
 
-        const FileIcon =
-          fileStatus === "added"
-            ? FilePlus
-            : fileStatus === "deleted"
-              ? FileX
-              : File;
+        const getFileIcon = () => {
+          if (fileStatus === "added") {
+            return FilePlus;
+          }
+          if (fileStatus === "deleted") {
+            return FileX;
+          }
+          return File;
+        };
+        const FileIcon = getFileIcon();
 
         const getFileIconColor = () => {
           if (isIgnored) {

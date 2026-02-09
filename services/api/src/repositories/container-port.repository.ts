@@ -5,7 +5,7 @@ import {
 } from "@lab/database/schema/container-ports";
 import { eq } from "drizzle-orm";
 
-export async function findPortsByContainerId(
+export function findPortsByContainerId(
   containerId: string
 ): Promise<ContainerPort[]> {
   return db

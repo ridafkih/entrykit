@@ -174,7 +174,12 @@ function TextAreaGroupAttachments() {
         <AttachmentPreview.Item
           attachment={attachment}
           key={attachment.id}
-          onRemove={actions.onRemoveAttachment ?? (() => {})}
+          onRemove={
+            actions.onRemoveAttachment ??
+            (() => {
+              /* noop */
+            })
+          }
         />
       ))}
     </AttachmentPreview.List>

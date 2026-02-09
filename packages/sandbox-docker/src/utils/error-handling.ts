@@ -27,6 +27,8 @@ export function wrapDockerError(
         return SandboxError.networkNotFound(resourceId);
       case "image":
         return SandboxError.imageNotFound(resourceId);
+      default:
+        break;
     }
   }
   return SandboxError.execFailed(resourceId, String(err));

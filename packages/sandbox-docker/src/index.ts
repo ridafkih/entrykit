@@ -1,3 +1,4 @@
+// biome-ignore lint/performance/noBarrelFile: entrypoint
 export { DockerClient } from "./clients/docker-client";
 export { PortAllocator } from "./clients/port-allocator";
 export {

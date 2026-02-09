@@ -270,5 +270,7 @@ function scheduleBackgroundTitleGeneration(
     userMessage,
     fallbackTitle: userMessage.slice(0, 50).trim(),
     publisher,
-  }).catch(() => {});
+  }).catch(() => {
+    /* expected */
+  });
 }

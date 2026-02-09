@@ -43,10 +43,10 @@ export interface BrowserService {
   stopReconciler(): void;
 }
 
-export const createBrowserService = async (
+export const createBrowserService = (
   config: BrowserServiceConfig,
   deps: BrowserServiceDependencies
-): Promise<BrowserService> => {
+): BrowserService => {
   const { stateStore, daemonController, publishFrame, publishStateChange } =
     deps;
   const {
@@ -61,7 +61,7 @@ export const createBrowserService = async (
 
   const frameReceivers = new Map<string, FrameReceiver>();
 
-  const connectFrameReceiver = async (
+  const connectFrameReceiver = (
     sessionId: string,
     port: number,
     orchestrator: Orchestrator
@@ -193,7 +193,7 @@ export const createBrowserService = async (
       };
     },
 
-    async subscribeBrowser(sessionId: string) {
+    subscribeBrowser(sessionId: string) {
       return orchestrator.subscribe(sessionId);
     },
 
@@ -201,7 +201,7 @@ export const createBrowserService = async (
       return orchestrator.unsubscribe(sessionId);
     },
 
-    async warmUpBrowser(sessionId: string) {
+    warmUpBrowser(sessionId: string) {
       return orchestrator.warmUp(sessionId);
     },
 

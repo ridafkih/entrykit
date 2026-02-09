@@ -144,6 +144,8 @@ export function createHooks<S extends Schema>(schema: S) {
             case "error":
               setState({ status: "error", error: message.error });
               break;
+            default:
+              break;
           }
         });
 

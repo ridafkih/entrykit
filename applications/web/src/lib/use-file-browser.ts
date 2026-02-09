@@ -179,7 +179,12 @@ export function useFileBrowser(sessionId: string | null): {
 
   const { data: rootNodes, isLoading: rootLoading } = useSWR<FileNode[]>(
     sessionId ? `file-browser-root-${sessionId}` : null,
-    () => fetchRootFiles(sessionId!)
+    () => {
+      if (!sessionId) {
+        return [];
+      }
+      return fetchRootFiles(sessionId);
+    }
   );
 
   const { statuses: fileStatuses, dirsWithChanges: directoriesWithChanges } =

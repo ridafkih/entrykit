@@ -1,7 +1,7 @@
 import { FrameResponse } from "../types/responses";
 import type { FrameReceiver, FrameReceiverConfig } from "../types/session";
 
-export type { FrameReceiver, FrameReceiverConfig };
+export type { FrameReceiver, FrameReceiverConfig } from "../types/session";
 
 const DEFAULT_WS_HOST = "browser";
 

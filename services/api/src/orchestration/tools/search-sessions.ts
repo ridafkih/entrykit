@@ -19,6 +19,7 @@ export function createSearchSessionsTool(opencode: OpencodeClient) {
     description:
       "Searches across session titles and conversation content to find relevant sessions. Returns matching sessions with relevant content snippets.",
     inputSchema,
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
     execute: async ({ query, limit }) => {
       const searchLimit = limit ?? 5;
 
@@ -56,6 +57,7 @@ export function createSearchSessionsTool(opencode: OpencodeClient) {
           break;
         }
 
+        // biome-ignore lint/style/noNonNullAssertion: index is within bounds
         const row = rows[i]!;
         let relevantContent = "";
         let score = 0;

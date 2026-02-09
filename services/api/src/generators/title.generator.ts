@@ -17,7 +17,7 @@ interface GenerateTitleOptions {
   publisher: Publisher;
 }
 
-export async function generateSessionTitle(
+export function generateSessionTitle(
   options: GenerateTitleOptions
 ): Promise<string> {
   const { sessionId, userMessage, fallbackTitle, publisher } = options;

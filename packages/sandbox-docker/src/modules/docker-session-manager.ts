@@ -15,12 +15,14 @@ function formatNetworkName(sessionId: string): string {
 }
 
 export class DockerSessionManager implements SessionManager {
+  private readonly provider: SandboxProvider;
   private readonly sharedContainerNames: string[];
 
   constructor(
-    private readonly provider: SandboxProvider,
+    provider: SandboxProvider,
     config: DockerSessionManagerConfig = {}
   ) {
+    this.provider = provider;
     this.sharedContainerNames = (config.sharedContainerNames ?? []).filter(
       Boolean
     );

@@ -23,10 +23,13 @@ const DEFAULT_RESTART_POLICY: RestartPolicy = {
 };
 
 export class DockerRuntimeManager implements RuntimeManager {
-  constructor(
-    private readonly provider: SandboxProvider,
-    private readonly config: DockerRuntimeManagerConfig
-  ) {}
+  private readonly provider: SandboxProvider;
+  private readonly config: DockerRuntimeManagerConfig;
+
+  constructor(provider: SandboxProvider, config: DockerRuntimeManagerConfig) {
+    this.provider = provider;
+    this.config = config;
+  }
 
   async startContainer(
     input: RuntimeContainerStartInput

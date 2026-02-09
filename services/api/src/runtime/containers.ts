@@ -152,7 +152,7 @@ async function startContainersInLevel(
   };
 }
 
-export async function initializeSessionContainers(
+export function initializeSessionContainers(
   sessionId: string,
   projectId: string,
   browserService: BrowserService,

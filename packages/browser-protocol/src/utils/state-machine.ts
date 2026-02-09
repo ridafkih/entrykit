@@ -48,6 +48,8 @@ export const computeRequiredAction = (
         return "WaitForReady";
       case "error":
         return "StartDaemon";
+      default:
+        break;
     }
   }
 
@@ -64,6 +66,8 @@ export const computeRequiredAction = (
       return "WaitForReady";
     case "error":
       return "ResetToStopped";
+    default:
+      return "NoOp";
   }
 };
 
@@ -89,6 +93,8 @@ export const computeNextState = (
       return null;
     case "WaitForReady":
     case "NoOp":
+      return null;
+    default:
       return null;
   }
 };

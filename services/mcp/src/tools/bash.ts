@@ -36,23 +36,20 @@ function isOperator(token: unknown): boolean {
 }
 
 function getCommandSegments(command: string): string[][] {
-  return parse(command)
-    .reduce<string[][]>(
-      (segments, token) => {
-        if (isOperator(token)) {
-          return [...segments, []];
-        }
-        if (typeof token !== "string") {
-          return segments;
-        }
+  const segments: string[][] = [[]];
 
-        const rest = segments.slice(0, -1);
-        const current = segments.at(-1) ?? [];
-        return [...rest, [...current, token]];
-      },
-      [[]]
-    )
-    .filter((segment) => segment.length > 0);
+  for (const token of parse(command)) {
+    if (isOperator(token)) {
+      segments.push([]);
+    } else if (typeof token === "string") {
+      const current = segments.at(-1);
+      if (current) {
+        current.push(token);
+      }
+    }
+  }
+
+  return segments.filter((segment) => segment.length > 0);
 }
 
 function matchesBlocked(

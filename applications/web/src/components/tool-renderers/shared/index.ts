@@ -1,3 +1,4 @@
+// biome-ignore lint/performance/noBarrelFile: entrypoint
 export { ContentCode } from "./content-code";
 export { ContentDiff } from "./content-diff";
 export { ContentError } from "./content-error";

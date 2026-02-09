@@ -37,7 +37,8 @@ const setNested = (
 
 export const flush = (
   context: Context | undefined
-): Record<string, unknown> => {
+): // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
+Record<string, unknown> => {
   if (!context) {
     return {};
   }
@@ -58,9 +59,13 @@ export const flush = (
       case "count":
         counters[entry.key] = (counters[entry.key] ?? 0) + entry.amount;
         break;
-      case "append":
-        (arrays[entry.key] ??= []).push(entry.value);
+      case "append": {
+        if (!arrays[entry.key]) {
+          arrays[entry.key] = [];
+        }
+        arrays[entry.key].push(entry.value);
         break;
+      }
       case "max": {
         const current = maxValues[entry.key];
         if (current === undefined || entry.value > current) {
@@ -76,8 +81,10 @@ export const flush = (
         break;
       }
       case "time.start": {
-        const timer = (timers[entry.key] ??= { start: 0, accumulated: 0 });
-        timer.start = entry.time;
+        if (!timers[entry.key]) {
+          timers[entry.key] = { start: 0, accumulated: 0 };
+        }
+        timers[entry.key].start = entry.time;
         break;
       }
       case "time.stop": {
@@ -88,22 +95,25 @@ export const flush = (
         }
         break;
       }
+
+      default:
+        break;
     }
   }
 
-  for (const key in counters) {
+  for (const key of Object.keys(counters)) {
     setNested(event, key, counters[key]);
   }
-  for (const key in arrays) {
+  for (const key of Object.keys(arrays)) {
     setNested(event, key, arrays[key]);
   }
-  for (const key in maxValues) {
+  for (const key of Object.keys(maxValues)) {
     setNested(event, key, maxValues[key]);
   }
-  for (const key in minValues) {
+  for (const key of Object.keys(minValues)) {
     setNested(event, key, minValues[key]);
   }
-  for (const key in timers) {
+  for (const key of Object.keys(timers)) {
     const timer = timers[key];
     if (timer) {
       setNested(event, key, Math.round(timer.accumulated * 100) / 100);

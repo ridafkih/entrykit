@@ -17,6 +17,7 @@ const sizeStyles: Record<SpinnerSize, string> = {
 
 export function Spinner({ size = "md", className }: SpinnerProps) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: spinner element
     <span
       aria-label="Loading"
       className={cn(

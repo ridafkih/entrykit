@@ -85,6 +85,7 @@ function createWaitForService(config: BrowserBootstrapConfig) {
           return;
         }
       }
+      // biome-ignore lint/correctness/noUndeclaredVariables: Bun global
       await Bun.sleep(intervalMs);
     }
 
@@ -100,14 +101,14 @@ export interface BrowserBootstrapResult {
   daemonController: DaemonController;
 }
 
-export const bootstrapBrowserService = async (
+export const bootstrapBrowserService = (
   config: BrowserBootstrapConfig
-): Promise<BrowserBootstrapResult> => {
+): BrowserBootstrapResult => {
   const baseUrl = config.browserApiUrl;
 
   const daemonController = createDaemonController({ baseUrl });
 
-  const browserService = await createBrowserService(
+  const browserService = createBrowserService(
     {
       browserWsHost: config.browserWsHost,
       browserDaemonUrl: baseUrl,

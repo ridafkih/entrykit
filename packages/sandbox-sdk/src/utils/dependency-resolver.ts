@@ -9,7 +9,7 @@ export interface StartLevel {
 }
 
 export class CircularDependencyError extends Error {
-  public readonly cycle: string[];
+  readonly cycle: string[];
 
   constructor(cycle: string[]) {
     super(`Circular dependency detected: ${cycle.join(" -> ")}`);

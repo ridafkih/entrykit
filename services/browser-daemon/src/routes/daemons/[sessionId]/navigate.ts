@@ -12,7 +12,7 @@ export const POST: RouteHandler = async ({
   params,
   context: { daemonManager, widelog },
 }) => {
-  const sessionId = params.sessionId!;
+  const sessionId = params.sessionId ?? "";
   widelog.set("session.id", sessionId);
 
   const session = daemonManager.getSession(sessionId);

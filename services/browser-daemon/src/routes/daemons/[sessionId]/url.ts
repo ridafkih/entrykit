@@ -6,7 +6,7 @@ export const GET: RouteHandler = ({
   params,
   context: { daemonManager, widelog },
 }) => {
-  const sessionId = params.sessionId!;
+  const sessionId = params.sessionId ?? "";
   widelog.set("session.id", sessionId);
 
   const session = daemonManager.getSession(sessionId);

@@ -74,6 +74,9 @@ export function Avatar({
           {fallback ? getInitials(fallback) : "?"}
         </span>
       ) : (
+        // biome-ignore lint/a11y/noNoninteractiveElementInteractions: avatar image
+        // biome-ignore lint/performance/noImgElement: generic UI component, not Next.js specific
+        // biome-ignore lint/correctness/useImageSize: size is controlled by parent container
         <img
           alt={alt}
           className={cn(
@@ -119,6 +122,7 @@ export function AvatarGroup({
   return (
     <div className={cn("flex -space-x-2", className)}>
       {visible.map((avatar, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: avatars have no stable unique id
         <span className="inline-block ring-2 ring-background" key={i}>
           {avatar}
         </span>

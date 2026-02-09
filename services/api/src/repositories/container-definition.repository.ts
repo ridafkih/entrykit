@@ -5,7 +5,7 @@ import { type Container, containers } from "@lab/database/schema/containers";
 import { and, eq } from "drizzle-orm";
 import { InternalError } from "../shared/errors";
 
-export async function findContainersByProjectId(
+export function findContainersByProjectId(
   projectId: string
 ): Promise<Container[]> {
   return db
@@ -28,7 +28,7 @@ export async function getWorkspaceContainerIdByProjectId(
   return result[0]?.id ?? null;
 }
 
-export async function createContainerWithDetails(data: {
+export function createContainerWithDetails(data: {
   projectId: string;
   image: string;
   hostname?: string;

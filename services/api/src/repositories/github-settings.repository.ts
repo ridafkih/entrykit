@@ -134,7 +134,7 @@ export async function saveGitHubSettings(
     updatedAt: new Date(),
   };
 
-  let settings;
+  let settings: GitHubSettings | undefined;
   if (existing) {
     [settings] = await db
       .update(githubSettings)
@@ -178,7 +178,7 @@ export async function saveGitHubOAuthToken(
     updatedAt: new Date(),
   };
 
-  let settings;
+  let settings: GitHubSettings | undefined;
   if (existing) {
     [settings] = await db
       .update(githubSettings)

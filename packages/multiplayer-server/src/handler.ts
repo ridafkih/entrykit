@@ -266,6 +266,8 @@ export function createWebSocketHandler<S extends Schema, TAuth>(
           case "ping":
             sendMessage(ws, { type: "pong" });
             break;
+          default:
+            break;
         }
       } catch (error) {
         console.warn("Malformed WebSocket message:", error);

@@ -27,9 +27,13 @@ interface CleanupSessionDeps {
 }
 
 export class SessionCleanupService {
-  constructor(private readonly deps: CleanupSessionDeps) {}
+  private readonly deps: CleanupSessionDeps;
 
-  async cleanupSessionFull(
+  constructor(deps: CleanupSessionDeps) {
+    this.deps = deps;
+  }
+
+  cleanupSessionFull(
     sessionId: string,
     browserService: BrowserService
   ): Promise<void> {
@@ -100,7 +104,7 @@ export class SessionCleanupService {
     });
   }
 
-  async cleanupOrphanedResources(
+  cleanupOrphanedResources(
     sessionId: string,
     runtimeIds: string[],
     browserService: BrowserService
@@ -148,7 +152,7 @@ export class SessionCleanupService {
     });
   }
 
-  async cleanupOnError(
+  cleanupOnError(
     sessionId: string,
     projectId: string,
     runtimeIds: string[],

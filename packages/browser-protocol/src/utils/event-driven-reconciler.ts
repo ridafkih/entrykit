@@ -82,10 +82,10 @@ export const createEventDrivenReconciler = (
     });
   };
 
-  const executeAction = async (
+  const executeAction = (
     session: BrowserSessionState,
     action: Action
-  ): Promise<void> => {
+  ): Promise<void> | undefined => {
     switch (action) {
       case "StartDaemon":
         return startSession(session);
@@ -96,6 +96,8 @@ export const createEventDrivenReconciler = (
       case "WaitForReady":
       case "NoOp":
         return;
+      default:
+        break;
     }
   };
 
@@ -116,6 +118,7 @@ export const createEventDrivenReconciler = (
     await reconcileSession(sessionId);
   };
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
   const handleDaemonEvent = async (event: DaemonEvent): Promise<void> => {
     const { sessionId, type, data } = event;
     const session = await stateStore.getState(sessionId);
@@ -182,6 +185,9 @@ export const createEventDrivenReconciler = (
         });
         break;
       }
+
+      default:
+        break;
     }
   };
 

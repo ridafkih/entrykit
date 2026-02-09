@@ -535,6 +535,8 @@ export function browser(server: McpServer, { config }: ToolContext) {
               case "right":
                 x = amount;
                 break;
+              default:
+                break;
             }
 
             const command: BrowserCommand = {

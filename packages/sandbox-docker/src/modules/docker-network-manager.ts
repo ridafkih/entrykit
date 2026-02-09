@@ -2,7 +2,11 @@ import type { NetworkCreateOptions, NetworkManager } from "@lab/sandbox-sdk";
 import type { DockerClient } from "../clients/docker-client";
 
 export class DockerNetworkManager implements NetworkManager {
-  constructor(private readonly client: DockerClient) {}
+  private readonly client: DockerClient;
+
+  constructor(client: DockerClient) {
+    this.client = client;
+  }
 
   async createNetwork(
     name: string,
@@ -56,7 +60,7 @@ export class DockerNetworkManager implements NetworkManager {
     await this.client.disconnectFromNetwork(containerName, networkName);
   }
 
-  async isContainerConnected(
+  isContainerConnected(
     containerName: string,
     networkName: string
   ): Promise<boolean> {

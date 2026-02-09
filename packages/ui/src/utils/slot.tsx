@@ -25,7 +25,7 @@ function mergeProps(
 ) {
   const merged: Record<string, unknown> = { ...slotProps };
 
-  for (const key in childProps) {
+  for (const key of Object.keys(childProps)) {
     const slotValue = slotProps[key];
     const childValue = childProps[key];
 

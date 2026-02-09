@@ -120,6 +120,8 @@ export function DropdownMenu({ children, className }: DropdownMenuProps) {
       case "Escape":
         setOpen(false);
         break;
+      default:
+        break;
     }
   };
 
@@ -177,5 +179,10 @@ export function DropdownItem({
 }
 
 export function DropdownSeparator({ className }: { className?: string }) {
-  return <div className={cn("h-px bg-border", className)} role="separator" />;
+  return (
+    // biome-ignore lint/a11y/useFocusableInteractive: decorative separator
+    // biome-ignore lint/a11y/useSemanticElements: dropdown separator
+    // biome-ignore lint/a11y/useAriaPropsForRole: decorative separator
+    <div className={cn("h-px bg-border", className)} role="separator" />
+  );
 }

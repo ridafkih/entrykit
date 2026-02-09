@@ -16,10 +16,10 @@ export class NetworkReconcileMonitor {
   private readonly abortController = new AbortController();
   private readonly watchedContainerNames: Set<string>;
 
-  constructor(
-    private readonly sandbox: Sandbox,
-    containerNames: string[]
-  ) {
+  private readonly sandbox: Sandbox;
+
+  constructor(sandbox: Sandbox, containerNames: string[]) {
+    this.sandbox = sandbox;
     this.watchedContainerNames = new Set(containerNames.filter(Boolean));
     if (this.watchedContainerNames.size === 0) {
       throw new Error(
@@ -56,7 +56,7 @@ export class NetworkReconcileMonitor {
     this.abortController.abort();
   }
 
-  private async reconcileAllWatchedContainers(
+  private reconcileAllWatchedContainers(
     reason: "startup" | "start" | "restart"
   ): Promise<void> {
     return widelog.context(async () => {

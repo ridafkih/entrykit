@@ -1,5 +1,6 @@
 // Types
 
+// biome-ignore lint/performance/noBarrelFile: entrypoint
 export { PromptBuilder } from "./builder";
 
 // Classes

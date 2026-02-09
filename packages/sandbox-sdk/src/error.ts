@@ -18,12 +18,13 @@ export const SandboxErrorKind = z.enum([
 export type SandboxErrorKind = z.infer<typeof SandboxErrorKind>;
 
 export class SandboxError extends Error {
-  constructor(
-    public readonly kind: SandboxErrorKind,
-    message: string,
-    public readonly resourceId?: string
-  ) {
+  readonly kind: SandboxErrorKind;
+  readonly resourceId?: string;
+
+  constructor(kind: SandboxErrorKind, message: string, resourceId?: string) {
     super(message);
+    this.kind = kind;
+    this.resourceId = resourceId;
     this.name = "SandboxError";
   }
 

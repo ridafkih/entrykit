@@ -11,6 +11,8 @@ import type { SessionStateStore } from "../state/session-state-store";
 import type { Publisher } from "../types/dependencies";
 import type { PromptService } from "../types/prompt";
 
+const OPENCODE_PATH_PREFIX_PATTERN = /^\/opencode/;
+
 const PROMPT_ENDPOINTS = ["/session/", "/prompt", "/message"];
 const QUESTION_ENDPOINTS = ["/question/"];
 
@@ -179,6 +181,7 @@ export function createOpenCodeProxyHandler(
 ): OpenCodeProxyHandler {
   const { opencodeUrl, publisher, promptService, sessionStateStore } = deps;
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
   async function buildProxyBody(
     request: Request,
     path: string,
@@ -303,7 +306,7 @@ export function createOpenCodeProxyHandler(
     request: Request,
     url: URL
   ): Promise<Response> {
-    const path = url.pathname.replace(/^\/opencode/, "");
+    const path = url.pathname.replace(OPENCODE_PATH_PREFIX_PATTERN, "");
     const labSessionId = request.headers.get("X-Lab-Session-Id");
     const workspacePath = labSessionId
       ? await resolveWorkspacePathBySession(labSessionId)

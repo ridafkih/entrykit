@@ -141,6 +141,8 @@ function Code({
   );
 }
 
+const languageRegex = /language-(\w+)/;
+
 function Pre({ children }: ComponentPropsWithoutRef<"pre">) {
   const codeChild = children as ReactNode & {
     props?: { className?: string; children?: string };
@@ -156,7 +158,7 @@ function Pre({ children }: ComponentPropsWithoutRef<"pre">) {
     );
   }
 
-  const langMatch = codeClassName.match(/language-(\w+)/);
+  const langMatch = codeClassName.match(languageRegex);
   const lang = langMatch?.[1];
 
   return <CodeBlock content={codeContent} language={lang} />;

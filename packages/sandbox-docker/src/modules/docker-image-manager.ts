@@ -3,9 +3,11 @@ import type Dockerode from "dockerode";
 import { isNotFoundError } from "../utils/error-handling";
 
 export class DockerImageManager implements ImageManager {
+  private readonly docker: Dockerode;
   private readonly modem: Dockerode["modem"];
 
-  constructor(private readonly docker: Dockerode) {
+  constructor(docker: Dockerode) {
+    this.docker = docker;
     this.modem = docker.modem;
   }
 

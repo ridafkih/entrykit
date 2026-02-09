@@ -70,7 +70,11 @@ function isActiveEndpointsError(error: unknown): boolean {
 }
 
 export class NetworkOperations {
-  constructor(private readonly docker: Dockerode) {}
+  private readonly docker: Dockerode;
+
+  constructor(docker: Dockerode) {
+    this.docker = docker;
+  }
 
   async createNetwork(
     name: string,
@@ -182,7 +186,10 @@ export class NetworkOperations {
         try {
           await this.docker
             .getNetwork(networkName)
-            .disconnect({ Container: containerId, Force: true } as any);
+            .disconnect({ Container: containerId, Force: true } as Record<
+              string,
+              unknown
+            >);
         } catch (error) {
           if (isNotFoundError(error)) {
             return;

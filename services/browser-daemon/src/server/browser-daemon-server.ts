@@ -20,23 +20,29 @@ interface BrowserDaemonServerConfig {
 
 export class BrowserDaemonServer {
   private server: BunServer<unknown> | null = null;
+  // biome-ignore lint/correctness/noUndeclaredVariables: Bun global
   private readonly router = new Bun.FileSystemRouter({
     dir: join(import.meta.dirname, "../routes"),
     style: "nextjs",
   });
 
-  constructor(private readonly config: BrowserDaemonServerConfig) {}
+  private readonly config: BrowserDaemonServerConfig;
+
+  constructor(config: BrowserDaemonServerConfig) {
+    this.config = config;
+  }
 
   start(port: number): void {
     const { daemonManager, widelog } = this.config;
     const routeContext: RouteContext = { daemonManager, widelog };
 
+    // biome-ignore lint/correctness/noUndeclaredVariables: Bun global
     this.server = Bun.serve({
       port,
       idleTimeout: TIMING.IDLE_TIMEOUT_SECONDS,
-      fetch: async (request): Promise<Response> => {
+      fetch: (request): Promise<Response> => {
         if (request.method === "OPTIONS") {
-          return optionsResponse();
+          return Promise.resolve(optionsResponse());
         }
 
         const url = new URL(request.url);
@@ -45,7 +51,7 @@ export class BrowserDaemonServer {
     });
   }
 
-  private async handleRouteRequest(
+  private handleRouteRequest(
     request: Request,
     url: URL,
     routeContext: RouteContext
@@ -89,7 +95,7 @@ export class BrowserDaemonServer {
     });
   }
 
-  private async handleRequestWithWideEvent(
+  private handleRequestWithWideEvent(
     request: Request,
     url: URL,
     handler: () => Promise<Response>

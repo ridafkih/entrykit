@@ -55,7 +55,12 @@ export function useFileStatuses(sessionId: string | null) {
 
   const { data, error, isLoading } = useSWR<ChangedFile[]>(
     getFileStatusesKey(sessionId),
-    () => fetchFileStatuses(sessionId!)
+    () => {
+      if (!sessionId) {
+        return [];
+      }
+      return fetchFileStatuses(sessionId);
+    }
   );
 
   useEffect(() => {

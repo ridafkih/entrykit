@@ -12,7 +12,7 @@ export interface ContainerWithDependencies extends Container {
   dependencies: { dependsOnContainerId: string; condition: string }[];
 }
 
-async function fetchDependenciesForContainers(
+function fetchDependenciesForContainers(
   containerIds: string[]
 ): Promise<ContainerDependency[]> {
   return db

@@ -207,7 +207,7 @@ export const setLastUrl = async (
   }
 };
 
-export const cleanupOrphanedSessions = async (): Promise<number> => {
+export const cleanupOrphanedSessions = (): Promise<number> => {
   return widelog.context(async () => {
     widelog.set("event_name", "browser.state_store.orphaned_sessions_cleaned");
     widelog.time.start("duration_ms");

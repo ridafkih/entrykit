@@ -9,7 +9,7 @@ interface MainOptions {
 
 type MainFunction = (options: MainOptions) => unknown;
 
-export const main = (async ({ env, extras }) => {
+export const main = (({ env, extras }) => {
   return widelog.context(async () => {
     widelog.set("event_name", "mcp.startup");
     widelog.set("port", env.MCP_PORT);
@@ -18,6 +18,7 @@ export const main = (async ({ env, extras }) => {
 
     await server.connect(transport);
 
+    // biome-ignore lint/correctness/noUndeclaredVariables: Bun global
     const httpServer = Bun.serve({
       port: env.MCP_PORT,
       fetch: (request) => transport.handleRequest(request),

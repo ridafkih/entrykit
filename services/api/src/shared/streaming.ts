@@ -23,13 +23,14 @@ async function* breakOnDelimiter(
   for await (const chunk of stream) {
     buffer += chunk;
 
-    let delimiterIndex: number;
-    while ((delimiterIndex = buffer.indexOf(delimiter)) !== -1) {
+    let delimiterIndex = buffer.indexOf(delimiter);
+    while (delimiterIndex !== -1) {
       const textBeforeDelimiter = buffer.slice(0, delimiterIndex).trim();
       if (textBeforeDelimiter.length > 0) {
         yield textBeforeDelimiter;
       }
       buffer = buffer.slice(delimiterIndex + delimiter.length);
+      delimiterIndex = buffer.indexOf(delimiter);
     }
   }
 

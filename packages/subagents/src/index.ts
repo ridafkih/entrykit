@@ -1,3 +1,4 @@
+// biome-ignore lint/performance/noBarrelFile: entrypoint
 export {
   type BrowserAgentContext,
   type BrowserTaskResult,

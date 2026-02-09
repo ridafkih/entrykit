@@ -1,4 +1,4 @@
-import * as fs from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import type { Command } from "agent-browser/dist/types.js";
 import { z } from "zod";
 import { NotFoundError, ServiceUnavailableError } from "../../../shared/errors";
@@ -29,7 +29,7 @@ async function transformScreenshotResponse(response: {
   }
 
   try {
-    const buffer = await fs.readFile(response.data.path);
+    const buffer = await readFile(response.data.path);
     const base64 = buffer.toString("base64");
     return { ...response, data: { base64 } };
   } catch {
@@ -60,7 +60,7 @@ async function transformRecordingResponse(response: {
   const data = response.data as { path: string; frames?: number };
 
   try {
-    const buffer = await fs.readFile(data.path);
+    const buffer = await readFile(data.path);
     const base64 = buffer.toString("base64");
     return {
       ...response,
@@ -85,7 +85,7 @@ export const POST: RouteHandler = async ({
   params,
   context: { daemonManager, widelog },
 }) => {
-  const sessionId = params.sessionId!;
+  const sessionId = params.sessionId ?? "";
   widelog.set("session.id", sessionId);
 
   const session = daemonManager.getSession(sessionId);

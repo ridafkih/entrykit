@@ -38,7 +38,7 @@ export async function createSessionContainer(data: {
   return sessionContainer;
 }
 
-export async function findSessionContainersBySessionId(
+export function findSessionContainersBySessionId(
   sessionId: string
 ): Promise<SessionContainer[]> {
   return db
@@ -74,7 +74,7 @@ export async function findAllRunningSessionContainers(): Promise<
   }));
 }
 
-export async function findAllActiveSessionContainers(): Promise<
+export function findAllActiveSessionContainers(): Promise<
   {
     id: string;
     sessionId: string;
@@ -221,9 +221,7 @@ export async function getFirstExposedService(
   return { hostname, port: result[0].port };
 }
 
-export async function getSessionContainersWithDetails(
-  sessionId: string
-): Promise<
+export function getSessionContainersWithDetails(sessionId: string): Promise<
   {
     id: string;
     containerId: string;

@@ -19,7 +19,7 @@ function createS3Client(config: Config): S3Client {
   });
 }
 
-export async function initializeBucket(config: Config): Promise<void> {
+export function initializeBucket(config: Config): Promise<void> {
   return widelog.context(async () => {
     widelog.set("event_name", "rustfs.bucket_initialized");
     widelog.set("bucket", config.RUSTFS_BUCKET);

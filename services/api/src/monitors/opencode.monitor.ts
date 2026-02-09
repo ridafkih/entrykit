@@ -22,7 +22,11 @@ class CompletionTimerManager {
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly completedSessions = new Set<string>();
 
-  constructor(private readonly getPublisher: () => Publisher) {}
+  private readonly getPublisher: () => Publisher;
+
+  constructor(getPublisher: () => Publisher) {
+    this.getPublisher = getPublisher;
+  }
 
   scheduleCompletion(sessionId: string): void {
     if (this.completedSessions.has(sessionId)) {
@@ -65,13 +69,24 @@ class CompletionTimerManager {
 class SessionTracker {
   private readonly abortController = new AbortController();
 
+  readonly labSessionId: string;
+  private readonly opencode: OpencodeClient;
+  private readonly getPublisher: () => Publisher;
+  private readonly completionTimerManager: CompletionTimerManager;
+  private readonly sessionStateStore: SessionStateStore;
+
   constructor(
-    readonly labSessionId: string,
-    private readonly opencode: OpencodeClient,
-    private readonly getPublisher: () => Publisher,
-    private readonly completionTimerManager: CompletionTimerManager,
-    private readonly sessionStateStore: SessionStateStore
+    labSessionId: string,
+    opencode: OpencodeClient,
+    getPublisher: () => Publisher,
+    completionTimerManager: CompletionTimerManager,
+    sessionStateStore: SessionStateStore
   ) {
+    this.labSessionId = labSessionId;
+    this.opencode = opencode;
+    this.getPublisher = getPublisher;
+    this.completionTimerManager = completionTimerManager;
+    this.sessionStateStore = sessionStateStore;
     this.monitor();
   }
 
@@ -85,7 +100,7 @@ class SessionTracker {
     return !this.abortController.signal.aborted;
   }
 
-  private async syncInitialStatus(directory: string): Promise<void> {
+  private syncInitialStatus(directory: string): Promise<void> {
     return widelog.context(async () => {
       widelog.set("event_name", "opencode_monitor.sync_initial_status");
       widelog.set("session_id", this.labSessionId);
@@ -200,6 +215,9 @@ class SessionTracker {
       case "session.error":
         await this.handleSessionInactive();
         break;
+
+      default:
+        break;
     }
   }
 
@@ -241,11 +259,19 @@ export class OpenCodeMonitor {
     this.deferredPublisher.get()
   );
 
+  private readonly opencode: OpencodeClient;
+  private readonly deferredPublisher: DeferredPublisher;
+  private readonly sessionStateStore: SessionStateStore;
+
   constructor(
-    private readonly opencode: OpencodeClient,
-    private readonly deferredPublisher: DeferredPublisher,
-    private readonly sessionStateStore: SessionStateStore
-  ) {}
+    opencode: OpencodeClient,
+    deferredPublisher: DeferredPublisher,
+    sessionStateStore: SessionStateStore
+  ) {
+    this.opencode = opencode;
+    this.deferredPublisher = deferredPublisher;
+    this.sessionStateStore = sessionStateStore;
+  }
 
   async start(): Promise<void> {
     await widelog.context(async () => {

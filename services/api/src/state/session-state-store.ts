@@ -16,7 +16,11 @@ interface SessionState {
 const KEY_PREFIX = "session:state";
 
 export class SessionStateStore {
-  constructor(private readonly redis: RedisClient) {}
+  private readonly redis: RedisClient;
+
+  constructor(redis: RedisClient) {
+    this.redis = redis;
+  }
 
   async getInferenceStatus(sessionId: string): Promise<InferenceStatus> {
     const value = await this.redis.get(

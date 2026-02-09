@@ -48,6 +48,8 @@ function AttachmentPreviewItem({ attachment, onRemove }: ItemProps) {
       )}
 
       {!(isLoading || isError) && attachment.preview && (
+        // biome-ignore lint/performance/noImgElement: dynamic preview image from blob URL
+        // biome-ignore lint/correctness/useImageSize: dimensions handled by CSS
         <img
           alt={attachment.file.name}
           className="h-full w-full object-cover"

@@ -1,6 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod/v4";
 
+const WHITESPACE_SPLIT_PATTERN = /\s+/;
+
 interface TextContent {
   type: "text";
   text: string;
@@ -47,12 +49,13 @@ interface HierarchicalToolConfig {
  * e.g., "interact click" -> ["interact", "click"]
  */
 function parseCommandPath(input: string): string[] {
-  return input.trim().split(/\s+/).filter(Boolean);
+  return input.trim().split(WHITESPACE_SPLIT_PATTERN).filter(Boolean);
 }
 
 /**
  * Format help text for a node's available subcommands
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
 function formatHelp(
   node: CommandNode | Record<string, CommandNode>,
   currentPath: string[]
@@ -85,10 +88,12 @@ function formatHelp(
       lines.push("  Parameters (pass in subcommandArguments):");
       for (const [paramName, paramSchema] of Object.entries(child.params)) {
         // Extract description from zod schema if available
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const schema = paramSchema as Record<string, unknown>;
+        const zodDef = schema?._zod as Record<string, unknown> | undefined;
+        const zodDefInner = zodDef?.def as Record<string, unknown> | undefined;
         const desc =
-          (paramSchema as any)?.description ||
-          (paramSchema as any)?._zod?.def?.description ||
+          (schema?.description as string) ||
+          (zodDefInner?.description as string) ||
           "";
         lines.push(`    - \`${paramName}\`: ${desc}`);
       }
@@ -131,14 +136,19 @@ function navigateTree(
   const traversedPath: string[] = [];
 
   for (let i = 0; i < path.length; i++) {
-    const segment = path[i]!;
+    const segment = path[i];
     const children = getChildren(current);
 
-    if (!(children && segment in children)) {
+    if (!(children && segment && segment in children)) {
       return { node: current, remainingPath: path.slice(i), traversedPath };
     }
 
-    current = children[segment]!;
+    const next = children[segment];
+    if (!next) {
+      return { node: current, remainingPath: path.slice(i), traversedPath };
+    }
+
+    current = next;
     traversedPath.push(segment);
   }
 
@@ -196,7 +206,8 @@ export function createHierarchicalTool(
           .describe("Arguments for the subcommand as key-value pairs"),
       },
     },
-    async (args) => {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
+    (args) => {
       const { sessionId, command, subcommandArguments } = args as {
         sessionId: string;
         command?: string;
@@ -239,7 +250,13 @@ export function createHierarchicalTool(
       if ("handler" in node && node.handler) {
         // This is an executable command
         const commandNode = node as CommandNode;
-        const handler = commandNode.handler!;
+        const { handler } = commandNode;
+        if (!handler) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: "Command has no handler" }],
+          };
+        }
         const params = subcommandArguments ?? {};
 
         // Validate params if schema exists

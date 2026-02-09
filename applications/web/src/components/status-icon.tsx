@@ -56,5 +56,7 @@ export function StatusIcon({ status, size = 14 }: StatusIconProps) {
       return <AlertCircle className={className} size={size} />;
     case "deleting":
       return <Trash2 className={className} size={size} />;
+    default:
+      return <CircleDashed className={className} size={size} />;
   }
 }

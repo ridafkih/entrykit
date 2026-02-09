@@ -5,7 +5,7 @@ export const GET: RouteHandler = ({
   params,
   context: { daemonManager, widelog },
 }) => {
-  const sessionId = params.sessionId!;
+  const sessionId = params.sessionId ?? "";
   widelog.set("session.id", sessionId);
 
   const session = daemonManager.getSession(sessionId);
@@ -24,7 +24,7 @@ export const POST: RouteHandler = async ({
   params,
   context: { daemonManager, widelog },
 }) => {
-  const sessionId = params.sessionId!;
+  const sessionId = params.sessionId ?? "";
   widelog.set("session.id", sessionId);
 
   const result = await daemonManager.start(sessionId);
@@ -35,7 +35,7 @@ export const DELETE: RouteHandler = ({
   params,
   context: { daemonManager, widelog },
 }) => {
-  const sessionId = params.sessionId!;
+  const sessionId = params.sessionId ?? "";
   widelog.set("session.id", sessionId);
 
   const result = daemonManager.stop(sessionId);

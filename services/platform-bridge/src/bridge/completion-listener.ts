@@ -36,9 +36,9 @@ class CompletionListener {
     }
   }
 
-  private async handleSessionComplete(
+  private handleSessionComplete(
     event: SessionCompleteEvent
-  ): Promise<void> {
+  ): Promise<void> | undefined {
     const { sessionId } = event;
 
     if (this.processingSet.has(sessionId)) {
@@ -83,6 +83,7 @@ class CompletionListener {
         const messagesToSend = [result.message];
 
         for (let i = 0; i < messagesToSend.length; i++) {
+          // biome-ignore lint/style/noNonNullAssertion: index is within bounds
           const content = messagesToSend[i]!;
           const isLastMessage = i === messagesToSend.length - 1;
 

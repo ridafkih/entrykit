@@ -1,7 +1,7 @@
 import { formatContainerWorkspacePath } from "../shared/naming";
 import type { Sandbox } from "../types/dependencies";
 
-export async function initializeContainerWorkspace(
+export function initializeContainerWorkspace(
   sessionId: string,
   containerId: string,
   image: string,

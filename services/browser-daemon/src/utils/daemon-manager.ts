@@ -73,6 +73,7 @@ export function createDaemonManager(
   discoverExistingSessions(recoveryCallbacks);
 
   return {
+    // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
     async start(sessionId: string): Promise<StartResult> {
       const existing = activeSessions.get(sessionId);
       if (existing !== undefined) {
@@ -150,6 +151,9 @@ export function createDaemonManager(
               }
               break;
             }
+
+            default:
+              break;
           }
 
           widelog.flush();
@@ -244,17 +248,14 @@ export function createDaemonManager(
       return true;
     },
 
-    async executeCommand(
-      sessionId: string,
-      command: Command
-    ): Promise<Response> {
+    executeCommand(sessionId: string, command: Command): Promise<Response> {
       const handle = daemonWorkers.get(sessionId);
       if (!handle) {
-        return {
+        return Promise.resolve({
           id: command.id,
           success: false,
           error: "Session not found or not ready",
-        };
+        });
       }
       return handle.executeCommand(command);
     },

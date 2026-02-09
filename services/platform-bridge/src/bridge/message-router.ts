@@ -10,7 +10,7 @@ import { responseSubscriber } from "./response-subscriber";
 import { sessionTracker } from "./session-tracker";
 
 class MessageRouter {
-  async handleIncomingMessage(message: IncomingPlatformMessage): Promise<void> {
+  handleIncomingMessage(message: IncomingPlatformMessage): Promise<void> {
     const { platform, chatId, userId, messageId, content, timestamp } = message;
 
     return widelog.context(async () => {

@@ -1,5 +1,5 @@
-import * as fs from "node:fs";
-import * as net from "node:net";
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { createServer, type Server } from "node:net";
 import { executeCommand } from "agent-browser/dist/actions.js";
 import { BrowserManager } from "agent-browser/dist/browser.js";
 import {
@@ -34,7 +34,7 @@ function isDaemonWorkerConfig(value: unknown): value is DaemonWorkerConfig {
 const state: {
   browser: BrowserManager | null;
   streamServer: StreamServer | null;
-  socketServer: net.Server | null;
+  socketServer: Server | null;
 } = { browser: null, streamServer: null, socketServer: null };
 
 type BrowserPage = ReturnType<BrowserManager["getPage"]>;
@@ -193,14 +193,15 @@ const createSocketServer = (
   sessionId: string,
   socketPath: string,
   browser: BrowserManager
-): net.Server => {
-  if (fs.existsSync(socketPath)) {
-    fs.unlinkSync(socketPath);
+): Server => {
+  if (existsSync(socketPath)) {
+    unlinkSync(socketPath);
   }
 
-  const server = net.createServer((socket) => {
+  const server = createServer((socket) => {
     let buffer = "";
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
     socket.on("data", async (chunk) => {
       buffer += chunk.toString();
       const lines = buffer.split("\n");
@@ -234,7 +235,9 @@ const createSocketServer = (
       }
     });
 
-    socket.on("error", () => {});
+    socket.on("error", () => {
+      /* expected */
+    });
   });
 
   server
@@ -282,13 +285,13 @@ const startWorker = async (config: DaemonWorkerConfig) => {
     },
   });
 
-  if (!fs.existsSync(socketDir)) {
-    fs.mkdirSync(socketDir, { recursive: true });
+  if (!existsSync(socketDir)) {
+    mkdirSync(socketDir, { recursive: true });
   }
 
-  fs.writeFileSync(pidFile, process.pid.toString());
-  fs.writeFileSync(streamPortFile, streamPort.toString());
-  fs.writeFileSync(cdpPortFile, cdpPort.toString());
+  writeFileSync(pidFile, process.pid.toString());
+  writeFileSync(streamPortFile, streamPort.toString());
+  writeFileSync(cdpPortFile, cdpPort.toString());
 
   try {
     state.browser = new BrowserManager();
@@ -346,6 +349,7 @@ const startWorker = async (config: DaemonWorkerConfig) => {
     process.exit(1);
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
   self.onmessage = async (event: MessageEvent) => {
     const { type, data } = event.data;
 
@@ -417,17 +421,17 @@ const startWorker = async (config: DaemonWorkerConfig) => {
         state.streamServer?.stop();
         state.browser?.close();
         try {
-          if (fs.existsSync(socketPath)) {
-            fs.unlinkSync(socketPath);
+          if (existsSync(socketPath)) {
+            unlinkSync(socketPath);
           }
-          if (fs.existsSync(pidFile)) {
-            fs.unlinkSync(pidFile);
+          if (existsSync(pidFile)) {
+            unlinkSync(pidFile);
           }
-          if (fs.existsSync(streamPortFile)) {
-            fs.unlinkSync(streamPortFile);
+          if (existsSync(streamPortFile)) {
+            unlinkSync(streamPortFile);
           }
-          if (fs.existsSync(cdpPortFile)) {
-            fs.unlinkSync(cdpPortFile);
+          if (existsSync(cdpPortFile)) {
+            unlinkSync(cdpPortFile);
           }
         } catch (error) {
           self.postMessage({
@@ -442,6 +446,10 @@ const startWorker = async (config: DaemonWorkerConfig) => {
         }
 
         process.exit(0);
+        break;
+
+      default:
+        break;
     }
   };
 };

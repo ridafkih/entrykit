@@ -38,16 +38,18 @@ function TodoRenderer({ input, error }: ToolRendererProps) {
 
   const isSingleTodo = todos.length === 0 && (subject || description);
 
-  const title =
-    todos.length > 0
-      ? todos.some((t) => t.status === "in_progress")
+  const getTitle = () => {
+    if (todos.length > 0) {
+      return todos.some((t) => t.status === "in_progress")
         ? "Updating plan"
-        : "Creating plan"
-      : isSingleTodo
-        ? inputStatus === "completed"
-          ? "Task completed"
-          : "Task update"
-        : "Plan";
+        : "Creating plan";
+    }
+    if (isSingleTodo) {
+      return inputStatus === "completed" ? "Task completed" : "Task update";
+    }
+    return "Plan";
+  };
+  const title = getTitle();
 
   return (
     <div className="flex flex-col bg-bg-muted">

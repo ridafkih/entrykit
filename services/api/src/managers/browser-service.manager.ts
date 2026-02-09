@@ -28,10 +28,16 @@ export class BrowserServiceManager {
   private result: BrowserBootstrapResult | null = null;
   private readonly lastFrameTime = new Map<string, number>();
 
+  private readonly config: BrowserServiceConfig;
+  private readonly deferredPublisher: DeferredPublisher;
+
   constructor(
-    private readonly config: BrowserServiceConfig,
-    private readonly deferredPublisher: DeferredPublisher
-  ) {}
+    config: BrowserServiceConfig,
+    deferredPublisher: DeferredPublisher
+  ) {
+    this.config = config;
+    this.deferredPublisher = deferredPublisher;
+  }
 
   get isInitialized(): boolean {
     return this.result !== null;

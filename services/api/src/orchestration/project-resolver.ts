@@ -4,6 +4,8 @@ import { NotFoundError, ValidationError } from "../shared/errors";
 import { complete } from "./llm";
 import { buildProjectResolutionPrompt } from "./prompts";
 
+const JSON_OBJECT_PATTERN = /\{[\s\S]*\}/;
+
 const resolutionResponseSchema = z.object({
   projectId: z.string(),
   projectName: z.string(),
@@ -31,7 +33,7 @@ function formatProjectContext(projects: ProjectInfo[]): string {
 }
 
 function extractJsonFromResponse(response: string): string {
-  const jsonMatch = response.match(/\{[\s\S]*\}/);
+  const jsonMatch = response.match(JSON_OBJECT_PATTERN);
   if (!jsonMatch) {
     throw new ValidationError("Failed to parse LLM response: no JSON found");
   }

@@ -406,6 +406,8 @@ const MessagePartFile = memo(function MessagePartFile({
   if (isImage && part.url) {
     return (
       <div className="px-4 py-3" data-opencode-component="File">
+        {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded image */}
+        {/* biome-ignore lint/correctness/useImageSize: dimensions handled by CSS */}
         <img
           alt={part.filename ?? "Uploaded image"}
           className="max-h-48 max-w-xs rounded border border-border"

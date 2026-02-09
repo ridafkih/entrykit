@@ -1,5 +1,3 @@
-import type { PromptFragment, PromptService } from "@lab/prompts-sdk";
-
 /**
  * Context for rendering prompts in the API service.
  */
@@ -9,4 +7,4 @@ export interface PromptContext {
   projectSystemPrompt: string | null;
 }
 
-export type { PromptFragment, PromptService };
+export type { PromptFragment, PromptService } from "@lab/prompts-sdk";

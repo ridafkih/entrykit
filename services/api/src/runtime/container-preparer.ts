@@ -1,4 +1,4 @@
-import { type ContainerNode, resolveStartOrder } from "@lab/sandbox-sdk";
+import type { ContainerNode } from "@lab/sandbox-sdk";
 import type { ContainerWithDependencies } from "../repositories/container-dependency.repository";
 import { findEnvVarsByContainerId } from "../repositories/container-env-var.repository";
 import { findPortsByContainerId } from "../repositories/container-port.repository";
@@ -42,4 +42,5 @@ export async function prepareContainerData(
   return { containerDefinition, ports, envVars, containerWorkspace };
 }
 
-export { resolveStartOrder };
+// biome-ignore lint/performance/noBarrelFile: re-export needed for module consumers
+export { resolveStartOrder } from "@lab/sandbox-sdk";

@@ -72,25 +72,27 @@ export function SessionInfoView({
         <SessionInfoPane.SectionHeader>
           Containers
         </SessionInfoPane.SectionHeader>
-        {hasSessionContainers ? (
-          containers.map((container) => (
-            <SessionInfoPane.ContainerItem
-              key={container.id}
-              name={container.name}
-              status={container.status}
-            />
-          ))
-        ) : projectContainers.length > 0 ? (
-          projectContainers.map((container) => (
-            <SessionInfoPane.ContainerItem
-              key={container.id}
-              name={container.image}
-              status="pending"
-            />
-          ))
-        ) : (
-          <SessionInfoPane.Empty>No containers</SessionInfoPane.Empty>
-        )}
+        {(() => {
+          if (hasSessionContainers) {
+            return containers.map((container) => (
+              <SessionInfoPane.ContainerItem
+                key={container.id}
+                name={container.name}
+                status={container.status}
+              />
+            ));
+          }
+          if (projectContainers.length > 0) {
+            return projectContainers.map((container) => (
+              <SessionInfoPane.ContainerItem
+                key={container.id}
+                name={container.image}
+                status="pending"
+              />
+            ));
+          }
+          return <SessionInfoPane.Empty>No containers</SessionInfoPane.Empty>;
+        })()}
       </SessionInfoPane.Section>
 
       <SessionInfoPane.Section>

@@ -98,9 +98,7 @@ class SessionTracker {
       );
   }
 
-  async getMappingsBySession(
-    sessionId: string
-  ): Promise<PlatformChatMapping[]> {
+  getMappingsBySession(sessionId: string): Promise<PlatformChatMapping[]> {
     return db
       .select()
       .from(platformChatMappings)

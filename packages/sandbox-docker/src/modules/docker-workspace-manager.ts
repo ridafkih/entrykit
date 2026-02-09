@@ -5,10 +5,13 @@ import type {
 } from "@lab/sandbox-sdk";
 
 export class DockerWorkspaceManager implements WorkspaceManager {
-  constructor(
-    private readonly client: SandboxProvider,
-    private readonly config: WorkspaceManagerConfig
-  ) {}
+  private readonly client: SandboxProvider;
+  private readonly config: WorkspaceManagerConfig;
+
+  constructor(client: SandboxProvider, config: WorkspaceManagerConfig) {
+    this.client = client;
+    this.config = config;
+  }
 
   async startWorkspace(workspacePath: string, image: string): Promise<string> {
     await this.ensureImageAvailable(image);

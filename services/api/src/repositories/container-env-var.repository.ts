@@ -5,7 +5,7 @@ import {
 } from "@lab/database/schema/container-env-vars";
 import { eq } from "drizzle-orm";
 
-export async function findEnvVarsByContainerId(
+export function findEnvVarsByContainerId(
   containerId: string
 ): Promise<ContainerEnvVar[]> {
   return db

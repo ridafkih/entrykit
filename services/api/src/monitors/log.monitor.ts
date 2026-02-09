@@ -31,19 +31,32 @@ class LogStreamTracker {
   private readonly rateLimiter: RateLimiter;
   private isStreaming = false;
 
+  readonly containerId: string;
+  readonly sessionId: string;
+  readonly runtimeId: string;
+  readonly hostname: string;
+  private readonly sandbox: Sandbox;
+  private readonly getPublisher: () => Publisher;
+
   constructor(
-    public readonly containerId: string,
-    public readonly sessionId: string,
-    public readonly runtimeId: string,
-    public readonly hostname: string,
-    private readonly sandbox: Sandbox,
-    private readonly getPublisher: () => Publisher
+    containerId: string,
+    sessionId: string,
+    runtimeId: string,
+    hostname: string,
+    sandbox: Sandbox,
+    getPublisher: () => Publisher
   ) {
+    this.containerId = containerId;
+    this.sessionId = sessionId;
+    this.runtimeId = runtimeId;
+    this.hostname = hostname;
+    this.sandbox = sandbox;
+    this.getPublisher = getPublisher;
     this.buffer = new CircularBuffer(LIMITS.LOG_BUFFER_SIZE);
     this.rateLimiter = new RateLimiter(LIMITS.LOG_LINES_PER_SECOND);
   }
 
-  async start(): Promise<void> {
+  start(): void {
     if (this.isStreaming) {
       return;
     }
@@ -51,7 +64,9 @@ class LogStreamTracker {
     this.abortController = new AbortController();
     this.isStreaming = true;
 
-    this.runStreamLoop().catch(() => {});
+    this.runStreamLoop().catch(() => {
+      /* expected */
+    });
   }
 
   stop(): void {
@@ -73,7 +88,7 @@ class LogStreamTracker {
     };
   }
 
-  private async runStreamLoop(): Promise<void> {
+  private runStreamLoop(): Promise<void> {
     return widelog.context(async () => {
       widelog.set("event_name", "log_monitor.stream");
       widelog.set("container_id", this.containerId);
@@ -174,12 +189,15 @@ export class LogMonitor {
   private readonly trackers = new Map<string, LogStreamTracker>();
   private readonly sessionTrackers = new Map<string, Set<string>>();
 
-  constructor(
-    private readonly sandbox: Sandbox,
-    private readonly deferredPublisher: DeferredPublisher
-  ) {}
+  private readonly sandbox: Sandbox;
+  private readonly deferredPublisher: DeferredPublisher;
 
-  async start(): Promise<void> {
+  constructor(sandbox: Sandbox, deferredPublisher: DeferredPublisher) {
+    this.sandbox = sandbox;
+    this.deferredPublisher = deferredPublisher;
+  }
+
+  start(): Promise<void> {
     return widelog.context(async () => {
       widelog.set("event_name", "log_monitor.start");
       widelog.time.start("duration_ms");

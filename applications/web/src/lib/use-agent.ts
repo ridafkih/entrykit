@@ -413,6 +413,7 @@ export function useAgent(labSessionId: string): UseAgentResult {
       });
     };
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
     const processEvent = (event: Event) => {
       const sessionSpecificEvents = [
         "message.updated",
@@ -460,7 +461,10 @@ export function useAgent(labSessionId: string): UseAgentResult {
               if (!current) {
                 return current;
               }
-              return { ...current, messages: streamedMessagesRef.current! };
+              return {
+                ...current,
+                messages: streamedMessagesRef.current ?? [],
+              };
             },
             { revalidate: false }
           );

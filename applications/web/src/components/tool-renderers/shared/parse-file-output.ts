@@ -1,3 +1,6 @@
+const pipeLineNumberRegex = /^\d{5}\| (.*)$/;
+const tabLineNumberRegex = /^\s*\d+\t(.*)$/;
+
 /**
  * Parses tool output that comes wrapped in <file> tags with line numbers.
  *
@@ -26,14 +29,14 @@ export function parseFileOutput(output: string): string {
   const lines = content.split("\n");
   const strippedLines = lines.map((line) => {
     // Match "00001| " format (5 digits, pipe, space)
-    const pipeMatch = line.match(/^\d{5}\| (.*)$/);
-    if (pipeMatch) {
+    const pipeMatch = line.match(pipeLineNumberRegex);
+    if (pipeMatch?.[1] !== undefined) {
       return pipeMatch[1];
     }
 
     // Match "    1\t" format (spaces, digits, tab) - cat -n format
-    const tabMatch = line.match(/^\s*\d+\t(.*)$/);
-    if (tabMatch) {
+    const tabMatch = line.match(tabLineNumberRegex);
+    if (tabMatch?.[1] !== undefined) {
       return tabMatch[1];
     }
 

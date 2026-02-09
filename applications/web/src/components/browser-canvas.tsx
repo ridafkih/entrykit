@@ -69,7 +69,7 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
     bitmapRef.current = null;
   }, []);
 
-  const processFrame = async (base64: string) => {
+  const processFrame = useCallback(async (base64: string) => {
     try {
       const binaryString = atob(base64);
       const bytes = new Uint8Array(binaryString.length);
@@ -89,7 +89,7 @@ function BrowserCanvasRoot({ sessionId, children }: RootProps) {
     } catch (error) {
       console.warn(error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (

@@ -1,3 +1,4 @@
+// biome-ignore lint/performance/noBarrelFile: entrypoint
 export { hasParams, parsePath, resolvePath } from "./channel";
 export { type AppSchema, type ClientMessage, schema } from "./channels";
 export { defineChannel, defineSchema } from "./schema";

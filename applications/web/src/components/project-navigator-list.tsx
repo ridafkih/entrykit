@@ -69,9 +69,10 @@ function ProjectNavigatorHeader({ children, onAdd }: HeaderProps) {
   const { expanded, toggle, setExpanded } = useProjectNavigator();
 
   return (
-    <div
-      className="group flex items-center gap-2 bg-bg-muted px-3 py-1.5"
+    <button
+      className="group flex w-full items-center gap-2 bg-bg-muted px-3 py-1.5 text-left"
       onClick={toggle}
+      type="button"
     >
       <ChevronRight className={chevron({ expanded })} size={14} />
       <Box className="shrink-0 text-text-secondary" size={14} />
@@ -86,7 +87,7 @@ function ProjectNavigatorHeader({ children, onAdd }: HeaderProps) {
       >
         <Plus size={14} />
       </IconButton>
-    </div>
+    </button>
   );
 }
 
@@ -143,13 +144,14 @@ function ProjectNavigatorItem({
   }
 
   return (
-    <div
-      className={listItem({ selected })}
+    <button
+      className={listItem({ selected, className: "w-full text-left" })}
       onClick={onClick}
       onMouseDown={onMouseDown}
+      type="button"
     >
       {children}
-    </div>
+    </button>
   );
 }
 

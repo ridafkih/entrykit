@@ -124,10 +124,10 @@ export const createReconciler = (
     });
   };
 
-  const executeAction = async (
+  const executeAction = (
     session: BrowserSessionState,
     action: Action
-  ): Promise<void> => {
+  ): Promise<void> | undefined => {
     switch (action) {
       case "StartDaemon":
         return startSession(session);
@@ -148,6 +148,8 @@ export const createReconciler = (
         return resetToStopped(session);
       case "NoOp":
         return;
+      default:
+        break;
     }
   };
 

@@ -4,6 +4,7 @@ export function groupBy<T, K>(
 ): Map<K, T[]> {
   const map = new Map<K, T[]>();
   for (let i = 0; i < items.length; i++) {
+    // biome-ignore lint/style/noNonNullAssertion: index is within bounds
     const item = items[i]!;
     const key = keyFn(item, i);
     const existing = map.get(key) ?? [];

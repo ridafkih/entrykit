@@ -14,12 +14,13 @@ export const BrowserErrorKind = z.enum([
 export type BrowserErrorKind = z.infer<typeof BrowserErrorKind>;
 
 export class BrowserError extends Error {
-  constructor(
-    public readonly kind: BrowserErrorKind,
-    message: string,
-    public readonly sessionId?: string
-  ) {
+  readonly kind: BrowserErrorKind;
+  readonly sessionId?: string;
+
+  constructor(kind: BrowserErrorKind, message: string, sessionId?: string) {
     super(message);
+    this.kind = kind;
+    this.sessionId = sessionId;
     this.name = "BrowserError";
   }
 

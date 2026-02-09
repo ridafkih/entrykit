@@ -1,7 +1,7 @@
 import { badRequestResponse } from "@lab/http-utilities";
 
 export class RouteValidationError extends Error {
-  public readonly statusCode = 400;
+  readonly statusCode = 400;
   constructor(message: string) {
     super(message);
     this.name = "RouteValidationError";

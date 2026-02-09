@@ -28,11 +28,17 @@ export const createOrchestrator = (
   const stateChangeHandlers: StateChangeHandler[] = [];
   const errorHandlers: ErrorHandler[] = [];
 
-  const notifyStateChange = (sessionId: string, state: BrowserSessionState) =>
-    stateChangeHandlers.forEach((h) => h(sessionId, state));
+  const notifyStateChange = (sessionId: string, state: BrowserSessionState) => {
+    for (const h of stateChangeHandlers) {
+      h(sessionId, state);
+    }
+  };
 
-  const notifyError = (error: unknown) =>
-    errorHandlers.forEach((h) => h(error));
+  const notifyError = (error: unknown) => {
+    for (const h of errorHandlers) {
+      h(error);
+    }
+  };
 
   const notifyingStateStore: StateStore = {
     ...stateStore,
@@ -105,7 +111,7 @@ export const createOrchestrator = (
       return getSnapshot(sessionId);
     },
 
-    async unsubscribe(sessionId) {
+    unsubscribe(sessionId) {
       const count = sessions.decrementSubscribers(sessionId);
 
       if (count === 0) {
@@ -154,9 +160,13 @@ export const createOrchestrator = (
 
     launchBrowser: (sessionId) => daemonController.launch(sessionId),
 
-    startReconciler: () => {},
+    startReconciler: () => {
+      /* no-op */
+    },
 
-    stopReconciler: () => {},
+    stopReconciler: () => {
+      /* no-op */
+    },
 
     onStateChange: (handler) => stateChangeHandlers.push(handler),
 

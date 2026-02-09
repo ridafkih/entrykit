@@ -22,8 +22,8 @@ class IMessageAdapter implements PlatformAdapter {
     this.watchedContacts = new Set(config.imessageWatchedContacts);
   }
 
-  async initialize(): Promise<void> {
-    return widelog.context(async () => {
+  initialize(): Promise<void> {
+    return widelog.context(() => {
       widelog.set("event_name", "imessage.initialized");
       widelog.time.start("duration_ms");
 
@@ -44,7 +44,7 @@ class IMessageAdapter implements PlatformAdapter {
     });
   }
 
-  async startListening(handler: MessageHandler): Promise<void> {
+  startListening(handler: MessageHandler): Promise<void> {
     return widelog.context(async () => {
       widelog.set("event_name", "imessage.start_listening");
       widelog.time.start("duration_ms");
@@ -59,7 +59,8 @@ class IMessageAdapter implements PlatformAdapter {
         this.handler = handler;
 
         await this.sdk.startWatching({
-          onNewMessage: async (message: Message) => {
+          onNewMessage: (message: Message) => {
+            // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
             return widelog.context(async () => {
               widelog.set("event_name", "imessage.message_received");
               widelog.set("guid", message.guid);
@@ -116,7 +117,8 @@ class IMessageAdapter implements PlatformAdapter {
               }
             });
           },
-          onGroupMessage: async (message: Message) => {
+          onGroupMessage: (message: Message) => {
+            // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
             return widelog.context(async () => {
               widelog.set("event_name", "imessage.group_message_received");
               widelog.set("guid", message.guid);
@@ -206,7 +208,7 @@ class IMessageAdapter implements PlatformAdapter {
     this.handler = null;
   }
 
-  async sendMessage(message: OutgoingPlatformMessage): Promise<void> {
+  sendMessage(message: OutgoingPlatformMessage): Promise<void> {
     if (!this.sdk) {
       throw new Error("iMessage adapter not initialized");
     }

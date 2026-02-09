@@ -6,7 +6,7 @@ import { projects } from "@lab/database/schema/projects";
 import { eq } from "drizzle-orm";
 import { InternalError, orThrow } from "../shared/errors";
 
-export async function findAllProjects() {
+export function findAllProjects() {
   return db.select().from(projects);
 }
 
@@ -82,8 +82,10 @@ export async function findAllProjectsWithContainers() {
     if (!container) {
       container = {
         id: row.containerId,
+        // biome-ignore lint/style/noNonNullAssertion: row always has image when containerId exists
         image: row.containerImage!,
         hostname: row.containerHostname,
+        // biome-ignore lint/style/noNonNullAssertion: row always has isWorkspace when containerId exists
         isWorkspace: row.containerIsWorkspace!,
         ports: [],
         dependencies: [],
@@ -128,7 +130,7 @@ export async function findProjectByIdOrThrow(projectId: string) {
   return orThrow(await findProjectById(projectId), "Project", projectId);
 }
 
-export async function findProjectSummaries() {
+export function findProjectSummaries() {
   return db.select({ id: projects.id, name: projects.name }).from(projects);
 }
 

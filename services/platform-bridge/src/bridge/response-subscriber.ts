@@ -27,6 +27,7 @@ class ResponseSubscriber {
     messagingMode: MessagingMode = "passive"
   ): void {
     if (this.subscriptions.has(sessionId)) {
+      // biome-ignore lint/style/noNonNullAssertion: has() check guarantees existence
       const existing = this.subscriptions.get(sessionId)!;
       if (existing.platform === platform && existing.chatId === chatId) {
         return;
@@ -65,10 +66,10 @@ class ResponseSubscriber {
     }
   }
 
-  private async handleSessionMessage(
+  private handleSessionMessage(
     sessionId: string,
     message: SessionMessage
-  ): Promise<void> {
+  ): Promise<void> | undefined {
     if (message.role !== "assistant") {
       return;
     }

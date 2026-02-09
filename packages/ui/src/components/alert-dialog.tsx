@@ -4,6 +4,7 @@ import {
   createContext,
   type MouseEvent,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -37,7 +38,7 @@ export function AlertDialog({
   onOpenChange,
   children,
 }: AlertDialogProps) {
-  const onClose = () => onOpenChange(false);
+  const onClose = useCallback(() => onOpenChange(false), [onOpenChange]);
 
   useEffect(() => {
     if (!open) {
@@ -61,6 +62,9 @@ export function AlertDialog({
   return createPortal(
     <AlertDialogContext.Provider value={{ onClose }}>
       <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: backdrop click to close */}
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handled via Escape key */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay */}
         <div className="fixed inset-0 bg-black/50" onClick={onClose} />
         {children}
       </div>

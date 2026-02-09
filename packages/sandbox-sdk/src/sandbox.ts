@@ -18,10 +18,15 @@ export class Sandbox {
   readonly runtime: RuntimeManager;
   readonly session: SessionManager;
 
+  readonly provider: SandboxProvider & ContainerEventStream;
+  readonly config: SandboxConfig;
+
   constructor(
-    public readonly provider: SandboxProvider & ContainerEventStream,
-    public readonly config: SandboxConfig
+    provider: SandboxProvider & ContainerEventStream,
+    config: SandboxConfig
   ) {
+    this.provider = provider;
+    this.config = config;
     this.network = config.network;
     this.workspace = config.workspace;
     this.runtime = config.runtime;

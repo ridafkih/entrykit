@@ -22,6 +22,7 @@ function FormInputLabel({
   required?: boolean;
 }) {
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: label wraps input via children
     <label className={label()}>
       {children}
       {required && <span className="ml-0.5 text-text-muted">*</span>}

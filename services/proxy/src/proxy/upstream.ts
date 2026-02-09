@@ -6,6 +6,8 @@ import { sessions } from "@lab/database/schema/sessions";
 import { and, eq } from "drizzle-orm";
 import type { UpstreamInfo } from "../types/proxy";
 
+const SUBDOMAIN_PATTERN = /^([a-f0-9-]+)--(\d+)\./;
+
 function formatUniqueHostname(sessionId: string, containerId: string): string {
   return `s-${sessionId.slice(0, 8)}-${containerId.slice(0, 8)}`;
 }
@@ -50,7 +52,7 @@ export async function resolveUpstream(
 export function parseSubdomain(
   host: string
 ): { sessionId: string; port: number } | null {
-  const match = host.match(/^([a-f0-9-]+)--(\d+)\./);
+  const match = host.match(SUBDOMAIN_PATTERN);
   if (!match) {
     return null;
   }

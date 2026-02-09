@@ -248,6 +248,7 @@ class MultiplayerClient {
   }
 
   private handleMessage(event: MessageEvent): void {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
     widelog.context(() => {
       try {
         const parsed: unknown = JSON.parse(event.data);

@@ -3,9 +3,11 @@ import type { ExecOptions, ExecResult } from "@lab/sandbox-sdk";
 import type Dockerode from "dockerode";
 
 export class ExecOperations {
+  private readonly docker: Dockerode;
   private readonly modem: Dockerode["modem"];
 
-  constructor(private readonly docker: Dockerode) {
+  constructor(docker: Dockerode) {
+    this.docker = docker;
     this.modem = docker.modem;
   }
 

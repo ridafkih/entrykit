@@ -1,3 +1,5 @@
+const CHANNEL_SNAPSHOT_PATTERN = /^\/channels\/([^/]+)\/snapshot$/;
+
 import { join } from "node:path";
 import type { ImageStore } from "@lab/context";
 import {
@@ -62,15 +64,19 @@ interface ApiServerServices {
 export class ApiServer {
   private server: BunServer<unknown> | null = null;
   private publisher: Publisher | null = null;
+  // biome-ignore lint/correctness/noUndeclaredVariables: Bun global
   private readonly router = new Bun.FileSystemRouter({
     dir: join(import.meta.dirname, "../routes"),
     style: "nextjs",
   });
 
-  constructor(
-    private readonly config: ApiServerConfig,
-    private readonly services: ApiServerServices
-  ) {}
+  private readonly config: ApiServerConfig;
+  private readonly services: ApiServerServices;
+
+  constructor(config: ApiServerConfig, services: ApiServerServices) {
+    this.config = config;
+    this.services = services;
+  }
 
   private getServer(): BunServer<unknown> {
     if (!this.server) {
@@ -82,6 +88,7 @@ export class ApiServer {
     return this.server;
   }
 
+  // biome-ignore lint/suspicious/useAwait: method sets up server infrastructure
   async start(port: string): Promise<Publisher> {
     const { proxyBaseDomain, opencodeUrl, github, frontendUrl } = this.config;
     const {
@@ -140,23 +147,24 @@ export class ApiServer {
       sessionStateStore,
     });
 
+    // biome-ignore lint/correctness/noUndeclaredVariables: Bun global
     this.server = Bun.serve<WebSocketData<Auth>>({
       port,
       idleTimeout: SERVER.IDLE_TIMEOUT_SECONDS,
       websocket: websocketHandler,
-      fetch: async (request): Promise<Response | undefined> => {
+      fetch: (request): Promise<Response | undefined> => {
         if (request.method === "OPTIONS") {
-          return optionsResponse();
+          return Promise.resolve(optionsResponse());
         }
 
         const url = new URL(request.url);
 
         if (url.pathname === "/ws") {
-          return upgrade(request, this.getServer());
+          return Promise.resolve(upgrade(request, this.getServer()));
         }
 
         if (url.pathname.startsWith("/opencode/")) {
-          return this.handleRequestWithWideEvent(request, url, async () => {
+          return this.handleRequestWithWideEvent(request, url, () => {
             this.services.widelog.set("route", "opencode_proxy");
 
             const labSessionId = request.headers.get("X-Lab-Session-Id");
@@ -168,8 +176,7 @@ export class ApiServer {
           });
         }
 
-        const [, channel] =
-          url.pathname.match(/^\/channels\/([^/]+)\/snapshot$/) ?? [];
+        const [, channel] = url.pathname.match(CHANNEL_SNAPSHOT_PATTERN) ?? [];
         if (channel) {
           return this.handleRequestWithWideEvent(request, url, async () => {
             this.services.widelog.set("route", "channel_snapshot");
@@ -200,7 +207,7 @@ export class ApiServer {
     return this.publisher;
   }
 
-  private async handleRouteRequest(
+  private handleRouteRequest(
     request: Request,
     url: URL,
     routeContext: RouteContext
@@ -244,7 +251,7 @@ export class ApiServer {
     });
   }
 
-  private async handleRequestWithWideEvent(
+  private handleRequestWithWideEvent(
     request: Request,
     url: URL,
     handler: () => Promise<Response>

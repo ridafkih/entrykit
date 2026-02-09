@@ -1,4 +1,7 @@
 import { config } from "../config/environment";
+
+const TRAILING_SLASH_PATTERN = /\/$/;
+
 import { widelog } from "../logging";
 import type {
   ChatRequest,
@@ -11,7 +14,7 @@ class ApiClient {
   private readonly baseUrl: string;
 
   constructor(baseUrl: string = config.apiUrl) {
-    this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.baseUrl = baseUrl.replace(TRAILING_SLASH_PATTERN, "");
   }
 
   async orchestrate(
@@ -141,10 +144,11 @@ class ApiClient {
     return response.json();
   }
 
-  private async consumeSseStream(
+  private consumeSseStream(
     response: Response,
     onChunk: (text: string) => Promise<void>
   ): Promise<ChatResult> {
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
     return widelog.context(async () => {
       widelog.set("event_name", "api_client.consume_sse_stream");
 

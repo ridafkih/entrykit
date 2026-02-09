@@ -36,6 +36,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(
           className
         )}
       >
+        {/* biome-ignore lint/a11y/useSemanticElements: custom checkbox implementation */}
         <button
           aria-checked={checked}
           className={cn(

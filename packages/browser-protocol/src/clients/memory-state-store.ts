@@ -12,12 +12,14 @@ export type { StateStore, StateStoreOptions } from "../types/orchestrator";
 export const createInMemoryStateStore = (): StateStore => {
   const sessions = new Map<string, BrowserSessionState>();
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const getState = async (
     sessionId: string
   ): Promise<BrowserSessionState | null> => {
     return sessions.get(sessionId) ?? null;
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const setState = async (state: BrowserSessionState): Promise<void> => {
     const parsed = BrowserSessionStateSchema.safeParse(state);
     if (!parsed.success) {
@@ -29,6 +31,7 @@ export const createInMemoryStateStore = (): StateStore => {
     sessions.set(state.sessionId, parsed.data);
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const setDesiredState = async (
     sessionId: string,
     desiredState: DesiredState
@@ -55,6 +58,7 @@ export const createInMemoryStateStore = (): StateStore => {
     return state;
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const setCurrentState = async (
     sessionId: string,
     currentState: CurrentState,
@@ -86,6 +90,7 @@ export const createInMemoryStateStore = (): StateStore => {
     return state;
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const transitionState = async (
     sessionId: string,
     transition: (current: BrowserSessionState) => BrowserSessionState
@@ -105,14 +110,17 @@ export const createInMemoryStateStore = (): StateStore => {
     return parsed.data;
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const getAllSessions = async (): Promise<BrowserSessionState[]> => {
     return Array.from(sessions.values());
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const deleteSession = async (sessionId: string): Promise<void> => {
     sessions.delete(sessionId);
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const updateHeartbeat = async (sessionId: string): Promise<void> => {
     const existing = sessions.get(sessionId);
     if (!existing) {
@@ -126,6 +134,7 @@ export const createInMemoryStateStore = (): StateStore => {
     });
   };
 
+  // biome-ignore lint/suspicious/useAwait: interface requires Promise return type
   const setLastUrl = async (
     sessionId: string,
     url: string | null

@@ -44,10 +44,13 @@ export class ContainerMonitor {
   private readonly abortController = new AbortController();
   private logMonitor: LogMonitor | null = null;
 
-  constructor(
-    private readonly sandbox: Sandbox,
-    private readonly deferredPublisher: DeferredPublisher
-  ) {}
+  private readonly sandbox: Sandbox;
+  private readonly deferredPublisher: DeferredPublisher;
+
+  constructor(sandbox: Sandbox, deferredPublisher: DeferredPublisher) {
+    this.sandbox = sandbox;
+    this.deferredPublisher = deferredPublisher;
+  }
 
   async start(logMonitor: LogMonitor): Promise<void> {
     this.logMonitor = logMonitor;

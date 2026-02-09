@@ -18,7 +18,11 @@ const CONTAINER_EVENT_TYPES: readonly string[] = [
 ];
 
 export class DockerEventStream implements ContainerEventStream {
-  constructor(private readonly docker: Dockerode) {}
+  private readonly docker: Dockerode;
+
+  constructor(docker: Dockerode) {
+    this.docker = docker;
+  }
 
   async *streamContainerEvents(
     options?: ContainerEventStreamOptions

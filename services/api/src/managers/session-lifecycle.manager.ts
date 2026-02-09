@@ -13,13 +13,25 @@ import type { BrowserServiceManager } from "./browser-service.manager";
 export class SessionLifecycleManager {
   private readonly initializationTasks = new Map<string, Promise<void>>();
 
+  private readonly sandbox: Sandbox;
+  private readonly proxyManager: ProxyManager;
+  private readonly browserServiceManager: BrowserServiceManager;
+  private readonly deferredPublisher: DeferredPublisher;
+  private readonly sessionStateStore: SessionStateStore;
+
   constructor(
-    private readonly sandbox: Sandbox,
-    private readonly proxyManager: ProxyManager,
-    private readonly browserServiceManager: BrowserServiceManager,
-    private readonly deferredPublisher: DeferredPublisher,
-    private readonly sessionStateStore: SessionStateStore
-  ) {}
+    sandbox: Sandbox,
+    proxyManager: ProxyManager,
+    browserServiceManager: BrowserServiceManager,
+    deferredPublisher: DeferredPublisher,
+    sessionStateStore: SessionStateStore
+  ) {
+    this.sandbox = sandbox;
+    this.proxyManager = proxyManager;
+    this.browserServiceManager = browserServiceManager;
+    this.deferredPublisher = deferredPublisher;
+    this.sessionStateStore = sessionStateStore;
+  }
 
   private getDeps() {
     const cleanupService = new SessionCleanupService({

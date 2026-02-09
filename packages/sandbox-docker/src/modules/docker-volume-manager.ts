@@ -13,10 +13,13 @@ async function throwAfterTimeout(ms: number, message: string): Promise<never> {
 }
 
 export class DockerVolumeManager implements VolumeManager {
-  constructor(
-    private readonly docker: Dockerode,
-    private readonly containerManager: ContainerManager
-  ) {}
+  private readonly docker: Dockerode;
+  private readonly containerManager: ContainerManager;
+
+  constructor(docker: Dockerode, containerManager: ContainerManager) {
+    this.docker = docker;
+    this.containerManager = containerManager;
+  }
 
   async createVolume(
     name: string,

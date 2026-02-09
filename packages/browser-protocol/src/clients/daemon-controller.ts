@@ -7,6 +7,7 @@ import type {
 import { StatusResponse, UrlResponse } from "../types/responses";
 import type { DaemonStatus } from "../types/session";
 
+// biome-ignore lint/performance/noBarrelFile: entrypoint
 export { executeCommand } from "../utils/execute-command";
 
 export interface DaemonControllerConfig {

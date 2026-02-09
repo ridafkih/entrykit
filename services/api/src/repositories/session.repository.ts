@@ -26,9 +26,7 @@ export async function findSessionByIdOrThrow(
   return orThrow(await findSessionById(sessionId), "Session", sessionId);
 }
 
-export async function findSessionsByProjectId(
-  projectId: string
-): Promise<Session[]> {
+export function findSessionsByProjectId(projectId: string): Promise<Session[]> {
   return db
     .select()
     .from(sessions)
@@ -52,7 +50,7 @@ export async function createSession(
   return session;
 }
 
-export async function updateSessionFields(
+export function updateSessionFields(
   sessionId: string,
   fields: {
     opencodeSessionId?: string;
@@ -140,7 +138,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.id, sessionId));
 }
 
-export async function findAllSessionSummaries(): Promise<
+export function findAllSessionSummaries(): Promise<
   { id: string; projectId: string; title: string | null }[]
 > {
   return db
@@ -153,14 +151,14 @@ export async function findAllSessionSummaries(): Promise<
     .where(and(...visibleSessionConditions));
 }
 
-export async function findRunningSessions(): Promise<{ id: string }[]> {
+export function findRunningSessions(): Promise<{ id: string }[]> {
   return db
     .select({ id: sessions.id })
     .from(sessions)
     .where(eq(sessions.status, SESSION_STATUS.RUNNING));
 }
 
-export async function findActiveSessionsForReconciliation(): Promise<
+export function findActiveSessionsForReconciliation(): Promise<
   { id: string }[]
 > {
   return db
@@ -171,7 +169,7 @@ export async function findActiveSessionsForReconciliation(): Promise<
     );
 }
 
-export async function findSessionsWithProject({
+export function findSessionsWithProject({
   projectId,
   limit,
 }: {
@@ -199,7 +197,7 @@ export async function findSessionsWithProject({
     .limit(limit ?? 10);
 }
 
-export async function searchSessionsWithProject({
+export function searchSessionsWithProject({
   query,
   limit,
 }: {

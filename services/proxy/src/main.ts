@@ -16,10 +16,11 @@ type MainFunction = (options: MainOptions) => unknown;
 export const main = (({ extras }) => {
   const { port } = extras;
 
+  // biome-ignore lint/correctness/noUndeclaredVariables: Bun global
   const server = Bun.serve<WebSocketData>({
     port,
     idleTimeout: TIMING.IDLE_TIMEOUT_SECONDS,
-    async fetch(request, server) {
+    fetch(request, server) {
       const url = new URL(request.url);
 
       if (url.pathname === "/health") {
@@ -30,6 +31,7 @@ export const main = (({ extras }) => {
         return new Response(null, { status: 204, headers: corsHeaders() });
       }
 
+      // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: complex business logic
       return widelog.context(async () => {
         widelog.set("method", request.method);
         widelog.set("path", url.pathname);

@@ -94,8 +94,8 @@ export async function* chatOrchestrateStream(
   // Helper to flush buffer and yield chunk
   const flushBuffer = function* () {
     // Check for any complete chunks with delimiter
-    let delimiterIndex: number;
-    while ((delimiterIndex = buffer.indexOf(delimiter)) !== -1) {
+    let delimiterIndex = buffer.indexOf(delimiter);
+    while (delimiterIndex !== -1) {
       const textBeforeDelimiter = buffer.slice(0, delimiterIndex).trim();
       if (textBeforeDelimiter.length > 0) {
         widelog.count("orchestration.stream_chunk_count");
@@ -107,6 +107,7 @@ export async function* chatOrchestrateStream(
         yield { type: "chunk" as const, text: textBeforeDelimiter };
       }
       buffer = buffer.slice(delimiterIndex + delimiter.length);
+      delimiterIndex = buffer.indexOf(delimiter);
     }
   };
 

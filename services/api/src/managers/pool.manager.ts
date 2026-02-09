@@ -39,11 +39,19 @@ export class PoolManager {
   private readonly reconcileLocks = new Map<string, Promise<void>>();
   private readonly reconcileStartedAt = new Map<string, number>();
 
+  private readonly poolSize: number;
+  private readonly browserService: BrowserServiceManager;
+  private readonly sessionLifecycle: SessionLifecycleManager;
+
   constructor(
-    private readonly poolSize: number,
-    private readonly browserService: BrowserServiceManager,
-    private readonly sessionLifecycle: SessionLifecycleManager
-  ) {}
+    poolSize: number,
+    browserService: BrowserServiceManager,
+    sessionLifecycle: SessionLifecycleManager
+  ) {
+    this.poolSize = poolSize;
+    this.browserService = browserService;
+    this.sessionLifecycle = sessionLifecycle;
+  }
 
   getTargetPoolSize(): number {
     return this.poolSize;
@@ -72,10 +80,12 @@ export class PoolManager {
   }
 
   triggerReconcileInBackground(projectId: string): void {
-    this.reconcilePool(projectId).catch(() => {});
+    this.reconcilePool(projectId).catch(() => {
+      /* expected */
+    });
   }
 
-  async createPooledSession(projectId: string): Promise<Session | null> {
+  createPooledSession(projectId: string): Promise<Session | null> {
     return widelog.context(async () => {
       widelog.set(
         "event_name",
@@ -129,7 +139,7 @@ export class PoolManager {
     });
   }
 
-  async reconcilePool(projectId: string): Promise<void> {
+  reconcilePool(projectId: string): Promise<void> {
     const existing = this.reconcileLocks.get(projectId);
     if (existing) {
       return existing;
@@ -169,7 +179,9 @@ export class PoolManager {
   }
 
   initialize(): void {
-    this.reconcileAllPools().catch(() => {});
+    this.reconcileAllPools().catch(() => {
+      /* expected */
+    });
   }
 
   /**
@@ -213,7 +225,7 @@ export class PoolManager {
    * Uses a fill/drain loop with exponential backoff on creation failures.
    * Protected by a per-project lock in reconcilePool() to prevent concurrent reconciliation.
    */
-  private async doReconcile(projectId: string): Promise<void> {
+  private doReconcile(projectId: string): Promise<void> {
     return widelog.context(async () => {
       widelog.set("event_name", "pool_manager.reconcile_pool.completed");
       widelog.set("project_id", projectId);

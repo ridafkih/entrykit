@@ -15,7 +15,7 @@ import { CONTAINER_STATUS, isContainerStatus } from "../types/container";
 import type { OpencodeClient } from "../types/dependencies";
 import { getChangeType } from "../types/file";
 
-export async function loadProjects() {
+export function loadProjects() {
   return findProjectSummaries();
 }
 
@@ -169,41 +169,51 @@ export function createSnapshotLoaders(
   } = deps;
 
   return {
-    projects: async () => loadProjects(),
-    sessions: async () => loadSessions(),
-    sessionMetadata: async (session) =>
+    projects: () => loadProjects(),
+    sessions: () => loadSessions(),
+    sessionMetadata: (session) =>
       session
         ? loadSessionMetadata(session, opencode, sessionStateStore)
-        : null,
-    sessionContainers: async (session) =>
-      session ? loadSessionContainers(session, proxyBaseDomain) : null,
-    sessionTyping: async () => [],
-    sessionPromptEngineers: async () => [],
-    sessionChangedFiles: async (session) =>
-      session ? loadSessionChangedFiles(session, opencode) : null,
-    sessionBranches: async () => [],
-    sessionLinks: async () => [],
-    sessionLogs: async (session) =>
+        : Promise.resolve(null),
+    sessionContainers: (session) =>
       session
-        ? loadSessionLogs(session, logMonitor)
-        : { sources: [], recentLogs: {} },
-    sessionMessages: async () => [],
-    sessionBrowserState: async (session) =>
-      session ? browserService.getBrowserSnapshot(session) : null,
-    sessionBrowserFrames: async (session) => {
+        ? loadSessionContainers(session, proxyBaseDomain)
+        : Promise.resolve(null),
+    sessionTyping: () => Promise.resolve([]),
+    sessionPromptEngineers: () => Promise.resolve([]),
+    sessionChangedFiles: (session) =>
+      session
+        ? loadSessionChangedFiles(session, opencode)
+        : Promise.resolve(null),
+    sessionBranches: () => Promise.resolve([]),
+    sessionLinks: () => Promise.resolve([]),
+    sessionLogs: (session) =>
+      session
+        ? Promise.resolve(loadSessionLogs(session, logMonitor))
+        : Promise.resolve({ sources: [], recentLogs: {} }),
+    sessionMessages: () => Promise.resolve([]),
+    sessionBrowserState: (session) =>
+      session
+        ? browserService.getBrowserSnapshot(session)
+        : Promise.resolve(null),
+    sessionBrowserFrames: (session) => {
       if (!session) {
-        return null;
+        return Promise.resolve(null);
       }
       const frame = browserService.getCachedFrame(session);
-      return { lastFrame: frame ?? null, timestamp: frame ? Date.now() : null };
+      return Promise.resolve({
+        lastFrame: frame ?? null,
+        timestamp: frame ? Date.now() : null,
+      });
     },
-    sessionBrowserInput: async () => ({}),
-    orchestrationStatus: async () => ({
-      status: "pending",
-      projectName: null,
-      sessionId: null,
-      errorMessage: null,
-    }),
-    sessionComplete: async () => ({ completed: false }),
+    sessionBrowserInput: () => Promise.resolve({}),
+    orchestrationStatus: () =>
+      Promise.resolve({
+        status: "pending",
+        projectName: null,
+        sessionId: null,
+        errorMessage: null,
+      }),
+    sessionComplete: () => Promise.resolve({ completed: false }),
   };
 }

@@ -32,6 +32,7 @@ export function FrameTabContent({ frameUrl }: FrameTabContentProps) {
     <div className="flex min-h-0 flex-1 flex-col">
       <UrlBar isLoading={isLoading} onRefresh={handleRefresh} url={frameUrl} />
       <div className="flex grow bg-white">
+        {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: iframe interaction required */}
         <iframe
           className="flex-1 border-none"
           key={key}

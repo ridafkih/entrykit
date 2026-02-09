@@ -13,6 +13,7 @@ const DOCKER_LOG_HEADER_SIZE = 8;
 const DOCKER_LOG_SIZE_OFFSET = 4;
 const STDOUT_STREAM_TYPE = 1;
 const DEFAULT_PROTOCOL = "tcp";
+const LEADING_SLASH_PATTERN = /^\//;
 
 interface PortBinding {
   HostPort?: string;
@@ -41,8 +42,8 @@ function orUndefinedIfEmptyArray<T>(arr: T[]): T[] | undefined {
 }
 
 function parseContainerPort(portKey: string): number {
-  const portString = portKey.split("/")[0];
-  return Number.parseInt(portString!, 10);
+  const portString = portKey.split("/")[0] ?? "";
+  return Number.parseInt(portString, 10);
 }
 
 function parseHostPort(binding: PortBinding): number | null {
@@ -80,7 +81,7 @@ function extractPortMappings(
 }
 
 function stripLeadingSlash(name: string): string {
-  return name.replace(/^\//, "");
+  return name.replace(LEADING_SLASH_PATTERN, "");
 }
 
 function determineStreamType(
@@ -90,7 +91,11 @@ function determineStreamType(
 }
 
 export class DockerContainerManager implements ContainerManager {
-  constructor(private readonly docker: Dockerode) {}
+  private readonly docker: Dockerode;
+
+  constructor(docker: Dockerode) {
+    this.docker = docker;
+  }
 
   async createContainer(options: ContainerCreateOptions): Promise<string> {
     const { exposedPorts, portBindings } = this.buildPortConfiguration(
@@ -299,6 +304,7 @@ export class DockerContainerManager implements ContainerManager {
 
     while (!streamEnded || pendingChunks.length > 0) {
       if (pendingChunks.length > 0) {
+        // biome-ignore lint/style/noNonNullAssertion: length check guarantees element exists
         yield pendingChunks.shift()!;
         continue;
       }

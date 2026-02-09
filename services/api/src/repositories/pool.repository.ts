@@ -4,9 +4,7 @@ import { and, count, eq } from "drizzle-orm";
 import { InternalError } from "../shared/errors";
 import { SESSION_STATUS } from "../types/session";
 
-export async function claimPooledSession(
-  projectId: string
-): Promise<Session | null> {
+export function claimPooledSession(projectId: string): Promise<Session | null> {
   return db.transaction(async (tx) => {
     const [candidate] = await tx
       .select({ id: sessions.id })
@@ -47,7 +45,7 @@ export async function countPooledSessions(projectId: string): Promise<number> {
   return result?.count ?? 0;
 }
 
-export async function findPooledSessions(
+export function findPooledSessions(
   projectId: string,
   limit?: number
 ): Promise<Session[]> {

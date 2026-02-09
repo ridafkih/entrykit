@@ -58,7 +58,7 @@ export function validateState(state: string): boolean {
   return true;
 }
 
-const GET: Handler<GithubContext> = async ({ context: ctx }) => {
+const GET: Handler<GithubContext> = ({ context: ctx }) => {
   widelog.set("github.action", "auth_redirect");
 
   if (!(ctx.githubClientId && ctx.githubCallbackUrl)) {

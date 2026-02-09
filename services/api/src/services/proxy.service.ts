@@ -8,12 +8,15 @@ interface ClusterRegistration {
 }
 
 export class ProxyManager {
-  constructor(
-    private readonly proxyBaseDomain: string,
-    private readonly redis: RedisClient
-  ) {}
+  private readonly proxyBaseDomain: string;
+  private readonly redis: RedisClient;
 
-  async registerCluster(
+  constructor(proxyBaseDomain: string, redis: RedisClient) {
+    this.proxyBaseDomain = proxyBaseDomain;
+    this.redis = redis;
+  }
+
+  registerCluster(
     clusterId: string,
     containers: {
       containerId: string;
@@ -61,7 +64,7 @@ export class ProxyManager {
     });
   }
 
-  async unregisterCluster(clusterId: string): Promise<void> {
+  unregisterCluster(clusterId: string): Promise<void> {
     return widelog.context(async () => {
       widelog.set("event_name", "proxy.cluster.unregistered");
       widelog.set("cluster_id", clusterId);

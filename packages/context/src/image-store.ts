@@ -117,7 +117,7 @@ export class ImageStore {
    * @param options - Storage options
    * @returns URL and metadata about the stored image
    */
-  async storeBase64(
+  storeBase64(
     base64: string,
     options: StoreOptions = {}
   ): Promise<StoreResult> {

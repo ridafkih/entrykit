@@ -396,7 +396,7 @@ function ToolPreviewCard({ tool }: { tool: MockTool }) {
                 ? "bg-bg text-text"
                 : "text-text-muted hover:bg-bg-hover hover:text-text-secondary"
             )}
-            key={index}
+            key={example.label}
             onClick={() => setExpandedExample(index)}
             type="button"
           >
@@ -406,9 +406,12 @@ function ToolPreviewCard({ tool }: { tool: MockTool }) {
       </div>
       <div className="bg-bg">
         {(() => {
-          const example = tool.examples[expandedExample]!;
-          const Renderer = getToolRenderer(example?.props.tool);
-          return <Renderer {...example?.props} />;
+          const example = tool.examples[expandedExample];
+          if (!example) {
+            return null;
+          }
+          const Renderer = getToolRenderer(example.props.tool);
+          return <Renderer {...example.props} />;
         })()}
       </div>
     </div>
