@@ -21,6 +21,7 @@ export const main = (({ env, extras }) => {
 
     const httpServer = serve({
       port: env.MCP_PORT,
+      idleTimeout: 0,
       fetch(request) {
         const url = new URL(request.url);
         if (url.pathname === "/health") {
