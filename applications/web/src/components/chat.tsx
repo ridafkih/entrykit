@@ -72,6 +72,10 @@ function useChat() {
 
 const SCROLL_THRESHOLD = 100;
 
+function getDistanceFromBottom(element: HTMLDivElement): number {
+  return element.scrollHeight - element.scrollTop - element.clientHeight;
+}
+
 interface ChatProviderProps {
   children: ReactNode;
   defaultModelId?: string;
@@ -282,10 +286,8 @@ function ChatMessageList({
     if (!element) {
       return;
     }
-    const { scrollHeight, scrollTop, clientHeight } = element;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-
-    isNearBottomRef.current = distanceFromBottom < SCROLL_THRESHOLD;
+    isNearBottomRef.current =
+      getDistanceFromBottom(element) <= SCROLL_THRESHOLD;
   };
 
   useLayoutEffect(() => {
@@ -297,22 +299,36 @@ function ChatMessageList({
 
     let frameId = 0;
     const scrollIfNearBottom = () => {
-      if (!isNearBottomRef.current) {
+      const distanceFromBottom = getDistanceFromBottom(scrollElement);
+      const shouldStick =
+        isNearBottomRef.current || distanceFromBottom <= SCROLL_THRESHOLD;
+      if (!shouldStick) {
         return;
       }
       scrollElement.scrollTo({ top: scrollElement.scrollHeight });
+      isNearBottomRef.current = true;
     };
     const scheduleScroll = () => {
       if (frameId) {
         cancelAnimationFrame(frameId);
       }
-      frameId = requestAnimationFrame(scrollIfNearBottom);
+      frameId = requestAnimationFrame(() => {
+        requestAnimationFrame(scrollIfNearBottom);
+      });
     };
 
     const resizeObserver = new ResizeObserver(() => {
       scheduleScroll();
     });
     resizeObserver.observe(contentElement);
+    const mutationObserver = new MutationObserver(() => {
+      scheduleScroll();
+    });
+    mutationObserver.observe(contentElement, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
     window.addEventListener("resize", scheduleScroll);
     scheduleScroll();
 
@@ -321,6 +337,7 @@ function ChatMessageList({
         cancelAnimationFrame(frameId);
       }
       window.removeEventListener("resize", scheduleScroll);
+      mutationObserver.disconnect();
       resizeObserver.disconnect();
     };
   }, [scrollRef, isNearBottomRef]);
@@ -332,7 +349,7 @@ function ChatMessageList({
       ref={scrollRef}
     >
       <div className="flex-1" />
-      <div className="contents" ref={contentRef}>
+      <div className="flex flex-col" ref={contentRef}>
         {children}
       </div>
     </div>
