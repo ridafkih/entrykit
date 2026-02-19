@@ -1,5 +1,5 @@
 {
-  "name": "@ridafkih/entry-point",
+  "name": "entrykit",
   "license": "AGPL-3.0",
   "private": true,
   "type": "module",
